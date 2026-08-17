@@ -16,6 +16,7 @@ enum class TokenType {
     LeftBrace,
     RightBrace,
     Colon,
+    ColonColon,
     Semicolon,
     Comma,
     Dot,

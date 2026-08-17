@@ -1074,11 +1074,11 @@ fun criticalPath(
     start: number
 ): Result<CriticalPathResult, CriticalPathError> {
   if (!graph.directed) {
-    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.UndirectedGraph());
+    return Result.Err::<CriticalPathResult, CriticalPathError>(CriticalPathError.UndirectedGraph());
   }
   let mut count = graph.vertexCount();
   if (start < 0 || start >= count || floor(start) != start) {
-    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.InvalidStart());
+    return Result.Err::<CriticalPathResult, CriticalPathError>(CriticalPathError.InvalidStart());
   }
 
   let indegrees: [number] = [];
@@ -1125,7 +1125,7 @@ fun criticalPath(
     }
   }
   if (order.len() != count) {
-    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.Cycle());
+    return Result.Err::<CriticalPathResult, CriticalPathError>(CriticalPathError.Cycle());
   }
 
   let distanceValues: [number] = [];
@@ -1177,7 +1177,7 @@ fun criticalPath(
     index += 1;
   }
 
-  return Result.Ok<CriticalPathResult, CriticalPathError>(
+  return Result.Ok::<CriticalPathResult, CriticalPathError>(
       CriticalPathResult { distances: distances, parents: parents, order: order });
 }
 
@@ -1302,7 +1302,7 @@ fun bellmanFord(
 ): Result<BellmanFordResult, BellmanFordError> {
   let count = graph.vertexCount();
   if (start < 0 || start >= count) {
-    return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.InvalidStart());
+    return Result.Err::<BellmanFordResult, BellmanFordError>(BellmanFordError.InvalidStart());
   }
 
   let distances: [optional<number>] = [];
@@ -1370,7 +1370,7 @@ fun bellmanFord(
           nil => { }
           existing => {
             if (candidate < existing) {
-              return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.NegativeCycle());
+              return Result.Err::<BellmanFordResult, BellmanFordError>(BellmanFordError.NegativeCycle());
             }
           }
         }
@@ -1380,7 +1380,7 @@ fun bellmanFord(
     }
     from += 1;
   }
-  return Result.Ok<BellmanFordResult, BellmanFordError>(
+  return Result.Ok::<BellmanFordResult, BellmanFordError>(
       BellmanFordResult { distances: distances, parents: parents });
 }
 
@@ -1408,7 +1408,7 @@ fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
     return distances;
   }
   distances[start] = 0;
-  let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+  let pending = newBinaryHeap::<WeightedDistanceEntry>(weightedDistanceLess);
   pending.add(WeightedDistanceEntry { vertex: start, distance: 0 });
 
   while (!pending.isEmpty()) {
@@ -1649,7 +1649,7 @@ fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [nu
     index += 1;
   }
   distances[start] = 0;
-  let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+  let pending = newBinaryHeap::<WeightedDistanceEntry>(weightedDistanceLess);
     pending.add(WeightedDistanceEntry { vertex: start, distance: 0 });
 
   while (!pending.isEmpty()) {
@@ -1728,7 +1728,7 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
     distances[root] = 0;
     parents[root] = -1;
     parentWeights[root] = -1;
-    let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+    let pending = newBinaryHeap::<WeightedDistanceEntry>(weightedDistanceLess);
     pending.add(WeightedDistanceEntry { vertex: root, distance: 0 });
     while (!pending.isEmpty()) {
       match pending.take() {

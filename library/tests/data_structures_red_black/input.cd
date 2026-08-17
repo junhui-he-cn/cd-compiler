@@ -15,13 +15,13 @@ fun describe(value: optional<number>): string {
   }
 }
 
-let empty = ds.newRedBlackTree<number>(ascending);
+let empty = ds.newRedBlackTree::<number>(ascending);
 print(empty.isEmpty());
 print(empty.height());
 print(describe(empty.minimum()));
 print(describe(empty.maximum()));
 
-let tree = ds.newRedBlackTree<number>(ascending);
+let tree = ds.newRedBlackTree::<number>(ascending);
 tree.insert(10);
 tree.insert(20);
 tree.insert(30);
@@ -60,7 +60,7 @@ let snapshot = tree.snapshot();
 snapshot[0] = 99;
 print(tree.snapshot());
 
-let stress = ds.newRedBlackTree<number>(ascending);
+let stress = ds.newRedBlackTree::<number>(ascending);
 stress.insert(1);
 stress.insert(2);
 stress.insert(3);
@@ -96,7 +96,7 @@ print(stress.size());
 print(stress.height());
 print(stress.isEmpty());
 
-let words = ds.newRedBlackTree<string>(stringAscending);
+let words = ds.newRedBlackTree::<string>(stringAscending);
 words.insert("delta");
 words.insert("alpha");
 words.insert("beta");

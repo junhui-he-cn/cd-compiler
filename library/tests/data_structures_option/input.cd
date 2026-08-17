@@ -7,9 +7,9 @@ fun render(value: ds.Option<number>): string {
   }
 }
 
-let present = ds.some<number>(7);
-let missing = ds.none<number>();
-let explicit = ds.Option.None<number>();
+let present = ds.some::<number>(7);
+let missing = ds.none::<number>();
+let explicit = ds.Option.None::<number>();
 let inferred = ds.some("hello");
 
 print(render(present));

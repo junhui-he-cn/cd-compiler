@@ -13192,6 +13192,117 @@
       "fixture": "tests/golden/generic_structs"
     },
     {
+      "case_id": "golden.success.generic_turbofish_calls.ast",
+      "runner": "golden",
+      "result_name": "generic_turbofish_calls default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:generic_turbofish_calls"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/generic_turbofish_calls/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_turbofish_calls/ast.out"
+      ],
+      "fixture": "tests/golden/generic_turbofish_calls"
+    },
+    {
+      "case_id": "golden.success.generic_turbofish_calls.bytecode",
+      "runner": "golden",
+      "result_name": "generic_turbofish_calls --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:generic_turbofish_calls"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/generic_turbofish_calls/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_turbofish_calls/bytecode.out"
+      ],
+      "fixture": "tests/golden/generic_turbofish_calls"
+    },
+    {
+      "case_id": "golden.success.generic_turbofish_calls.ir",
+      "runner": "golden",
+      "result_name": "generic_turbofish_calls --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:generic_turbofish_calls"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/generic_turbofish_calls/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_turbofish_calls/ir.out"
+      ],
+      "fixture": "tests/golden/generic_turbofish_calls"
+    },
+    {
+      "case_id": "golden.success.generic_turbofish_calls.module_interface",
+      "runner": "golden",
+      "result_name": "generic_turbofish_calls --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:generic_turbofish_calls"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/generic_turbofish_calls/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_turbofish_calls/module-interface.out"
+      ],
+      "fixture": "tests/golden/generic_turbofish_calls"
+    },
+    {
       "case_id": "golden.success.hash_capabilities.ast",
       "runner": "golden",
       "result_name": "hash_capabilities default(ast)",
@@ -41464,6 +41575,68 @@
         "tests/golden/generic_structs/run.out"
       ],
       "fixture": "tests/golden/generic_structs"
+    },
+    {
+      "case_id": "rust_vm.golden.generic_turbofish_calls.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "generic_turbofish_calls emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:generic_turbofish_calls"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/generic_turbofish_calls/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_turbofish_calls/run.out"
+      ],
+      "fixture": "tests/golden/generic_turbofish_calls"
+    },
+    {
+      "case_id": "rust_vm.golden.generic_turbofish_calls.run",
+      "runner": "rust_vm_golden",
+      "result_name": "generic_turbofish_calls rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:generic_turbofish_calls"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/generic_turbofish_calls/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_turbofish_calls/run.out"
+      ],
+      "fixture": "tests/golden/generic_turbofish_calls"
     },
     {
       "case_id": "rust_vm.golden.hash_capabilities.emit",

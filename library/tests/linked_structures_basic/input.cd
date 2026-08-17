@@ -1,6 +1,6 @@
 import "../../data_structures.cd" as ds;
 
-let list = ds.newLinkedList<number>();
+let list = ds.newLinkedList::<number>();
 print(list.isEmpty());
 print(list.popFront());
 list.pushBack(1);
@@ -23,8 +23,8 @@ if let removedValue = removed {
 }
 print(list.snapshot());
 
-let first = ds.newLinkedNode<number>(3);
-let second = ds.newLinkedNode<number>(4);
+let first = ds.newLinkedNode::<number>(3);
+let second = ds.newLinkedNode::<number>(4);
 first.setNext(second);
 second.setNext(first);
 print(first);

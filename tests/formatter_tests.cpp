@@ -81,16 +81,16 @@ void test_formats_generic_calls_and_for_headers()
 {
     const std::string source =
         "fun id<T>(value:T):T{return value;}\n"
-        "let x=id<number>(1);\n"
-        "for let i=0;i<2;i+=1{print(id<number>(i));}\n";
+        "let x=id :: <number>(1);\n"
+        "for let i=0;i<2;i+=1{print(id :: <number>(i));}\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
     const std::string expected =
         "fun id<T>(value: T): T {\n"
         "  return value;\n"
         "}\n"
-        "let x = id<number>(1);\n"
+        "let x = id::<number>(1);\n"
         "for let i = 0; i < 2; i += 1 {\n"
-        "  print(id<number>(i));\n"
+        "  print(id::<number>(i));\n"
         "}\n";
     assert(formatted == expected);
     assert(astFor(source) == astFor(formatted));

@@ -13,12 +13,12 @@ fun render(entries: [ds.LruCacheEntry<string, number>]): string {
   return result;
 }
 
-let zero = ds.newLruCache<string, number>(0);
+let zero = ds.newLruCache::<string, number>(0);
 print(zero.put("ignored", 1));
 print(zero.get("ignored"));
 print(zero.snapshot());
 
-let cache = ds.newLruCache<string, number>(2.9);
+let cache = ds.newLruCache::<string, number>(2.9);
 print(cache.capacity());
 print(cache.put("a", 1));
 print(cache.put("b", 2));
@@ -38,7 +38,7 @@ let snapshot = cache.snapshot();
 snapshot[0].value = 99;
 print(render(cache.snapshot()));
 
-let nullable = ds.newLruCache<string, optional<number>>(2);
+let nullable = ds.newLruCache::<string, optional<number>>(2);
 print(nullable.put("nil", nil));
 print(nullable.has("nil"));
 print(nullable.get("nil"));

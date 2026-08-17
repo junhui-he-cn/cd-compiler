@@ -21,6 +21,6 @@ ds.bubbleSortInPlace(words, ds.stringLess);
 print(words);
 
 let empty: [number] = [];
-print(ds.selectionSort<number>(empty, ascending));
+print(ds.selectionSort::<number>(empty, ascending));
 ds.bubbleSortInPlace(empty, descending);
 print(empty);

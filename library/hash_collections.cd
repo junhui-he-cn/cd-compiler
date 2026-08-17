@@ -63,7 +63,7 @@ impl HashSet<T: Eq + Hash> {
   }
 
   fun rehash() {
-    let buckets = newHashSetBuckets<T>(this.buckets.len() * 2);
+    let buckets = newHashSetBuckets::<T>(this.buckets.len() * 2);
     let mut index = 0;
     while (index < this.values.len()) {
       let value = this.values[index];
@@ -159,7 +159,7 @@ impl HashSet<T: Eq + Hash> {
   }
 
   fun clear() {
-    this.buckets = newHashSetBuckets<T>(this.buckets.len());
+    this.buckets = newHashSetBuckets::<T>(this.buckets.len());
     this.values = [];
   }
 
@@ -170,7 +170,7 @@ impl HashSet<T: Eq + Hash> {
 
 fun newHashSet<T: Eq + Hash>(): HashSet<T> {
   return HashSet<T> {
-    buckets: newHashSetBuckets<T>(8),
+    buckets: newHashSetBuckets::<T>(8),
     values: []
   };
 }
@@ -188,7 +188,7 @@ impl HashMap<K: Eq + Hash, V> {
   }
 
   fun rehash() {
-    let buckets = newHashMapBuckets<K, V>(this.buckets.len() * 2);
+    let buckets = newHashMapBuckets::<K, V>(this.buckets.len() * 2);
     let mut index = 0;
     while (index < this.entries.len()) {
       let entry = this.entries[index];
@@ -306,7 +306,7 @@ impl HashMap<K: Eq + Hash, V> {
   }
 
   fun clear() {
-    this.buckets = newHashMapBuckets<K, V>(this.buckets.len());
+    this.buckets = newHashMapBuckets::<K, V>(this.buckets.len());
     this.entries = [];
   }
 
@@ -317,7 +317,7 @@ impl HashMap<K: Eq + Hash, V> {
 
 fun newHashMap<K: Eq + Hash, V>(): HashMap<K, V> {
   return HashMap<K, V> {
-    buckets: newHashMapBuckets<K, V>(8),
+    buckets: newHashMapBuckets::<K, V>(8),
     entries: []
   };
 }

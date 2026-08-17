@@ -7,4 +7,4 @@ print(ds.longestUniqueSubarrayLength([4, 4, 4]));
 
 let words = ["red", "blue", "red", "green", "blue"];
 print(ds.longestUniqueSubarrayLength(words));
-print(ds.longestUniqueSubarrayLength<number>([]));
+print(ds.longestUniqueSubarrayLength::<number>([]));

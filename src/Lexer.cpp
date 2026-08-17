@@ -121,7 +121,7 @@ void Lexer::scanToken()
         addToken(TokenType::RightBrace);
         break;
     case ':':
-        addToken(TokenType::Colon);
+        addToken(match(':') ? TokenType::ColonColon : TokenType::Colon);
         break;
     case ';':
         addToken(TokenType::Semicolon);
@@ -371,6 +371,8 @@ std::string tokenTypeName(TokenType type)
         return "RightBrace";
     case TokenType::Colon:
         return "Colon";
+    case TokenType::ColonColon:
+        return "ColonColon";
     case TokenType::Semicolon:
         return "Semicolon";
     case TokenType::Comma:

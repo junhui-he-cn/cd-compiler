@@ -128,7 +128,7 @@ impl LruCache<K: Eq, V> {
       }
     }
 
-    let node = newLinkedNode<LruCacheEntry<K, V>>(LruCacheEntry<K, V> {
+    let node = newLinkedNode::<LruCacheEntry<K, V>>(LruCacheEntry<K, V> {
       key: key,
       value: value
     });
@@ -329,7 +329,7 @@ impl LfuCache<K: Eq, V> {
     }
 
     this.clock += 1;
-    let node = newLinkedNode<LfuCacheNode<K, V>>(LfuCacheNode<K, V> {
+    let node = newLinkedNode::<LfuCacheNode<K, V>>(LfuCacheNode<K, V> {
       entry: LfuCacheEntry<K, V> {
         key: key,
         value: value,

@@ -1,6 +1,6 @@
 import "../../data_structures.cd" as ds;
 
-let map = ds.newMultiMap<string, number>();
+let map = ds.newMultiMap::<string, number>();
 print(map.getAll("missing"));
 map.add("a", 1);
 map.add("a", 2);

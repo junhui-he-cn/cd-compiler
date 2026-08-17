@@ -1,0 +1,25 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 identity#0, v0
+0002  v1 = make_function $0 identity/1
+0003  assign_var @2 identity#0, v1
+0004  v2 = constant #2 1
+0005  store_var @3 left#2, v2
+0006  v3 = constant #3 2
+0007  store_var @4 right#3, v3
+0008  v4 = load_var @5 left#2
+0009  v5 = load_var @6 right#3
+0010  v6 = lt_num v4, v5
+0011  v7 = native_call @7 print(v6)
+0012  v8 = constant #4 42
+0013  v9 = call_direct $0 identity/1(v8)
+0014  v10 = native_call @8 print(v9)
+0015  v11 = constant #5 "ok"
+0016  v12 = call_direct $0 identity/1(v11)
+0017  v13 = native_call @9 print(v12)
+
+function $0 identity(value#1)
+0000  v0 = load_var @1 value#1
+0001  return v0
+0002  v1 = constant #1 nil
+0003  return v1

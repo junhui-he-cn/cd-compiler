@@ -23,12 +23,12 @@ fun sum(list: List<number>): number {
 }
 
 let some: Option<number> = Option.Some(7);
-let none: Option<number> = Option.None<number>();
+let none: Option<number> = Option.None::<number>();
 let maybe: optional<Option<number>> = nil;
 let inferred = Option.Some("hello");
 print(describe(some));
 print(describe(none));
-print(sum(List.Cons(1, List.Cons(2, List.Nil<number>()))));
+print(sum(List.Cons(1, List.Cons(2, List.Nil::<number>()))));
 match maybe {
   nil => { print("nil"); }
   Option.Some(value) => { print("some"); }

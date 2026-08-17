@@ -21,7 +21,7 @@ print(ds.heapSort(words, ds.stringLess));
 print(words);
 
 let empty: [number] = [];
-print(ds.heapSort<number>(empty, ascending));
+print(ds.heapSort::<number>(empty, ascending));
 ds.heapSortInPlace(empty, descending);
 print(empty);
 print(ds.heapSort([42], ascending));

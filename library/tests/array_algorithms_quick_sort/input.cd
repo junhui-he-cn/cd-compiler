@@ -25,7 +25,7 @@ print(ds.quickSort(words, ds.stringLess));
 print(words);
 
 let empty: [number] = [];
-print(ds.quickSort<number>(empty, ascending));
+print(ds.quickSort::<number>(empty, ascending));
 ds.quickSortInPlace(empty, descending);
 print(empty);
 print(ds.quickSort([42], ascending));

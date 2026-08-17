@@ -52,5 +52,5 @@ let entries: [[Entry]] = [
 print(renderEntries(ds.mergeSortedArrays(entries, entryLess)));
 
 let empty: [[number]] = [];
-print(ds.mergeSortedArrays<number>(empty, ascendingNumber));
-print(ds.mergeSortedArrays<number>([[], []], ascendingNumber));
+print(ds.mergeSortedArrays::<number>(empty, ascendingNumber));
+print(ds.mergeSortedArrays::<number>([[], []], ascendingNumber));

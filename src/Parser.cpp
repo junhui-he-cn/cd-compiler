@@ -1190,6 +1190,7 @@ ExprPtr Parser::call(bool allowStructConstructors)
     ExprPtr expr = primary(allowStructConstructors);
     while (true) {
         if (isExplicitTypeArgumentCall(*expr)) {
+            consume(TokenType::ColonColon, "expected `::` before explicit type arguments");
             std::vector<TypeAnnotation> typeArguments = explicitTypeArguments();
             consume(TokenType::LeftParen, "expected `(` after type arguments");
             expr = finishCall(std::move(expr), std::move(typeArguments));
@@ -1221,18 +1222,12 @@ bool Parser::isExplicitTypeArgumentCall(const Expr& callee) const
         calleeName = &field->name;
     }
 
-    if (!calleeName || !check(TokenType::Less)) {
-        return false;
-    }
-
-    const Token& less = peek();
-    if (less.line != calleeName->line
-        || less.column != calleeName->column + static_cast<int>(calleeName->lexeme.size())) {
+    if (!calleeName || !check(TokenType::ColonColon) || !checkNext(TokenType::Less)) {
         return false;
     }
 
     int angleDepth = 0;
-    for (std::size_t index = current_; index < tokens_.size(); ++index) {
+    for (std::size_t index = current_ + 1; index < tokens_.size(); ++index) {
         if (tokens_[index].type == TokenType::Less) {
             ++angleDepth;
         } else if (tokens_[index].type == TokenType::Greater) {

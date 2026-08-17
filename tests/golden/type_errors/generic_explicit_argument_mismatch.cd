@@ -1,2 +1,2 @@
 fun identity<T>(value: T): T { return value; }
-print(identity<number>("bad"));
+print(identity::<number>("bad"));

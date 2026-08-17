@@ -15,7 +15,7 @@ fun describe(value: optional<number>): string {
   }
 }
 
-let empty = ds.newAvlTree<number>(ascending);
+let empty = ds.newAvlTree::<number>(ascending);
 print(empty.isEmpty());
 print(empty.height());
 print(describe(empty.minimum()));
@@ -23,7 +23,7 @@ print(describe(empty.maximum()));
 print(describe(empty.predecessor(10)));
 print(describe(empty.successor(10)));
 
-let tree = ds.newAvlTree<number>(ascending);
+let tree = ds.newAvlTree::<number>(ascending);
 print(tree.insert(30));
 print(tree.insert(20));
 print(tree.insert(10));
@@ -57,7 +57,7 @@ print(tree.snapshot());
 print(tree.discard(30));
 print(tree.snapshot());
 
-let words = ds.newAvlTree<string>(stringAscending);
+let words = ds.newAvlTree::<string>(stringAscending);
 words.insert("delta");
 words.insert("alpha");
 words.insert("beta");

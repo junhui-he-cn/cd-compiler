@@ -1,3 +1,3 @@
-Type error at <repo>/tests/golden/type_errors/generic_lambda_argument_mismatch.cd:2:23: argument 1 expects number, got string
-  identity<number>("bad");
-                        ^
+Type error at <repo>/tests/golden/type_errors/generic_lambda_argument_mismatch.cd:2:25: argument 1 expects number, got string
+  identity::<number>("bad");
+                          ^

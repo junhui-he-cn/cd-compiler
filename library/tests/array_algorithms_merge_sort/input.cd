@@ -45,5 +45,5 @@ print(renderEntries(ds.mergeSort(entries, entryLess)));
 print(renderEntries(entries));
 
 let empty: [number] = [];
-print(ds.mergeSort<number>(empty, ascending));
+print(ds.mergeSort::<number>(empty, ascending));
 print(ds.mergeSort([42], ascending));

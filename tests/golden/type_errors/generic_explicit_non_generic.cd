@@ -1,2 +1,2 @@
 fun identity(value: number): number { return value; }
-print(identity<number>(1));
+print(identity::<number>(1));

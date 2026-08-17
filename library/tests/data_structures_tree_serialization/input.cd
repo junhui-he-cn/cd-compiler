@@ -1,6 +1,6 @@
 import "../../data_structures.cd" as ds;
 
-let empty = ds.emptyTree<number>();
+let empty = ds.emptyTree::<number>();
 print(ds.serializeNumericTree(empty));
 let restoredEmpty = ds.deserializeNumericTree("#");
 match restoredEmpty {
@@ -10,8 +10,8 @@ match restoredEmpty {
 
 let tree = ds.treeNode(
   -2.5,
-  ds.treeNode(1, ds.emptyTree<number>(), ds.treeLeaf(1)),
-  ds.treeNode(3.25, ds.emptyTree<number>(), ds.emptyTree<number>())
+  ds.treeNode(1, ds.emptyTree::<number>(), ds.treeLeaf(1)),
+  ds.treeNode(3.25, ds.emptyTree::<number>(), ds.emptyTree::<number>())
 );
 let encoded = ds.serializeNumericTree(tree);
 print(encoded);

@@ -26,7 +26,7 @@
 | 赋值 / 复合赋值 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
 | `fun` 函数 / 闭包 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
 | 泛型声明 `fun f<T>` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
-| 显式泛型调用 `f<T>(x)` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致，但见「已知技术债」#1 |
+| 显式泛型调用 `f::<T>(x)` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致（Phase 11） |
 | `optional<T>` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
 | 类型后置 `T?` | — | — | — | — | — | — | — | 各层均无（Phase 13 可选项） |
 | 表达式后缀 `?`（unwrap/early-return） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
@@ -92,13 +92,14 @@ arm 用逗号分隔、返回值），但：
 
 结论：一致，`T?` 属于 Phase 13 可选项，当前不存在。
 
-### 4. generic call whitespace sensitivity
+### 4. explicit generic call syntax
 
-`src/Parser.cpp`（`isGenericCallStart` 附近）要求 `<` 与 callee 名字同行且
-`column == name.column + name.lexeme.size()`，即 `f<T>(x)` 的 `<` 必须紧邻名字。
-EBNF 注释明确记录了这条限制。手册没有说明该限制。
+显式泛型调用使用独立的 `::` token，例如 `f::<T>(x)`、`lib.f::<T>(x)` 和
+`value.method::<T>(x)`。普通调用仍使用类型推断，泛型声明和类型注解仍使用
+`name<T>` 形式；Parser 不再根据 token column 或名字与 `<` 的相邻关系猜测调用。
 
-结论：实现与 EBNF 一致，但该空白敏感规则是 Phase 11 要移除的技术债；手册缺少说明。
+结论：Phase 11 已完成，Lexer、Parser、Formatter、EBNF、手册和 golden/bytecode
+fixture 使用同一套无空格敏感语法。
 
 ### 5. struct literal in condition
 
@@ -142,11 +143,10 @@ FrontendSession 模块图语义一致（直接导入暴露导出名、别名限�
 
 ## 已知技术债（Phase 0 记录，不修复）
 
-1. 显式泛型调用依赖 `<` 与名字紧邻的空白敏感规则（Phase 11 改为 `f::<T>(x)` 或等价方案）。
-2. truthiness 允许非 bool 条件，`&&`/`||` 返回 operand 值（Phase 5 收紧）。
-3. 字符串无转义、无块注释、无 `else if`、无尾逗号统一（Phase 6/8/14/16）。
-4. 数字字面量仅整数/小数（Phase 15）。
-5. capability 只是内置约束，非完整 trait/capability 系统（Phase 19 决策）。
+1. truthiness 允许非 bool 条件，`&&`/`||` 返回 operand 值（Phase 5 收紧）。
+2. 字符串无转义、无块注释、无 `else if`、无尾逗号统一（Phase 6/8/14/16）。
+3. 数字字面量仅整数/小数（Phase 15）。
+4. capability 只是内置约束，非完整 trait/capability 系统（Phase 19 决策）。
 
 ## 验证
 
@@ -189,4 +189,5 @@ native 函数调用 `print(value)`，AST 不再有 `PrintStmt`。两条以实现
 支持字段简写，例如 `Point { x, y }` 等价于 `Point { x: x, y: y }`，并支持末尾的
 rest pattern（`Point { x, .. }`）显式忽略其余字段。Phase 10 已完成：struct literal
 可以通过显式分组进入条件表达式，同时裸条件仍保留清晰的 block 边界。下一阶段是
-Phase 11：移除显式泛型调用的空白敏感限制。
+Phase 11 已完成：显式泛型调用使用 `f::<T>(x)`，不再依赖空白或 token column；下一阶段是
+Phase 12：模块语法增强。

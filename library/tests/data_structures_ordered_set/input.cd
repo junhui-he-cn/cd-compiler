@@ -15,7 +15,7 @@ fun describe(value: optional<number>): string {
   }
 }
 
-let ordered = ds.newOrderedSet<number>(ascending);
+let ordered = ds.newOrderedSet::<number>(ascending);
 print(ordered.isEmpty());
 print(ordered.add(5));
 print(ordered.add(1));
@@ -37,7 +37,7 @@ print(ordered.discard(3));
 print(ordered.discard(3));
 print(ordered.snapshot());
 
-let words = ds.newOrderedSet<string>(stringAscending);
+let words = ds.newOrderedSet::<string>(stringAscending);
 words.add("delta");
 words.add("alpha");
 words.add("beta");

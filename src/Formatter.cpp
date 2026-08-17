@@ -174,19 +174,17 @@ std::vector<bool> findGenericAngles(const std::vector<const Token*>& tokens)
 
         const Token& previous = *tokens[index - 1];
         const bool canStartAfterFun = previous.type == TokenType::Fun;
+        const bool canStartAfterTurbofish = previous.type == TokenType::ColonColon;
         const bool canStartAdjacent = isWordLike(previous.type)
             || previous.type == TokenType::RightBracket
             || previous.type == TokenType::RightParen
             || previous.type == TokenType::Greater;
-        if (!canStartAfterFun && !canStartAdjacent) {
+        if (!canStartAfterFun && !canStartAfterTurbofish && !canStartAdjacent) {
             continue;
         }
 
-        // Explicit generic calls require adjacency in the parser.  Keeping
-        // that signal prevents `left < right > (value)` from being rewritten
-        // as a generic call, while still recognizing declarations and the
-        // compact type forms used by the language.
-        if (!canStartAfterFun && !rangesAreAdjacent(previous, *tokens[index])) {
+        if (!canStartAfterFun && !canStartAfterTurbofish
+            && !rangesAreAdjacent(previous, *tokens[index])) {
             continue;
         }
 
@@ -352,6 +350,7 @@ bool tokenIsPunctuationWithoutLeadingSpace(TokenType type)
     case TokenType::Comma:
     case TokenType::Semicolon:
     case TokenType::Dot:
+    case TokenType::ColonColon:
         return true;
     default:
         return false;
@@ -844,6 +843,10 @@ void emitToken(
         }
         break;
     case TokenType::Dot:
+        state.trimTrailingSpaces();
+        state.writeRaw(token.lexeme);
+        break;
+    case TokenType::ColonColon:
         state.trimTrailingSpaces();
         state.writeRaw(token.lexeme);
         break;

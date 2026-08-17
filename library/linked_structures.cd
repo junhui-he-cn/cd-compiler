@@ -48,7 +48,7 @@ impl LinkedList<T> {
   }
 
   fun pushFront(value: T) {
-    let node = newLinkedNode<T>(value);
+    let node = newLinkedNode::<T>(value);
     node.setNext(this.head);
     this.head = node;
     if (this.count == 0) {
@@ -58,7 +58,7 @@ impl LinkedList<T> {
   }
 
   fun pushBack(value: T) {
-    let node = newLinkedNode<T>(value);
+    let node = newLinkedNode::<T>(value);
     let mut current = this.tail;
     match current {
       nil => {

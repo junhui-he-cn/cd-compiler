@@ -14,12 +14,12 @@ fun render(entries: [ds.LfuCacheEntry<string, number>]): string {
   return result;
 }
 
-let zero = ds.newLfuCache<string, number>(0);
+let zero = ds.newLfuCache::<string, number>(0);
 print(zero.capacity());
 print(zero.put("ignored", 1));
 print(zero.snapshot());
 
-let cache = ds.newLfuCache<string, number>(2);
+let cache = ds.newLfuCache::<string, number>(2);
 print(cache.put("a", 1));
 print(cache.put("b", 2));
 print(render(cache.snapshot()));
@@ -47,7 +47,7 @@ print(cache.isEmpty());
 print(cache.discard("c"));
 print(cache.isEmpty());
 
-let nullable = ds.newLfuCache<string, optional<number>>(1);
+let nullable = ds.newLfuCache::<string, optional<number>>(1);
 print(nullable.put("nil", nil));
 print(nullable.has("nil"));
 print(nullable.frequencyOf("nil"));

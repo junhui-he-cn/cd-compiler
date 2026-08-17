@@ -1,2 +1,2 @@
 fun identity<T>(value: T): T { return value; }
-print(identity<Missing>(1));
+print(identity::<Missing>(1));

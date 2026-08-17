@@ -9,7 +9,7 @@ enum Tree<T> {
 }
 
 fun emptyTree<T>(): Tree<T> {
-  return Tree.Empty<T>();
+  return Tree.Empty::<T>();
 }
 
 fun treeNode<T>(value: T, left: Tree<T>, right: Tree<T>): Tree<T> {
@@ -17,7 +17,7 @@ fun treeNode<T>(value: T, left: Tree<T>, right: Tree<T>): Tree<T> {
 }
 
 fun treeLeaf<T>(value: T): Tree<T> {
-  return Tree.Node(value, Tree.Empty<T>(), Tree.Empty<T>());
+  return Tree.Node(value, Tree.Empty::<T>(), Tree.Empty::<T>());
 }
 
 fun treeSize<T>(tree: Tree<T>): number {
@@ -46,7 +46,7 @@ fun treeLeafCount<T>(tree: Tree<T>): number {
   match tree {
     Tree.Empty => { return 0; }
     Tree.Node(value, left, right) => {
-      if (left == Tree.Empty<T>() && right == Tree.Empty<T>()) {
+      if (left == Tree.Empty::<T>() && right == Tree.Empty::<T>()) {
         return 1;
       }
       return treeLeafCount(left) + treeLeafCount(right);
@@ -398,7 +398,7 @@ impl NumericTreeParser {
     }
     if (this.text.charAt(this.position) == "#") {
       this.position += 1;
-      return Tree.Empty<number>();
+      return Tree.Empty::<number>();
     }
 
     let parsedValue = this.parseNumber()?;
@@ -568,7 +568,7 @@ fun bstContains<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): bool {
 
 fun bstInsert<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T> {
   match tree {
-    Tree.Empty => { return Tree.Node(value, Tree.Empty<T>(), Tree.Empty<T>()); }
+    Tree.Empty => { return Tree.Node(value, Tree.Empty::<T>(), Tree.Empty::<T>()); }
     Tree.Node(current, left, right) => {
       if (less(value, current)) {
         return Tree.Node(current, bstInsert(left, value, less), right);

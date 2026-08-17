@@ -134,7 +134,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_methods/input.cd" text="struct Box { value: number }\n\nimpl Box {\n  fun echo<T>(value: T): T {\n    let copy: T = value;\n    return copy;\n  }\n\n  fun head<T>(values: [T]): T {\n    return values[0];\n  }\n\n  fun make<T>(): optional<T> {\n    return nil;\n  }\n}\n\nlet box: Box = Box { value: 0 };\nprint(box.echo<number>(42));\nprint(box.echo(\"hello\"));\nprint(box.head<number>([3, 4]));\nprint(box.make<string>());\n"
+  s0 path="tests/bytecode_artifacts/generic_methods/input.cd" text="struct Box { value: number }\n\nimpl Box {\n  fun echo<T>(value: T): T {\n    let copy: T = value;\n    return copy;\n  }\n\n  fun head<T>(values: [T]): T {\n    return values[0];\n  }\n\n  fun make<T>(): optional<T> {\n    return nil;\n  }\n}\n\nlet box: Box = Box { value: 0 };\nprint(box.echo::<number>(42));\nprint(box.echo(\"hello\"));\nprint(box.head::<number>([3, 4]));\nprint(box.make::<string>());\n"
 
 debug_locations:
   main 0 = s0:3:1
@@ -155,7 +155,7 @@ debug_locations:
   main 15 = s0:18:1
   main 16 = s0:19:7
   main 17 = s0:19:7
-  main 18 = s0:19:24
+  main 18 = s0:19:26
   main 19 = s0:19:7
   main 20 = s0:19:1
   main 21 = s0:20:7
@@ -165,9 +165,9 @@ debug_locations:
   main 25 = s0:20:1
   main 26 = s0:21:7
   main 27 = s0:21:7
-  main 28 = s0:21:25
-  main 29 = s0:21:28
-  main 30 = s0:21:24
+  main 28 = s0:21:27
+  main 29 = s0:21:30
+  main 30 = s0:21:26
   main 31 = s0:21:7
   main 32 = s0:21:1
   main 33 = s0:22:7
@@ -221,28 +221,28 @@ debug_ranges:
   main 13 = s0:258:259
   main 14 = s0:245:259
   main 15 = s0:234:259
-  main 16 = s0:269:289
+  main 16 = s0:269:291
   main 17 = s0:269:272
-  main 18 = s0:286:288
-  main 19 = s0:269:289
-  main 20 = s0:263:290
-  main 21 = s0:298:315
-  main 22 = s0:298:301
-  main 23 = s0:307:314
-  main 24 = s0:298:315
-  main 25 = s0:292:316
-  main 26 = s0:324:348
-  main 27 = s0:324:327
-  main 28 = s0:342:343
-  main 29 = s0:345:346
-  main 30 = s0:341:346
-  main 31 = s0:324:348
-  main 32 = s0:318:349
-  main 33 = s0:357:375
-  main 34 = s0:357:360
-  main 35 = s0:357:375
-  main 36 = s0:351:376
-  main 37 = s0:351:376
+  main 18 = s0:288:290
+  main 19 = s0:269:291
+  main 20 = s0:263:292
+  main 21 = s0:300:317
+  main 22 = s0:300:303
+  main 23 = s0:309:316
+  main 24 = s0:300:317
+  main 25 = s0:294:318
+  main 26 = s0:326:352
+  main 27 = s0:326:329
+  main 28 = s0:346:347
+  main 29 = s0:349:350
+  main 30 = s0:345:350
+  main 31 = s0:326:352
+  main 32 = s0:320:353
+  main 33 = s0:361:381
+  main 34 = s0:361:364
+  main 35 = s0:361:381
+  main 36 = s0:355:382
+  main 37 = s0:355:382
   function f0 0 = s0:88:93
   function f0 1 = s0:88:93
   function f0 2 = s0:78:93

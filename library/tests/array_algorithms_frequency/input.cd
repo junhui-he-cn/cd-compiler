@@ -26,5 +26,5 @@ print(ds.frequencyEntries([2, 2, 3, 2]));
 print(ds.mostFrequent([2, 2, 3, 2]));
 
 let empty: [number] = [];
-print(ds.frequencyEntries<number>(empty));
-print(ds.mostFrequent<number>(empty));
+print(ds.frequencyEntries::<number>(empty));
+print(ds.mostFrequent::<number>(empty));

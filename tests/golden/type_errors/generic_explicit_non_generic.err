@@ -1,3 +1,3 @@
-Type error at <repo>/tests/golden/type_errors/generic_explicit_non_generic.cd:2:25: function is not generic
-  print(identity<number>(1));
-                          ^
+Type error at <repo>/tests/golden/type_errors/generic_explicit_non_generic.cd:2:27: function is not generic
+  print(identity::<number>(1));
+                            ^

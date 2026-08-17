@@ -1,0 +1,8 @@
+Program
+  Fun identity<T>(value: T): T
+    Return value
+  Let left = 1
+  Let right = 2
+  Expr (call print (< left right))
+  Expr (call print (call identity<number> 42))
+  Expr (call print (call identity<string> "ok"))

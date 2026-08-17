@@ -2,7 +2,7 @@ import "lib.cd";
 import "lib.cd" as lib;
 
 let direct = identity(1);
-let namespaced = lib.identity<number>(2);
+let namespaced = lib.identity::<number>(2);
 let box: Boxed = Boxed { value: 0 };
 let directMethod = box.echo(3);
 let namespaceEnum = lib.Box.Value(4);

@@ -7,11 +7,11 @@ fun render(value: ds.Result<number, string>): string {
   }
 }
 
-let success: ds.Result<number, string> = ds.ok<number, string>(7);
-let failure: ds.Result<number, string> = ds.err<number, string>("bad");
-let explicit = ds.Result.Ok<number, string>(9);
-let explicitError = ds.Result.Err<number, string>("worse");
-let factoryExplicit = ds.ok<number, string>(11);
+let success: ds.Result<number, string> = ds.ok::<number, string>(7);
+let failure: ds.Result<number, string> = ds.err::<number, string>("bad");
+let explicit = ds.Result.Ok::<number, string>(9);
+let explicitError = ds.Result.Err::<number, string>("worse");
+let factoryExplicit = ds.ok::<number, string>(11);
 
 print(render(success));
 print(render(failure));

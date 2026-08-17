@@ -4,7 +4,7 @@ fun ascending(left: number, right: number): bool {
   return left < right;
 }
 
-let queue = ds.newPriorityQueue<number>(ascending);
+let queue = ds.newPriorityQueue::<number>(ascending);
 print(queue.front());
 queue.enqueue(8);
 queue.enqueue(2);
@@ -34,7 +34,7 @@ fun descending(left: number, right: number): bool {
   return left > right;
 }
 
-let maxQueue = ds.newPriorityQueue<number>(descending);
+let maxQueue = ds.newPriorityQueue::<number>(descending);
 maxQueue.enqueue(4);
 maxQueue.enqueue(9);
 maxQueue.enqueue(7);

@@ -1,6 +1,6 @@
 import "../library/data_structures.cd" as ds;
 
-let stack = ds.newStack<number>();
+let stack = ds.newStack::<number>();
 stack.push(10);
 stack.push(20);
 print stack.top();
@@ -10,7 +10,7 @@ print stack.pop();
 print stack.pop();
 print stack.isEmpty();
 
-let queue = ds.newQueue<string>();
+let queue = ds.newQueue::<string>();
 queue.enqueue("first");
 queue.enqueue("second");
 print queue.front();
@@ -21,7 +21,7 @@ print queue.dequeue();
 queue.enqueue("third");
 print queue.snapshot();
 
-let deque = ds.newDeque<number>();
+let deque = ds.newDeque::<number>();
 deque.addFront(2);
 deque.addFront(1);
 deque.addBack(3);
@@ -33,7 +33,7 @@ fun ascending(left: number, right: number): bool {
   return left < right;
 }
 
-let heap = ds.newBinaryHeap<number>(ascending);
+let heap = ds.newBinaryHeap::<number>(ascending);
 heap.add(5);
 heap.add(1);
 heap.add(3);
@@ -41,7 +41,7 @@ print heap.peek();
 print heap.take();
 print heap.snapshot();
 
-let priorities = ds.newPriorityQueue<number>(ascending);
+let priorities = ds.newPriorityQueue::<number>(ascending);
 priorities.enqueue(8);
 priorities.enqueue(2);
 priorities.enqueue(5);
@@ -49,40 +49,40 @@ print priorities.front();
 print priorities.dequeue();
 print priorities.snapshot();
 
-let maybe = ds.some<number>(42);
+let maybe = ds.some::<number>(42);
 match maybe {
   ds.Option.Some(value) => { print value; }
   ds.Option.None => { print 0; }
 }
 
-let absent = ds.none<string>();
+let absent = ds.none::<string>();
 match absent {
   ds.Option.Some(value) => { print value; }
   ds.Option.None => { print "missing"; }
 }
 
-let result: ds.Result<number, string> = ds.ok<number, string>(42);
+let result: ds.Result<number, string> = ds.ok::<number, string>(42);
 match result {
   ds.Result.Ok(value) => { print value; }
   ds.Result.Err(error) => { print 0; }
 }
 
-let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
+let list = ds.prepend(2, ds.prepend(1, ds.emptyList::<number>()));
 print ds.toArray(list);
 print ds.toArray(ds.reverse(list));
 
-let seen = ds.newSet<number>();
+let seen = ds.newSet::<number>();
 seen.add(2);
 seen.add(2);
 seen.add(1);
 print seen.snapshot();
 
-let bag = ds.newMultiSet<string>();
+let bag = ds.newMultiSet::<string>();
 bag.add("tag");
 bag.add("tag");
 print bag.countOf("tag");
 
-let index = ds.newMultiMap<string, number>();
+let index = ds.newMultiMap::<string, number>();
 index.add("even", 2);
 index.add("even", 4);
 print index.getAll("even");

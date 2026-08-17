@@ -3,5 +3,5 @@ import "lib.cd" as lib;
 
 let direct: Box = Box { value: 0 };
 let namespaced: lib.Box = lib.Box { value: 0 };
-print(direct.echo<number>(7));
-print(namespaced.echo<string>("module"));
+print(direct.echo::<number>(7));
+print(namespaced.echo::<string>("module"));

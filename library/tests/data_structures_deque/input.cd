@@ -1,6 +1,6 @@
 import "../../data_structures.cd" as ds;
 
-let deque = ds.newDeque<number>();
+let deque = ds.newDeque::<number>();
 print(deque.peekFront());
 print(deque.peekBack());
 print(deque.takeFront());
@@ -23,7 +23,7 @@ snapshot.push(99);
 print(deque.snapshot());
 print(snapshot);
 
-let strings = ds.newDeque<string>();
+let strings = ds.newDeque::<string>();
 strings.addBack("a");
 strings.addBack("b");
 print(strings.takeFront());
@@ -31,7 +31,7 @@ print(strings.peekBack());
 print(strings.takeBack());
 print(strings.isEmpty());
 
-let frontOnly = ds.newDeque<number>();
+let frontOnly = ds.newDeque::<number>();
 frontOnly.addFront(1);
 frontOnly.addFront(2);
 print(frontOnly.takeBack());

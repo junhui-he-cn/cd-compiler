@@ -229,15 +229,15 @@ call        = primary,
    from the enclosing function when the expression is nil. It is valid only
    in functions whose return type is `optional<U>`. *)
 
-genericCall = callTypeArguments, "(", [ arguments ], ")" ;
+genericCall = "::", callTypeArguments, "(", [ arguments ], ")" ;
 
 memberPostfix = ".", identifier,
-                [ callTypeArguments ],
+                [ "::", callTypeArguments ],
                 [ "(", [ arguments ], ")" ] ;
 
-(* A generic call uses the compact postfix form name<T>(arguments) or
-   namespace.name<T>(arguments). The parser requires the `<` to be adjacent to
-   the callee name to keep ordinary comparison expressions unambiguous. *)
+(* A generic call uses the explicit postfix form name::<T>(arguments) or
+   namespace.name::<T>(arguments). Ordinary calls infer type arguments, while
+   generic declarations and type annotations continue to use name<T>. *)
 
 callTypeArguments = "<", typeExpr,
                     { ",", typeExpr }, ">" ;

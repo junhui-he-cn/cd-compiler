@@ -303,7 +303,7 @@ fun some<T>(value: T): Option<T> {
 }
 
 fun none<T>(): Option<T> {
-  return Option.None<T>();
+  return Option.None::<T>();
 }
 
 enum Result<T, E> {
@@ -360,30 +360,30 @@ impl RingBuffer<T> {
 
   fun peek(): Option<T> {
     if (this.count == 0) {
-      return none<T>();
+      return none::<T>();
     }
     let slot = this.slots[this.head];
     match slot {
-      Option.None => { return none<T>(); }
-      Option.Some(value) => { return some<T>(value); }
+      Option.None => { return none::<T>(); }
+      Option.Some(value) => { return some::<T>(value); }
     }
   }
 
   fun read(): Option<T> {
     if (this.count == 0) {
-      return none<T>();
+      return none::<T>();
     }
     let slot = this.slots[this.head];
     match slot {
-      Option.None => { return none<T>(); }
+      Option.None => { return none::<T>(); }
       Option.Some(value) => {
-        this.slots[this.head] = Option.None<T>();
+        this.slots[this.head] = Option.None::<T>();
         this.head += 1;
         if (this.head == this.limit) {
           this.head = 0;
         }
         this.count -= 1;
-        return some<T>(value);
+        return some::<T>(value);
       }
     }
   }
@@ -414,7 +414,7 @@ fun newRingBuffer<T>(capacity: number): RingBuffer<T> {
   let slots: [Option<T>] = [];
   let mut index = 0;
   while (index < limit) {
-    slots.push(Option.None<T>());
+    slots.push(Option.None::<T>());
     index += 1;
   }
   return RingBuffer<T> { slots: slots, limit: limit, head: 0, count: 0 };
@@ -426,7 +426,7 @@ enum List<T> {
 }
 
 fun emptyList<T>(): List<T> {
-  return List.Nil<T>();
+  return List.Nil::<T>();
 }
 
 fun prepend<T>(value: T, list: List<T>): List<T> {
@@ -455,7 +455,7 @@ fun reverseInto<T>(remaining: List<T>, result: List<T>): List<T> {
 }
 
 fun reverse<T>(list: List<T>): List<T> {
-  return reverseInto(list, List.Nil<T>());
+  return reverseInto(list, List.Nil::<T>());
 }
 
 fun appendListToArray<T>(list: List<T>, values: [T]) {
@@ -512,7 +512,7 @@ fun listGet<T>(list: List<T>, index: number): optional<T> {
 
 fun listAppend<T>(list: List<T>, value: T): List<T> {
   match list {
-    List.Nil => { return List.Cons(value, List.Nil<T>()); }
+    List.Nil => { return List.Cons(value, List.Nil::<T>()); }
     List.Cons(headValue, rest) => { return List.Cons(headValue, listAppend(rest, value)); }
   }
 }
@@ -526,10 +526,10 @@ fun listConcat<T>(left: List<T>, right: List<T>): List<T> {
 
 fun listTake<T>(list: List<T>, count: number): List<T> {
   if (floor(count) != count || count <= 0) {
-    return List.Nil<T>();
+    return List.Nil::<T>();
   }
   match list {
-    List.Nil => { return List.Nil<T>(); }
+    List.Nil => { return List.Nil::<T>(); }
     List.Cons(value, rest) => { return List.Cons(value, listTake(rest, count - 1)); }
   }
 }
@@ -609,7 +609,7 @@ fun listRemoveFromEnd<T>(list: List<T>, count: number): List<T> {
     return list;
   }
   let removeIndex = values.len() - count;
-  let mut result: List<T> = emptyList<T>();
+  let mut result: List<T> = emptyList::<T>();
   let mut index = values.len();
   while (index > 0) {
     index -= 1;

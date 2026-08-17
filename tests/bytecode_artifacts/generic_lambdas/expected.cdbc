@@ -110,7 +110,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_lambdas/input.cd" text="fun<T>(value: T): T { return value; };\n\nlet identity = fun<T>(value: T): T {\n  return value;\n};\nlet head = fun<T>(values: [T]): T {\n  return values[0];\n};\nlet maybe = fun<T>(): optional<T> {\n  return nil;\n};\n\nprint(identity<number>(41));\nprint(identity(\"generic\"));\nprint(head([7, 8]));\nprint(maybe<string>());\n"
+  s0 path="tests/bytecode_artifacts/generic_lambdas/input.cd" text="fun<T>(value: T): T { return value; };\n\nlet identity = fun<T>(value: T): T {\n  return value;\n};\nlet head = fun<T>(values: [T]): T {\n  return values[0];\n};\nlet maybe = fun<T>(): optional<T> {\n  return nil;\n};\n\nprint(identity::<number>(41));\nprint(identity(\"generic\"));\nprint(head([7, 8]));\nprint(maybe::<string>());\n"
 
 debug_locations:
   main 0 = s0:1:1
@@ -122,7 +122,7 @@ debug_locations:
   main 6 = s0:9:13
   main 7 = s0:9:1
   main 8 = s0:13:7
-  main 9 = s0:13:24
+  main 9 = s0:13:26
   main 10 = s0:13:7
   main 11 = s0:13:1
   main 12 = s0:14:7
@@ -184,23 +184,23 @@ debug_ranges:
   main 6 = s0:167:203
   main 7 = s0:159:203
   main 8 = s0:215:223
-  main 9 = s0:232:234
-  main 10 = s0:215:235
-  main 11 = s0:209:236
-  main 12 = s0:244:252
-  main 13 = s0:253:262
-  main 14 = s0:244:263
-  main 15 = s0:238:264
-  main 16 = s0:272:276
-  main 17 = s0:278:279
-  main 18 = s0:281:282
-  main 19 = s0:277:282
-  main 20 = s0:272:284
-  main 21 = s0:266:285
-  main 22 = s0:293:298
-  main 23 = s0:293:308
-  main 24 = s0:287:309
-  main 25 = s0:287:309
+  main 9 = s0:234:236
+  main 10 = s0:215:237
+  main 11 = s0:209:238
+  main 12 = s0:246:254
+  main 13 = s0:255:264
+  main 14 = s0:246:265
+  main 15 = s0:240:266
+  main 16 = s0:274:278
+  main 17 = s0:280:281
+  main 18 = s0:283:284
+  main 19 = s0:279:284
+  main 20 = s0:274:286
+  main 21 = s0:268:287
+  main 22 = s0:295:300
+  main 23 = s0:295:312
+  main 24 = s0:289:313
+  main 25 = s0:289:313
   function f0 0 = s0:29:34
   function f0 1 = s0:29:34
   function f0 2 = s0:22:34

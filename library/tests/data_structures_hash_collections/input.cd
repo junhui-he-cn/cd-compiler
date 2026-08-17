@@ -13,7 +13,7 @@ fun renderMap(entries: [ds.HashMapEntry<string, number>]): string {
   return result;
 }
 
-let set = ds.newHashSet<string>();
+let set = ds.newHashSet::<string>();
 print(set.isEmpty());
 print(set.add("alpha"));
 print(set.add("beta"));
@@ -24,7 +24,7 @@ print(set.discard("alpha"));
 print(set.discard("alpha"));
 print(set.snapshot());
 
-let growing = ds.newHashSet<number>();
+let growing = ds.newHashSet::<number>();
 let number = 0;
 while (number < 12) {
   growing.add(number);
@@ -35,7 +35,7 @@ print(growing.has(11));
 print(growing.discard(5));
 print(growing.has(5));
 
-let mapping = ds.newHashMap<string, number>();
+let mapping = ds.newHashMap::<string, number>();
 print(mapping.isEmpty());
 print(mapping.put("alpha", 1));
 print(mapping.put("beta", 2));
@@ -58,13 +58,13 @@ print(mapping.discard("key0"));
 print(mapping.has("key0"));
 
 let arrayKey = [1];
-let arrayKeys = ds.newHashSet<[number]>();
+let arrayKeys = ds.newHashSet::<[number]>();
 print(arrayKeys.add(arrayKey));
 arrayKey.push(2);
 print(arrayKeys.has(arrayKey));
 print(arrayKeys.has([1, 2]));
 
-let arrayMap = ds.newHashMap<[number], string>();
+let arrayMap = ds.newHashMap::<[number], string>();
 print(arrayMap.put(arrayKey, "array"));
 arrayKey.push(3);
 print(arrayMap.get(arrayKey));
@@ -75,7 +75,7 @@ struct MutableKey {
 }
 
 let mutableKey = MutableKey { value: 1 };
-let objectKeys = ds.newHashSet<MutableKey>();
+let objectKeys = ds.newHashSet::<MutableKey>();
 print(objectKeys.add(mutableKey));
 mutableKey.value = 2;
 print(objectKeys.has(mutableKey));

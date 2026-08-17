@@ -4,7 +4,7 @@ fun ascending(left: number, right: number): bool {
   return left < right;
 }
 
-let heap = ds.newBinaryHeap<number>(ascending);
+let heap = ds.newBinaryHeap::<number>(ascending);
 print(heap.peek());
 heap.add(5);
 heap.add(1);
@@ -36,7 +36,7 @@ fun descending(left: number, right: number): bool {
   return left > right;
 }
 
-let maxHeap = ds.newBinaryHeap<number>(descending);
+let maxHeap = ds.newBinaryHeap::<number>(descending);
 maxHeap.add(4);
 maxHeap.add(9);
 maxHeap.add(7);

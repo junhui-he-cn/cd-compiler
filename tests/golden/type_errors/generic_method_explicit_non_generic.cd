@@ -3,4 +3,4 @@ impl Box {
   fun getValue(): number { return this.value; }
 }
 let box: Box = Box { value: 1 };
-box.getValue<number>();
+box.getValue::<number>();

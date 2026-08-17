@@ -16,4 +16,4 @@ print(ds.rotatedBinarySearch(words, "cow", ds.stringLess));
 print(words);
 
 let empty: [number] = [];
-print(ds.rotatedBinarySearch<number>(empty, 4, ascendingNumber));
+print(ds.rotatedBinarySearch::<number>(empty, 4, ascendingNumber));

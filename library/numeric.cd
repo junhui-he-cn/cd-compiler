@@ -226,7 +226,7 @@ impl PriorityQueue<T> {
 }
 
 fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
-  return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
+  return PriorityQueue<T> { heap: newBinaryHeap::<T>(less) };
 }
 
 fun medianLowerLess(left: number, right: number): bool {
@@ -304,8 +304,8 @@ impl MedianHeap {
 
 fun newMedianHeap(): MedianHeap {
   return MedianHeap {
-    lower: newBinaryHeap<number>(medianLowerLess),
-    upper: newBinaryHeap<number>(medianUpperLess)
+    lower: newBinaryHeap::<number>(medianLowerLess),
+    upper: newBinaryHeap::<number>(medianUpperLess)
   };
 }
 

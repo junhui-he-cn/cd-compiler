@@ -15,4 +15,4 @@ print(reversed);
 let words = ["alpha", "beta", "alpha"];
 print(ds.linearSearch(words, "beta"));
 print(ds.countValue(words, "alpha"));
-print(ds.reverseArray<number>([]));
+print(ds.reverseArray::<number>([]));

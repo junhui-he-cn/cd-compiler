@@ -15,5 +15,5 @@ fun isLong(word: string): bool {
 print(ds.stablePartition(["ant", "bear", "cat", "dove"], isLong));
 
 let empty: [number] = [];
-print(ds.stablePartition<number>(empty, isAtMostThree));
+print(ds.stablePartition::<number>(empty, isAtMostThree));
 print(ds.stablePartition([1, 3, 5], isAtMostThree));

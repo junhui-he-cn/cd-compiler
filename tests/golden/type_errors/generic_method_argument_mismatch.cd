@@ -3,4 +3,4 @@ impl Box {
   fun echo<T>(value: T): T { return value; }
 }
 let box: Box = Box { value: 0 };
-box.echo<number>("bad");
+box.echo::<number>("bad");

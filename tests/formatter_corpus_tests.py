@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ERROR_CASES = {"runtime_errors", "parse_errors", "type_errors", "import_errors"}
-EXPECTED_CASE_COUNT = 236
+EXPECTED_CASE_COUNT = 237
 
 
 def compiler_inputs(case_dir: Path) -> list[Path]:

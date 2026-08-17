@@ -1,2 +1,2 @@
 let identity = fun<T>(value: T): T { return value; };
-identity<number>("bad");
+identity::<number>("bad");

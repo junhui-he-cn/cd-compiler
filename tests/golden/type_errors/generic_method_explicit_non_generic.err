@@ -1,3 +1,3 @@
-Type error at <repo>/tests/golden/type_errors/generic_method_explicit_non_generic.cd:6:22: function is not generic
-  box.getValue<number>();
-                       ^
+Type error at <repo>/tests/golden/type_errors/generic_method_explicit_non_generic.cd:6:24: function is not generic
+  box.getValue::<number>();
+                         ^

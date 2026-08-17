@@ -1,6 +1,6 @@
 import "../../data_structures.cd" as ds;
 
-let empty = ds.emptyTree<number>();
+let empty = ds.emptyTree::<number>();
 print(ds.treeSize(empty));
 print(ds.treeHeight(empty));
 print(ds.treeLeafCount(empty));
@@ -38,6 +38,6 @@ print(snapshot);
 let words = ds.treeNode(
   "root",
   ds.treeLeaf("left"),
-  ds.emptyTree<string>()
+  ds.emptyTree::<string>()
 );
 print(ds.treePreorder(words));

@@ -473,7 +473,7 @@ void test_declaration_index_signature_shapes()
         "fun identity<T>(value: T): T { return value; }\n"
         "let box: Box<number> = Box { value: 1 };\n"
         "let result: Result<number> = Result.Ok(1);\n"
-        "print(identity<number>(1));\n");
+        "print(identity::<number>(1));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
     const auto* structDecl = dynamic_cast<const StructDeclStmt*>(entryModule(program).statements[0].get());
@@ -1177,7 +1177,7 @@ void test_variant_constructor_lowering_metadata()
         "enum Result { Ok(number), Empty }\n"
         "enum Option<T> { Some(T), None }\n"
         "let ok = Result.Ok(1);\n"
-        "let none: Option<number> = Option.None<number>();\n"
+        "let none: Option<number> = Option.None::<number>();\n"
         "print(ok);\n"
         "print(none);\n");
     FrontendSession frontend;

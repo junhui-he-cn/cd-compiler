@@ -1,0 +1,9 @@
+fun identity<T>(value: T): T {
+  return value;
+}
+
+let left = 1;
+let right = 2;
+print(left < right);
+print(identity :: <number>(42));
+print(identity::<string>("ok"));

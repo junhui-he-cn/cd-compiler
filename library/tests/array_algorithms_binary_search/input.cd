@@ -26,6 +26,6 @@ print(ds.upperBound(words, "cat", ds.stringLess));
 print(ds.binarySearch(words, "dog", ds.stringLess));
 
 let empty: [number] = [];
-print(ds.lowerBound<number>(empty, 4, ascendingNumber));
-print(ds.upperBound<number>(empty, 4, ascendingNumber));
-print(ds.binarySearch<number>(empty, 4, ascendingNumber));
+print(ds.lowerBound::<number>(empty, 4, ascendingNumber));
+print(ds.upperBound::<number>(empty, 4, ascendingNumber));
+print(ds.binarySearch::<number>(empty, 4, ascendingNumber));

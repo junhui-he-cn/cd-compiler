@@ -4,7 +4,7 @@ fun ascending(left: number, right: number): bool {
   return left < right;
 }
 
-let empty = ds.emptyTree<number>();
+let empty = ds.emptyTree::<number>();
 let tree0 = ds.bstInsert(empty, 4, ascending);
 let tree1 = ds.bstInsert(tree0, 2, ascending);
 let tree2 = ds.bstInsert(tree1, 6, ascending);

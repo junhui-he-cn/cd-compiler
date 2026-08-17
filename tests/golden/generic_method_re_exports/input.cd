@@ -1,4 +1,4 @@
 import "./api.cd" as lib;
 
 let box: lib.Box = lib.Box { value: 0 };
-print(box.echo<number>(9));
+print(box.echo::<number>(9));

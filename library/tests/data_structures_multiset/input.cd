@@ -14,7 +14,7 @@ fun renderEntries(values: [ds.MultiSetEntry<number>]): string {
   return result;
 }
 
-let numbers = ds.newMultiSet<number>();
+let numbers = ds.newMultiSet::<number>();
 print(numbers.countOf(4));
 print(numbers.has(4));
 numbers.add(4);
@@ -33,7 +33,7 @@ print(renderEntries(numbers.entries()));
 print(numbers.takeOne(4));
 print(numbers.has(2));
 
-let words = ds.newMultiSet<string>();
+let words = ds.newMultiSet::<string>();
 words.add("alpha");
 words.add("alpha");
 words.add("beta");

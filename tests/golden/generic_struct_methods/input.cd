@@ -27,7 +27,7 @@ let numberBox: NumberBox<number> = NumberBox { value: 3 };
 print(box.get());
 print(box.set(2));
 print(box.value);
-let textBox = box.wrap<string>("text");
+let textBox = box.wrap::<string>("text");
 print(textBox.value);
 print(box.wrap("inferred").value);
 print(numberBox.get());

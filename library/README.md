@@ -33,21 +33,21 @@ Import the module with a namespace alias:
 ```cd
 import "./library/data_structures.cd" as ds;
 
-let stack = ds.newStack<number>();
+let stack = ds.newStack::<number>();
 stack.push(10);
 stack.push(20);
 print stack.top();
 print stack.pop();
 print stack.snapshot();
 
-let queue = ds.newQueue<string>();
+let queue = ds.newQueue::<string>();
 queue.enqueue("first");
 queue.enqueue("second");
 print queue.front();
 print queue.dequeue();
 print queue.snapshot();
 
-let deque = ds.newDeque<number>();
+let deque = ds.newDeque::<number>();
 deque.addFront(2);
 deque.addFront(1);
 deque.addBack(3);
@@ -55,7 +55,7 @@ print deque.peekFront();
 print deque.peekBack();
 print deque.snapshot();
 
-let ring = ds.newRingBuffer<number>(2);
+let ring = ds.newRingBuffer::<number>(2);
 print ring.offer(10);
 print ring.offer(20);
 print ring.offer(30);
@@ -66,40 +66,40 @@ fun ascending(left: number, right: number): bool {
   return left < right;
 }
 
-let heap = ds.newBinaryHeap<number>(ascending);
+let heap = ds.newBinaryHeap::<number>(ascending);
 heap.add(5);
 heap.add(1);
 heap.add(3);
 print heap.peek();
 print heap.take();
 
-let maybe = ds.some<number>(42);
+let maybe = ds.some::<number>(42);
 print match maybe {
   ds.Option.Some(value) => value,
   ds.Option.None => 0,
 };
 
-let result: ds.Result<number, string> = ds.ok<number, string>(42);
+let result: ds.Result<number, string> = ds.ok::<number, string>(42);
 print match result {
   ds.Result.Ok(value) => value,
   ds.Result.Err(error) => 0,
 };
 
-let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
+let list = ds.prepend(2, ds.prepend(1, ds.emptyList::<number>()));
 print ds.toArray(ds.reverse(list));
 
-let seen = ds.newSet<number>();
+let seen = ds.newSet::<number>();
 seen.add(2);
 seen.add(2);
 seen.add(1);
 print seen.snapshot();
 
-let bag = ds.newMultiSet<string>();
+let bag = ds.newMultiSet::<string>();
 bag.add("tag");
 bag.add("tag");
 print bag.countOf("tag");
 
-let index = ds.newMultiMap<string, number>();
+let index = ds.newMultiMap::<string, number>();
 index.add("even", 2);
 index.add("even", 4);
 print index.getAll("even");
@@ -174,7 +174,7 @@ fun ascending(left: number, right: number): bool {
   return left < right;
 }
 
-let ordered = ds.bstInsert(ds.bstInsert(ds.emptyTree<number>(), 2, ascending), 1, ascending);
+let ordered = ds.bstInsert(ds.bstInsert(ds.emptyTree::<number>(), 2, ascending), 1, ascending);
 print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
 print ds.shellSort(values, ascending);
@@ -276,10 +276,10 @@ The factory functions make the generic argument explicit while keeping the
 backing fields out of normal construction code:
 
 ```cd
-let numbers = ds.newStack<number>();
-let names = ds.newQueue<string>();
-let work = ds.newDeque<number>();
-let maybeNumber = ds.some<number>(42);
+let numbers = ds.newStack::<number>();
+let names = ds.newQueue::<string>();
+let work = ds.newDeque::<number>();
+let maybeNumber = ds.some::<number>(42);
 ```
 
 ## API
@@ -853,7 +853,7 @@ return arrays:
 
 `reverseArray`, `linearSearch`, and `countValue` are all `O(n)`; only
 `reverseArray` allocates a new outer array. Empty array arguments need an
-explicit type argument, such as `reverseArray<number>([])`, because they carry
+explicit type argument, such as `reverseArray::<number>([])`, because they carry
 no element from which to infer `T`.
 
 `rotateArray<T>(values, shift)` returns a shallow copy rotated right for a

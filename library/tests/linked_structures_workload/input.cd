@@ -1,6 +1,6 @@
 import "../../data_structures.cd" as ds;
 
-let list = ds.newLinkedList<number>();
+let list = ds.newLinkedList::<number>();
 let value = 0;
 while (value < 1000) {
   list.pushBack(value);

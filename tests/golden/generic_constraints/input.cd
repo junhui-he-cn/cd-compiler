@@ -38,7 +38,7 @@ let enumValue = Box.Value(6);
 print(copied);
 print(kept);
 print(lambda(3));
-print(identity<number>(4));
+print(identity::<number>(4));
 print(pair("key", 7));
 print(box.echo(5));
 print(outer(6));

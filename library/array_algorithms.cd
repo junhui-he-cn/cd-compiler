@@ -342,7 +342,7 @@ fun minimumJumps(values: [number]): optional<number> {
 }
 
 fun huffmanMergeCost(weights: [number]): optional<number> {
-  let working = newBinaryHeap<number>(numberLess);
+  let working = newBinaryHeap::<number>(numberLess);
   let mut index = 0;
   while (index < weights.len()) {
     if (weights[index] < 0) {
@@ -407,7 +407,7 @@ fun mergeHeadLess<T>(left: MergeHead<T>, right: MergeHead<T>): bool {
 
 fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
   let result: [T] = [];
-  let heads = newBinaryHeap<MergeHead<T>>(mergeHeadLess);
+  let heads = newBinaryHeap::<MergeHead<T>>(mergeHeadLess);
   let mut sequenceIndex = 0;
   while (sequenceIndex < sequences.len()) {
     if (sequences[sequenceIndex].len() > 0) {
@@ -592,7 +592,7 @@ fun differenceValues<T: Eq>(left: [T], right: [T]): [T] {
 }
 
 fun frequencyEntries<T: Eq>(values: [T]): [MultiSetEntry<T>] {
-  let counts = newMultiSet<T>();
+  let counts = newMultiSet::<T>();
   let mut index = 0;
   while (index < values.len()) {
     counts.add(values[index]);

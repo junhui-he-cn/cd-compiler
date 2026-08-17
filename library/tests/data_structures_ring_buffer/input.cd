@@ -7,7 +7,7 @@ fun describe(value: ds.Option<number>): string {
   }
 }
 
-let buffer = ds.newRingBuffer<number>(3);
+let buffer = ds.newRingBuffer::<number>(3);
 print(buffer.capacity());
 print(buffer.isEmpty());
 print(buffer.isFull());
@@ -37,9 +37,9 @@ print(describe(buffer.read()));
 print(buffer.offer(8));
 print(buffer.snapshot());
 
-let empty = ds.newRingBuffer<string>(2.9);
+let empty = ds.newRingBuffer::<string>(2.9);
 print(empty.capacity());
 print(empty.offer("x"));
-let zero = ds.newRingBuffer<number>(-1);
+let zero = ds.newRingBuffer::<number>(-1);
 print(zero.capacity());
 print(zero.offer(1));

@@ -13,7 +13,7 @@ fun render(entries: [ds.BiMapEntry<string, number>]): string {
   return result;
 }
 
-let mapping = ds.newBiMap<string, number>();
+let mapping = ds.newBiMap::<string, number>();
 print(mapping.isEmpty());
 print(mapping.get("missing"));
 print(mapping.getKey(99));

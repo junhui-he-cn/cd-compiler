@@ -292,7 +292,7 @@ enum Result<T> {
   Err(string),
 }
 
-print(identity<number>(42));
+print(identity::<number>(42));
 let box: Box<number> = Box { value: 42 };
 let result: Result<number> = Result.Ok(42);
 ```
@@ -303,7 +303,7 @@ let result: Result<number> = Result.Ok(42);
 
 从高到低的主要优先级如下：
 
-1. 调用、泛型调用、索引和成员访问：`f(x)`、`f<number>(x)`、`a[i]`、`x.field`
+1. 调用、泛型调用、索引和成员访问：`f(x)`、`f::<number>(x)`、`a[i]`、`x.field`
 2. 一元运算：`!x`、`-x`
 3. 乘除：`*`、`/`
 4. 加减：`+`、`-`
@@ -434,11 +434,11 @@ fun identity<T>(value: T): T {
   return value;
 }
 
-let text = identity<string>("hello");
+let text = identity::<string>("hello");
 let keepNumber = fun<T: number>(value: T): T {
   return value;
 };
-print(keepNumber<number>(41));
+print(keepNumber::<number>(41));
 ```
 
 函数类型写作 `fun(parameterType, ...): returnType`，可以用于 `let`、函数参数和函数返回值。未注解的函数参数、返回值和回调在缺少上下文时不能完全推断，遇到兼容性诊断时应补充注解。泛型函数值不会自动转换成单态函数类型；传给 `map`、`filter` 等回调 helper 时，所有泛型参数都必须能从已知输入和签名推断。
@@ -834,13 +834,13 @@ cargo run --manifest-path vm-rs/Cargo.toml -- profile program.cdbc
 ```cd
 import "../library/data_structures.cd" as ds;
 
-let stack = ds.newStack<number>();
+let stack = ds.newStack::<number>();
 stack.push(10);
 stack.push(20);
 print(stack.top());
 print(stack.pop());
 
-let queue = ds.newQueue<string>();
+let queue = ds.newQueue::<string>();
 queue.enqueue("first");
 print(queue.dequeue());
 ```
