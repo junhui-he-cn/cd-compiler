@@ -294,6 +294,16 @@ void TypeChecker::checkStructDeclaration(const StructDeclStmt& statement)
     endTypeParameterScope();
     structTypes_[statement.name.lexeme] = std::move(declaration);
     structCheckStates_[statement.name.lexeme] = StructCheckState::Checked;
+
+    if (statement.exportKeyword && !moduleStack_.empty()) {
+        const std::size_t moduleId = moduleStack_.back();
+        ensureExportNameAvailable(moduleId, statement.name);
+        moduleSymbols_.recordStructExport(
+            moduleId,
+            statement.name.lexeme,
+            structTypes_.at(statement.name.lexeme));
+        recordStructMethodExports(moduleId, statement.name.lexeme);
+    }
 }
 
 void TypeChecker::checkEnumDeclaration(const EnumDeclStmt& statement)
@@ -796,5 +806,10 @@ void TypeChecker::checkImpl(const ImplStmt& statement)
 
     if (!structType->genericParameters.empty()) {
         endTypeParameterScope();
+    }
+
+    if (!moduleStack_.empty() && moduleSymbols_.hasStructExport(
+            moduleStack_.back(), statement.typeName.lexeme)) {
+        recordStructMethodExports(moduleStack_.back(), statement.typeName.lexeme);
     }
 }

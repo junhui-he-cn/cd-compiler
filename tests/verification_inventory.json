@@ -5415,14 +5415,14 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
-      "case_id": "golden.parse_errors.export_invalid_fun",
+      "case_id": "golden.parse_errors.export_invalid_enum",
       "runner": "golden",
-      "result_name": "parse_errors/export_invalid_fun default(ast)",
+      "result_name": "parse_errors/export_invalid_enum default(ast)",
       "stage": "parse-error",
       "capability_tags": [
         "golden",
         "parse_errors",
-        "fixture:export_invalid_fun"
+        "fixture:export_invalid_enum"
       ],
       "backend": "cpp",
       "expected_result_kind": "diagnostic-and-exit",
@@ -5433,12 +5433,12 @@
       ],
       "terminal_boundary": "parse_diagnostic",
       "sources": [
-        "tests/golden/parse_errors/export_invalid_fun.cd"
+        "tests/golden/parse_errors/export_invalid_enum.cd"
       ],
       "expected_files": [
-        "tests/golden/parse_errors/export_invalid_fun.cd",
-        "tests/golden/parse_errors/export_invalid_fun.err",
-        "tests/golden/parse_errors/export_invalid_fun.exit"
+        "tests/golden/parse_errors/export_invalid_enum.cd",
+        "tests/golden/parse_errors/export_invalid_enum.err",
+        "tests/golden/parse_errors/export_invalid_enum.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -5467,34 +5467,6 @@
         "tests/golden/parse_errors/export_invalid_statement.cd",
         "tests/golden/parse_errors/export_invalid_statement.err",
         "tests/golden/parse_errors/export_invalid_statement.exit"
-      ],
-      "fixture": "tests/golden/parse_errors"
-    },
-    {
-      "case_id": "golden.parse_errors.export_invalid_struct",
-      "runner": "golden",
-      "result_name": "parse_errors/export_invalid_struct default(ast)",
-      "stage": "parse-error",
-      "capability_tags": [
-        "golden",
-        "parse_errors",
-        "fixture:export_invalid_struct"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "parse_diagnostic"
-      ],
-      "terminal_boundary": "parse_diagnostic",
-      "sources": [
-        "tests/golden/parse_errors/export_invalid_struct.cd"
-      ],
-      "expected_files": [
-        "tests/golden/parse_errors/export_invalid_struct.cd",
-        "tests/golden/parse_errors/export_invalid_struct.err",
-        "tests/golden/parse_errors/export_invalid_struct.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -10514,6 +10486,117 @@
         "tests/golden/compound_assignment_expression_result/ir.out"
       ],
       "fixture": "tests/golden/compound_assignment_expression_result"
+    },
+    {
+      "case_id": "golden.success.declarative_exports.ast",
+      "runner": "golden",
+      "result_name": "declarative_exports default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:declarative_exports"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/declarative_exports/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/declarative_exports/ast.out"
+      ],
+      "fixture": "tests/golden/declarative_exports"
+    },
+    {
+      "case_id": "golden.success.declarative_exports.bytecode",
+      "runner": "golden",
+      "result_name": "declarative_exports --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:declarative_exports"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/declarative_exports/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/declarative_exports/bytecode.out"
+      ],
+      "fixture": "tests/golden/declarative_exports"
+    },
+    {
+      "case_id": "golden.success.declarative_exports.ir",
+      "runner": "golden",
+      "result_name": "declarative_exports --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:declarative_exports"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/declarative_exports/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/declarative_exports/ir.out"
+      ],
+      "fixture": "tests/golden/declarative_exports"
+    },
+    {
+      "case_id": "golden.success.declarative_exports.module_interface",
+      "runner": "golden",
+      "result_name": "declarative_exports --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:declarative_exports"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/declarative_exports/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/declarative_exports/module-interface.out"
+      ],
+      "fixture": "tests/golden/declarative_exports"
     },
     {
       "case_id": "golden.success.else_if_chain.ast",
@@ -29464,9 +29547,9 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
-      "case_id": "malformed.parse_error.export_invalid_fun",
+      "case_id": "malformed.parse_error.export_invalid_enum",
       "runner": "malformed",
-      "result_name": "malformed.parse_error.export_invalid_fun",
+      "result_name": "malformed.parse_error.export_invalid_enum",
       "stage": "diagnostic-recovery",
       "capability_tags": [
         "malformed",
@@ -29483,12 +29566,12 @@
       ],
       "terminal_boundary": "parse_diagnostic",
       "sources": [
-        "tests/golden/parse_errors/export_invalid_fun.cd"
+        "tests/golden/parse_errors/export_invalid_enum.cd"
       ],
       "expected_files": [
-        "tests/golden/parse_errors/export_invalid_fun.cd",
-        "tests/golden/parse_errors/export_invalid_fun.err",
-        "tests/golden/parse_errors/export_invalid_fun.exit"
+        "tests/golden/parse_errors/export_invalid_enum.cd",
+        "tests/golden/parse_errors/export_invalid_enum.err",
+        "tests/golden/parse_errors/export_invalid_enum.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -29518,35 +29601,6 @@
         "tests/golden/parse_errors/export_invalid_statement.cd",
         "tests/golden/parse_errors/export_invalid_statement.err",
         "tests/golden/parse_errors/export_invalid_statement.exit"
-      ],
-      "fixture": "tests/golden/parse_errors"
-    },
-    {
-      "case_id": "malformed.parse_error.export_invalid_struct",
-      "runner": "malformed",
-      "result_name": "malformed.parse_error.export_invalid_struct",
-      "stage": "diagnostic-recovery",
-      "capability_tags": [
-        "malformed",
-        "parser",
-        "diagnostic-recovery",
-        "golden-corpus"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "reject",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "parse_diagnostic"
-      ],
-      "terminal_boundary": "parse_diagnostic",
-      "sources": [
-        "tests/golden/parse_errors/export_invalid_struct.cd"
-      ],
-      "expected_files": [
-        "tests/golden/parse_errors/export_invalid_struct.cd",
-        "tests/golden/parse_errors/export_invalid_struct.err",
-        "tests/golden/parse_errors/export_invalid_struct.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -38857,6 +38911,68 @@
         "tests/golden/contextual_lambda_return_function/run.out"
       ],
       "fixture": "tests/golden/contextual_lambda_return_function"
+    },
+    {
+      "case_id": "rust_vm.golden.declarative_exports.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "declarative_exports emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:declarative_exports"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/declarative_exports/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/declarative_exports/run.out"
+      ],
+      "fixture": "tests/golden/declarative_exports"
+    },
+    {
+      "case_id": "rust_vm.golden.declarative_exports.run",
+      "runner": "rust_vm_golden",
+      "result_name": "declarative_exports rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:declarative_exports"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/declarative_exports/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/declarative_exports/run.out"
+      ],
+      "fixture": "tests/golden/declarative_exports"
     },
     {
       "case_id": "rust_vm.golden.else_if_chain.emit",

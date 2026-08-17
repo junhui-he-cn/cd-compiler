@@ -129,14 +129,28 @@ void IRCompiler::collectExportedDeclarations(const Program& program)
         return;
     }
 
-    const auto markExport = [this](const ExportStmt& statement, ScopeId scopeId) {
+    const auto markExportName = [this](const Token& name, ScopeId scopeId) {
+        if (const std::optional<DeclarationId> declaration
+            = declarationIndex_->lookup(scopeId, name.lexeme)) {
+            exportedDeclarations_.insert(*declaration);
+        }
+    };
+    const auto markExport = [&markExportName](const ExportStmt& statement, ScopeId scopeId) {
         if (statement.sourcePath) {
             return;
         }
         for (const Token& name : statement.names) {
-            if (const std::optional<DeclarationId> declaration
-                = declarationIndex_->lookup(scopeId, name.lexeme)) {
-                exportedDeclarations_.insert(*declaration);
+            markExportName(name, scopeId);
+        }
+    };
+    const auto markDeclarativeExport = [&markExportName](const Stmt& statement, ScopeId scopeId) {
+        if (const auto* function = dynamic_cast<const FunctionStmt*>(&statement)) {
+            if (function->exportKeyword) {
+                markExportName(function->name, scopeId);
+            }
+        } else if (const auto* structure = dynamic_cast<const StructDeclStmt*>(&statement)) {
+            if (structure->exportKeyword) {
+                markExportName(structure->name, scopeId);
             }
         }
     };
@@ -163,6 +177,7 @@ void IRCompiler::collectExportedDeclarations(const Program& program)
                 if (const auto* exportStatement = dynamic_cast<const ExportStmt*>(child.get())) {
                     markExport(*exportStatement, moduleDeclaration->scopeId);
                 }
+                markDeclarativeExport(*child, moduleDeclaration->scopeId);
             }
         }
         return;
@@ -182,6 +197,7 @@ void IRCompiler::collectExportedDeclarations(const Program& program)
         if (const auto* exportStatement = dynamic_cast<const ExportStmt*>(statement.get())) {
             markExport(*exportStatement, *rootScope);
         }
+        markDeclarativeExport(*statement, *rootScope);
     }
 }
 

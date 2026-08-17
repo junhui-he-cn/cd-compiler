@@ -335,6 +335,13 @@ StmtPtr Parser::declaration()
 StmtPtr Parser::exportDeclaration()
 {
     Token keyword = previous();
+    if (match(TokenType::Fun)) {
+        return functionDeclaration(std::optional<Token>{std::move(keyword)});
+    }
+    if (match(TokenType::Struct)) {
+        return structDeclaration(std::optional<Token>{std::move(keyword)});
+    }
+
     std::vector<Token> names;
 
     names.push_back(consume(TokenType::Identifier, "expected identifier after `export`"));
@@ -356,7 +363,7 @@ StmtPtr Parser::exportDeclaration()
         span);
 }
 
-StmtPtr Parser::structDeclaration()
+StmtPtr Parser::structDeclaration(std::optional<Token> exportKeyword)
 {
     Token keyword = previous();
     Token name = consume(TokenType::Identifier, "expected struct name after `struct`");
@@ -364,10 +371,15 @@ StmtPtr Parser::structDeclaration()
     consume(TokenType::LeftBrace, "expected `{` after struct name");
     std::vector<StructFieldDecl> fields = structFields();
     consume(TokenType::RightBrace, "expected `}` after struct fields");
-    const std::optional<SourceSpan> span = spanForToken(keyword);
+    const std::optional<SourceSpan> span = exportKeyword
+        ? spanForToken(*exportKeyword)
+        : spanForToken(keyword);
     return withSpan(
         std::make_unique<StructDeclStmt>(
-            std::move(name), std::move(parsedTypeParameters), std::move(fields)),
+            std::move(name),
+            std::move(parsedTypeParameters),
+            std::move(fields),
+            std::move(exportKeyword)),
         span);
 }
 
@@ -520,7 +532,7 @@ MethodDecl Parser::methodDeclaration()
         std::move(body));
 }
 
-StmtPtr Parser::functionDeclaration()
+StmtPtr Parser::functionDeclaration(std::optional<Token> exportKeyword)
 {
     Token keyword = previous();
     Token name = consume(TokenType::Identifier, "expected function name after `fun`");
@@ -534,14 +546,17 @@ StmtPtr Parser::functionDeclaration()
     ++blockDepth_;
     std::vector<StmtPtr> body = blockStatements();
     --blockDepth_;
-    const std::optional<SourceSpan> span = spanForToken(keyword);
+    const std::optional<SourceSpan> span = exportKeyword
+        ? spanForToken(*exportKeyword)
+        : spanForToken(keyword);
     return withSpan(
         std::make_unique<FunctionStmt>(
             std::move(name),
             std::move(parsedTypeParameters),
             std::move(parsedParameters),
             std::move(returnTypeName),
-            std::move(body)),
+            std::move(body),
+            std::move(exportKeyword)),
         span);
 }
 

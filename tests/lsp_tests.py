@@ -599,6 +599,7 @@ def main() -> int:
                         "text": (
                             "let value = 42;\n"
                             "export value;\n"
+                            "export fun answer(): number { return 42; }\n"
                             "struct Box { value: number }\n"
                             "impl Box { fun get(): number { return this.value; } }\n"
                             "enum Result { Ok(number), Empty }\n"
@@ -630,6 +631,7 @@ def main() -> int:
         imported_source = (
             'import "./compiler-design-lsp-module.cd";\n'
             "print(value);\n"
+            "print(answer());\n"
         )
         send(
             process,
@@ -666,6 +668,30 @@ def main() -> int:
         }:
             raise AssertionError(
                 f"cross-module definition response mismatch: {imported_definition!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 18,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 2, "character": 8},
+                },
+            },
+        )
+        declarative_definition = receive(process)
+        if declarative_definition.get("result") != {
+            "uri": module_uri,
+            "range": {
+                "start": {"line": 2, "character": 11},
+                "end": {"line": 2, "character": 17},
+            },
+        }:
+            raise AssertionError(
+                f"declarative export definition response mismatch: {declarative_definition!r}"
             )
 
         closed_source = (
@@ -1082,8 +1108,8 @@ def main() -> int:
         if qualified_type_definition.get("result") != {
             "uri": module_uri,
             "range": {
-                "start": {"line": 2, "character": 7},
-                "end": {"line": 2, "character": 10},
+                "start": {"line": 3, "character": 7},
+                "end": {"line": 3, "character": 10},
             },
         }:
             raise AssertionError(
@@ -1107,8 +1133,8 @@ def main() -> int:
         if qualified_variant_definition.get("result") != {
             "uri": module_uri,
             "range": {
-                "start": {"line": 4, "character": 14},
-                "end": {"line": 4, "character": 16},
+                "start": {"line": 5, "character": 14},
+                "end": {"line": 5, "character": 16},
             },
         }:
             raise AssertionError(

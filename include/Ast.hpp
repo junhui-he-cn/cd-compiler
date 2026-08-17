@@ -427,12 +427,17 @@ struct MatchExpr final : Expr {
 };
 
 struct StructDeclStmt final : Stmt {
-    StructDeclStmt(Token name, std::vector<TypeParameter> typeParameters, std::vector<StructFieldDecl> fields);
+    StructDeclStmt(
+        Token name,
+        std::vector<TypeParameter> typeParameters,
+        std::vector<StructFieldDecl> fields,
+        std::optional<Token> exportKeyword = std::nullopt);
     void print(std::ostream& out, int indent) const override;
 
     Token name;
     std::vector<TypeParameter> typeParameters;
     std::vector<StructFieldDecl> fields;
+    std::optional<Token> exportKeyword;
 };
 
 struct ImplStmt final : Stmt {
@@ -607,7 +612,13 @@ struct ContinueStmt final : Stmt {
 };
 
 struct FunctionStmt final : Stmt {
-    FunctionStmt(Token name, std::vector<TypeParameter> typeParameters, std::vector<Parameter> parameters, std::optional<TypeAnnotation> returnTypeName, std::vector<StmtPtr> body);
+    FunctionStmt(
+        Token name,
+        std::vector<TypeParameter> typeParameters,
+        std::vector<Parameter> parameters,
+        std::optional<TypeAnnotation> returnTypeName,
+        std::vector<StmtPtr> body,
+        std::optional<Token> exportKeyword = std::nullopt);
     void print(std::ostream& out, int indent) const override;
 
     Token name;
@@ -615,6 +626,7 @@ struct FunctionStmt final : Stmt {
     std::vector<Parameter> parameters;
     std::optional<TypeAnnotation> returnTypeName;
     std::vector<StmtPtr> body;
+    std::optional<Token> exportKeyword;
 };
 
 struct ReturnStmt final : Stmt {

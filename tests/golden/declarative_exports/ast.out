@@ -1,0 +1,13 @@
+Program
+  Module 0
+    Export Fun answer(): number
+      Return (+ 40 2)
+    Export Struct Point {x: number, y: number}
+    Impl Point
+      Method total(): number
+        Return (+ (field this x) (field this y))
+  Module 1 entry
+    Import { answer Point } from "./lib.cd"
+    Let point = (construct Point x: 1 y: 2)
+    Expr (call print (call answer))
+    Expr (call print (member-call point total))

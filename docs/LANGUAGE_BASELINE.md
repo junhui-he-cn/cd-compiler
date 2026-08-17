@@ -192,5 +192,6 @@ rest pattern（`Point { x, .. }`）显式忽略其余字段。Phase 10 已完成
 可以通过显式分组进入条件表达式，同时裸条件仍保留清晰的 block 边界。下一阶段是
 Phase 11 已完成：显式泛型调用使用 `f::<T>(x)`，不再依赖空白或 token column。Phase 12
 的第一片已完成：支持 `import { name, value as local } from "...";`，值可本地重命名，
-结构体和枚举支持同名选择性导入；下一片是声明式 `export fun/struct` 或类型重命名的
-独立决策。
+结构体和枚举支持同名选择性导入。Phase 12 的第二片已完成：函数和结构体可以在定义处
+使用声明式 `export fun` / `export struct`，并复用既有模块接口、方法导出、IR 和 LSP
+边界；类型重命名仍是下一片独立切片。

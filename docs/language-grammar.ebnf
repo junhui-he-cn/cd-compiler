@@ -3,6 +3,8 @@
 program     = { declaration } ;
 
 declaration = importDecl
+            | exportedFunDecl
+            | exportedStructDecl
             | exportDecl
             | enumDecl
             | structDecl
@@ -85,6 +87,10 @@ importDecl  = "import", ( string,
               "from", string ), ";" ;
 
 importSpecifier = identifier, [ "as", identifier ] ;
+
+exportedFunDecl = "export", funDecl ;
+
+exportedStructDecl = "export", structDecl ;
 
 exportDecl  = "export", identifier,
               { ",", identifier },

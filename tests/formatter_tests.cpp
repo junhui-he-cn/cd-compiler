@@ -110,6 +110,25 @@ void test_formats_selective_imports()
     assert(astFor(source) == astFor(formatted));
 }
 
+void test_formats_declarative_exports()
+{
+    const std::string source =
+        "export fun answer():number{return 42;}\n"
+        "export struct Point{x:number,y:number}\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "export fun answer(): number {\n"
+        "  return 42;\n"
+        "}\n"
+        "export struct Point {\n"
+        "  x: number,\n"
+        "  y: number\n"
+        "}\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
 void test_formats_optional_types_and_postfix_question()
 {
     const std::string source =
@@ -229,6 +248,7 @@ int main()
     test_formats_lossless_source_and_preserves_semantics();
     test_formats_generic_calls_and_for_headers();
     test_formats_selective_imports();
+    test_formats_declarative_exports();
     test_formats_optional_types_and_postfix_question();
     test_preserves_top_level_blank_lines_only();
     test_preserves_supported_trailing_commas();

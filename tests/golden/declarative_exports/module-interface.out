@@ -1,0 +1,8 @@
+module 0 "<repo>/tests/golden/declarative_exports/lib.cd"
+  export value answer: fun(): number
+  export struct Point
+    field x: number
+    field y: number
+    method total(): number
+
+module 1 entry "<repo>/tests/golden/declarative_exports/input.cd"

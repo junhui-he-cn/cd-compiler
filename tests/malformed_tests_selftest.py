@@ -18,7 +18,7 @@ class MalformedHarnessTests(unittest.TestCase):
         manifest = malformed_corpus.load_manifest()
         cases = malformed_corpus.expand_cases(manifest)
         case_ids = [case["case_id"] for case in cases]
-        self.assertEqual(len(cases), 113)
+        self.assertEqual(len(cases), 112)
         self.assertEqual(case_ids, sorted(case_ids))
         self.assertEqual(len(case_ids), len(set(case_ids)))
         self.assertEqual(manifest["seed"], 20260722)

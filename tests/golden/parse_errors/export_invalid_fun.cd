@@ -1,1 +1,0 @@
-export fun f() { return 1; }

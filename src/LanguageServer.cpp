@@ -2222,6 +2222,17 @@ bool exportNamesContain(const ExportStmt& exportStatement, std::string_view name
         [name](const Token& token) { return token.lexeme == name; });
 }
 
+const Token* declarativeExportName(const Stmt& statement)
+{
+    if (const auto* function = dynamic_cast<const FunctionStmt*>(&statement)) {
+        return function->exportKeyword ? &function->name : nullptr;
+    }
+    if (const auto* structure = dynamic_cast<const StructDeclStmt*>(&statement)) {
+        return structure->exportKeyword ? &structure->name : nullptr;
+    }
+    return nullptr;
+}
+
 std::optional<std::string> importedSourceName(const ImportStmt& import, std::string_view localName)
 {
     if (import.specifiers.empty()) {
@@ -2269,20 +2280,27 @@ std::optional<DefinitionTarget> exportedDefinition(
 
     for (const StmtPtr& statement : module->statements) {
         const auto* exportStatement = dynamic_cast<const ExportStmt*>(statement.get());
-        if (!exportStatement || !exportNamesContain(*exportStatement, name)) {
-            continue;
-        }
-        if (exportStatement->sourcePath) {
-            const std::optional<DefinitionTarget> forwarded = exportedDefinition(
-                snapshot,
-                exportStatement->resolvedModuleId,
-                name,
-                visiting);
-            if (forwarded) {
-                visiting.erase(moduleId);
-                return forwarded;
+        if (exportStatement) {
+            if (!exportNamesContain(*exportStatement, name)) {
+                continue;
             }
-            continue;
+            if (exportStatement->sourcePath) {
+                const std::optional<DefinitionTarget> forwarded = exportedDefinition(
+                    snapshot,
+                    exportStatement->resolvedModuleId,
+                    name,
+                    visiting);
+                if (forwarded) {
+                    visiting.erase(moduleId);
+                    return forwarded;
+                }
+                continue;
+            }
+        } else {
+            const Token* declarativeName = declarativeExportName(*statement);
+            if (!declarativeName || declarativeName->lexeme != name) {
+                continue;
+            }
         }
         if (const DeclarationRecord* declaration = topLevelDeclaration(snapshot, *module, name)) {
             visiting.erase(moduleId);
@@ -2392,12 +2410,9 @@ std::vector<SourceRange> exportRangesForTarget(
         }
         for (const StmtPtr& child : module->statements) {
             const auto* exportStatement = dynamic_cast<const ExportStmt*>(child.get());
-            if (!exportStatement) {
-                continue;
-            }
-            for (const Token& name : exportStatement->names) {
+            const auto addExportRange = [&](const Token& name) {
                 if (!name.range) {
-                    continue;
+                    return;
                 }
                 std::unordered_set<std::size_t> visiting;
                 const std::optional<DefinitionTarget> exported = exportedDefinition(
@@ -2408,6 +2423,13 @@ std::vector<SourceRange> exportRangesForTarget(
                 if (exported && exported->declaration == &target) {
                     ranges.push_back(*name.range);
                 }
+            };
+            if (exportStatement) {
+                for (const Token& name : exportStatement->names) {
+                    addExportRange(name);
+                }
+            } else if (const Token* name = declarativeExportName(*child)) {
+                addExportRange(*name);
             }
         }
     }
@@ -2425,10 +2447,7 @@ std::vector<std::pair<std::string, DefinitionTarget>> exportedDefinitionsForModu
     }
     for (const StmtPtr& statement : module->statements) {
         const auto* exportStatement = dynamic_cast<const ExportStmt*>(statement.get());
-        if (!exportStatement) {
-            continue;
-        }
-        for (const Token& name : exportStatement->names) {
+        const auto addExportedDefinition = [&](const Token& name) {
             std::unordered_set<std::size_t> visiting;
             const std::optional<DefinitionTarget> target = exportedDefinition(
                 snapshot,
@@ -2438,6 +2457,13 @@ std::vector<std::pair<std::string, DefinitionTarget>> exportedDefinitionsForModu
             if (target && target->declaration) {
                 definitions.emplace_back(name.lexeme, *target);
             }
+        };
+        if (exportStatement) {
+            for (const Token& name : exportStatement->names) {
+                addExportedDefinition(name);
+            }
+        } else if (const Token* name = declarativeExportName(*statement)) {
+            addExportedDefinition(*name);
         }
     }
     return definitions;

@@ -42,7 +42,7 @@ private:
     StmtPtr enumDeclaration();
     std::vector<EnumVariantDecl> enumVariants();
     EnumVariantDecl enumVariant();
-    StmtPtr structDeclaration();
+    StmtPtr structDeclaration(std::optional<Token> exportKeyword = std::nullopt);
     StmtPtr implDeclaration();
     MethodDecl methodDeclaration();
     std::optional<MethodDecl> parseMethodDeclarationRecovering();
@@ -50,7 +50,7 @@ private:
     void synchronizeDelimitedMember();
     std::vector<StructFieldDecl> structFields();
     StructFieldDecl structField();
-    StmtPtr functionDeclaration();
+    StmtPtr functionDeclaration(std::optional<Token> exportKeyword = std::nullopt);
     StmtPtr letDeclaration();
     StmtPtr importDeclaration();
     std::vector<TypeParameter> typeParameters();

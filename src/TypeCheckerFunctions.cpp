@@ -219,6 +219,12 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
     if (const DeclarationRecord* record = declarationIndex_.declaration(statement)) {
         declarationIndex_.recordResolvedSignature(record->declarationId, storedFunction->type);
     }
+
+    if (statement.exportKeyword && !moduleStack_.empty()) {
+        const std::size_t moduleId = moduleStack_.back();
+        ensureExportNameAvailable(moduleId, statement.name);
+        moduleSymbols_.recordValueExport(moduleId, statement.name.lexeme, *storedFunction);
+    }
     endTypeParameterScope();
 }
 

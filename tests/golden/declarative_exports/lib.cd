@@ -1,0 +1,14 @@
+export fun answer(): number {
+    return 40 + 2;
+}
+
+export struct Point {
+    x: number,
+    y: number
+}
+
+impl Point {
+    fun total(): number {
+        return this.x + this.y;
+    }
+}

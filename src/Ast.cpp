@@ -1017,17 +1017,19 @@ void MatchExpr::print(std::ostream& out) const
 StructDeclStmt::StructDeclStmt(
     Token name,
     std::vector<TypeParameter> typeParameters,
-    std::vector<StructFieldDecl> fields)
+    std::vector<StructFieldDecl> fields,
+    std::optional<Token> exportKeyword)
     : name(std::move(name))
     , typeParameters(std::move(typeParameters))
     , fields(std::move(fields))
+    , exportKeyword(std::move(exportKeyword))
 {
 }
 
 void StructDeclStmt::print(std::ostream& out, int indent) const
 {
     writeIndent(out, indent);
-    out << "Struct " << name.lexeme;
+    out << (exportKeyword ? "Export Struct " : "Struct ") << name.lexeme;
     writeTypeParameterList(out, typeParameters);
     out << " {";
     for (std::size_t i = 0; i < fields.size(); ++i) {
@@ -1421,19 +1423,26 @@ void ContinueStmt::print(std::ostream& out, int indent) const
     out << "Continue\n";
 }
 
-FunctionStmt::FunctionStmt(Token name, std::vector<TypeParameter> typeParameters, std::vector<Parameter> parameters, std::optional<TypeAnnotation> returnTypeName, std::vector<StmtPtr> body)
+FunctionStmt::FunctionStmt(
+    Token name,
+    std::vector<TypeParameter> typeParameters,
+    std::vector<Parameter> parameters,
+    std::optional<TypeAnnotation> returnTypeName,
+    std::vector<StmtPtr> body,
+    std::optional<Token> exportKeyword)
     : name(std::move(name))
     , typeParameters(std::move(typeParameters))
     , parameters(std::move(parameters))
     , returnTypeName(std::move(returnTypeName))
     , body(std::move(body))
+    , exportKeyword(std::move(exportKeyword))
 {
 }
 
 void FunctionStmt::print(std::ostream& out, int indent) const
 {
     writeIndent(out, indent);
-    out << "Fun " << name.lexeme;
+    out << (exportKeyword ? "Export Fun " : "Fun ") << name.lexeme;
     writeTypeParameterList(out, typeParameters);
     writeParameterList(out, parameters);
     writeReturnAnnotation(out, returnTypeName);
@@ -1873,6 +1882,9 @@ void populateStmt(Stmt& statement)
             }
         }
     } else if (auto* structDecl = dynamic_cast<StructDeclStmt*>(&statement)) {
+        if (structDecl->exportKeyword) {
+            mergeRange(result, tokenRange(*structDecl->exportKeyword));
+        }
         mergeRange(result, tokenRange(structDecl->name));
         for (const TypeParameter& parameter : structDecl->typeParameters) {
             mergeRange(result, tokenRange(parameter.name));
@@ -2027,6 +2039,9 @@ void populateStmt(Stmt& statement)
     } else if (auto* continueStmt = dynamic_cast<ContinueStmt*>(&statement)) {
         mergeRange(result, tokenRange(continueStmt->keyword));
     } else if (auto* function = dynamic_cast<FunctionStmt*>(&statement)) {
+        if (function->exportKeyword) {
+            mergeRange(result, tokenRange(*function->exportKeyword));
+        }
         mergeRange(result, tokenRange(function->name));
         for (const TypeParameter& parameter : function->typeParameters) {
             mergeRange(result, tokenRange(parameter.name));

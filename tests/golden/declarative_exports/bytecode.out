@@ -1,0 +1,49 @@
+native_import i0 = print abi=1
+main registers=14
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 answer/0
+0004  set_global g0, b1
+0005  b2 = constant #4 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 total/1
+0008  set_global g1, b3
+0009  b4 = constant #6 1
+0010  b5 = constant #7 2
+0011  b6 = make_struct t0 [b4, b5]
+0012  init_global g2, b6
+0013  b7 = load_global g0
+0014  b8 = call b7()
+0015  b9 = call_native i0 [b8]
+0016  b10 = load_global g1
+0017  b11 = load_global g2
+0018  b12 = call b10(b11)
+0019  b13 = call_native i0 [b12]
+0020  return_nil
+
+function $0 answer/0 registers=4
+0000  block
+0001  b0 = constant #1 40
+0002  b1 = constant #2 2
+0003  b2 = add_num b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #3 nil
+0007  return b3
+0008  block
+0009  return_nil
+
+function $1 total/1 registers=6
+0000  block
+0001  b0 = load_local l0
+0002  b1 = struct_get b0, t0, 0
+0003  b2 = load_local l0
+0004  b3 = struct_get b2, t0, 1
+0005  b4 = add_num b1, b3
+0006  return b4
+0007  block
+0008  b5 = constant #5 nil
+0009  return b5
+0010  block
+0011  return_nil
