@@ -185,5 +185,6 @@ Phase 0/1/2/3/4 完成：match 表达式已统一为 `MatchExpr`；enum 命名 p
 短路，可选值通过 `if let`/`??` 显式处理；字符串支持 `\n`/`\r`/`\t`/`\0`/`\\`/
 `\"` 转义，裸换行与未知转义在词法阶段报错；`print` 已从语句/keyword 改为普通
 native 函数调用 `print(value)`，AST 不再有 `PrintStmt`。两条以实现为准的漂移已修正。
-`else if` 链已支持，`else` 绑定最近的未配对 `if`。下一步是 Phase 9：pattern
-ergonomics（field shorthand / rest）。
+`else if` 链已支持，`else` 绑定最近的未配对 `if`。Phase 9 已开始：record pattern
+支持字段简写，例如 `Point { x, y }` 等价于 `Point { x: x, y: y }`；下一窄切片是
+rest pattern（`..`）。

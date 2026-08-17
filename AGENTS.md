@@ -299,7 +299,8 @@ File-backed lexer, parser, and type diagnostics always include the file path: `<
   `Result.Ok(value, message)`); the former named payload fields and reordered
   pattern arguments were removed. Named struct values may use partial,
   reordered, nested, and namespace-qualified record patterns such as
-  `Person { name: "Ada" }` and `geo.Point { x: 1 }`. `match` is statement-only:
+  `Person { name: "Ada" }`, `Point { x, y }`, and `geo.Point { x: 1 }`;
+  a field without `:` is shorthand for a same-name binding. `match` is statement-only:
   each arm is `pattern [if condition] => block`, and the match requires
   exhaustive coverage from unguarded arms or a wildcard/binding arm. Matches
   support `nil`, `true`, `false`, number, and string literal patterns, nullable

@@ -141,7 +141,10 @@ recordPattern = identifier, "{", [ recordPatternFields ], "}"
 recordPatternFields = recordPatternField,
                       { ",", recordPatternField } ;
 
-recordPatternField = identifier, ":", pattern ;
+recordPatternField = identifier, [ ":", pattern ] ;
+
+(* A record field without `:` is shorthand for a binding with the same name:
+   `Point { x, y }` means `Point { x: x, y: y }`. *)
 
 whileStmt   = "while", expression, block ;
 
@@ -314,8 +317,9 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
    generic enum values use `Box<number>` type annotations. Literal patterns
    match primitive values directly or nested inside enum payloads; nullable
    primitive and enum matches may use `nil`. Named struct values may use
-   partial or nested record patterns such as `Person { name: "Ada" }` and
-   `geo.Point { x: 1 }`; fields may be omitted or reordered. OR-pattern
+   partial or nested record patterns such as `Person { name: "Ada" }`,
+   `Point { x, y }`, and `geo.Point { x: 1 }`; fields may be omitted or
+   reordered. OR-pattern
    alternatives must bind the same names. Match is statement-only: every arm
    is a block, and the match requires exhaustive coverage from unguarded arms
    or a wildcard/binding arm. Nullable function parameters,

@@ -620,7 +620,7 @@ return match result {
 };
 ```
 
-支持 `_`、绑定模式、`nil`、布尔/数字/字符串字面量、variant 模式、嵌套模式、命名 payload、命名结构体 record 模式和 OR 模式：
+支持 `_`、绑定模式、`nil`、布尔/数字/字符串字面量、variant 模式、嵌套模式、命名 payload、命名结构体 record 模式和 OR 模式。record 字段可以使用同名绑定简写：
 
 ```cd
 struct Point {
@@ -631,11 +631,11 @@ struct Point {
 let point = Point { x: 1, y: 2 };
 match point {
   Point { x: 1 } => { print("on x=1"); }
-  Point { x: x, y: y } => { print(x + y); }
+  Point { x, y } => { print(x + y); }
 }
 ```
 
-record 模式可以省略字段或调整顺序，例如 `Point { y: 2 }`。OR 模式的所有分支必须绑定相同的名字并具有兼容类型。guard 写在模式和 `=>` 之间，但 guard 不参与穷尽性覆盖：
+`Point { x, y }` 等价于 `Point { x: x, y: y }`。record 模式可以省略字段或调整顺序，例如 `Point { y: 2 }`。OR 模式的所有分支必须绑定相同的名字并具有兼容类型。guard 写在模式和 `=>` 之间，但 guard 不参与穷尽性覆盖：
 
 ```cd
 enum NamedResult {

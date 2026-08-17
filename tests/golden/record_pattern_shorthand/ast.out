@@ -1,0 +1,10 @@
+Program
+  Struct Point {x: number, y: number}
+  Struct Box {point: Point}
+  Fun describe(box: Box): string
+    Match box
+      Arm Box {point: Point {x: x, y: y}}
+        Block
+          Return (+ (+ (call str x) ":") (call str y))
+  Let box = (construct Box point: (construct Point x: 3 y: 4))
+  Expr (call print (call describe box))

@@ -1603,8 +1603,15 @@ PatternPtr Parser::recordPattern(std::optional<Token> qualifier, Token name)
     if (!check(TokenType::RightBrace)) {
         do {
             Token fieldName = consume(TokenType::Identifier, "expected record pattern field name");
-            consume(TokenType::Colon, "expected `:` after record pattern field name");
-            fields.push_back(RecordPatternField{std::move(fieldName), pattern()});
+            PatternPtr fieldPattern;
+            if (match(TokenType::Colon)) {
+                fieldPattern = pattern();
+            } else {
+                fieldPattern = withSpan(
+                    std::make_unique<VariablePattern>(fieldName),
+                    fieldName);
+            }
+            fields.push_back(RecordPatternField{std::move(fieldName), std::move(fieldPattern)});
         } while (match(TokenType::Comma));
     }
     consume(TokenType::RightBrace, "expected `}` after record pattern fields");

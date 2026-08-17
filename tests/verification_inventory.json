@@ -6759,34 +6759,6 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
-      "case_id": "golden.parse_errors.record_pattern_missing_colon",
-      "runner": "golden",
-      "result_name": "parse_errors/record_pattern_missing_colon default(ast)",
-      "stage": "parse-error",
-      "capability_tags": [
-        "golden",
-        "parse_errors",
-        "fixture:record_pattern_missing_colon"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "parse_diagnostic"
-      ],
-      "terminal_boundary": "parse_diagnostic",
-      "sources": [
-        "tests/golden/parse_errors/record_pattern_missing_colon.cd"
-      ],
-      "expected_files": [
-        "tests/golden/parse_errors/record_pattern_missing_colon.cd",
-        "tests/golden/parse_errors/record_pattern_missing_colon.err",
-        "tests/golden/parse_errors/record_pattern_missing_colon.exit"
-      ],
-      "fixture": "tests/golden/parse_errors"
-    },
-    {
       "case_id": "golden.parse_errors.string_bare_newline",
       "runner": "golden",
       "result_name": "parse_errors/string_bare_newline default(ast)",
@@ -16795,6 +16767,117 @@
         "tests/golden/record_pattern_module/module-interface.out"
       ],
       "fixture": "tests/golden/record_pattern_module"
+    },
+    {
+      "case_id": "golden.success.record_pattern_shorthand.ast",
+      "runner": "golden",
+      "result_name": "record_pattern_shorthand default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:record_pattern_shorthand"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/record_pattern_shorthand/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/record_pattern_shorthand/ast.out"
+      ],
+      "fixture": "tests/golden/record_pattern_shorthand"
+    },
+    {
+      "case_id": "golden.success.record_pattern_shorthand.bytecode",
+      "runner": "golden",
+      "result_name": "record_pattern_shorthand --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:record_pattern_shorthand"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/record_pattern_shorthand/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/record_pattern_shorthand/bytecode.out"
+      ],
+      "fixture": "tests/golden/record_pattern_shorthand"
+    },
+    {
+      "case_id": "golden.success.record_pattern_shorthand.ir",
+      "runner": "golden",
+      "result_name": "record_pattern_shorthand --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:record_pattern_shorthand"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/record_pattern_shorthand/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/record_pattern_shorthand/ir.out"
+      ],
+      "fixture": "tests/golden/record_pattern_shorthand"
+    },
+    {
+      "case_id": "golden.success.record_pattern_shorthand.module_interface",
+      "runner": "golden",
+      "result_name": "record_pattern_shorthand --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:record_pattern_shorthand"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/record_pattern_shorthand/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/record_pattern_shorthand/module-interface.out"
+      ],
+      "fixture": "tests/golden/record_pattern_shorthand"
     },
     {
       "case_id": "golden.success.record_patterns.ast",
@@ -30269,35 +30352,6 @@
         "tests/golden/parse_errors/re_export_missing_path.cd",
         "tests/golden/parse_errors/re_export_missing_path.err",
         "tests/golden/parse_errors/re_export_missing_path.exit"
-      ],
-      "fixture": "tests/golden/parse_errors"
-    },
-    {
-      "case_id": "malformed.parse_error.record_pattern_missing_colon",
-      "runner": "malformed",
-      "result_name": "malformed.parse_error.record_pattern_missing_colon",
-      "stage": "diagnostic-recovery",
-      "capability_tags": [
-        "malformed",
-        "parser",
-        "diagnostic-recovery",
-        "golden-corpus"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "reject",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "parse_diagnostic"
-      ],
-      "terminal_boundary": "parse_diagnostic",
-      "sources": [
-        "tests/golden/parse_errors/record_pattern_missing_colon.cd"
-      ],
-      "expected_files": [
-        "tests/golden/parse_errors/record_pattern_missing_colon.cd",
-        "tests/golden/parse_errors/record_pattern_missing_colon.err",
-        "tests/golden/parse_errors/record_pattern_missing_colon.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },

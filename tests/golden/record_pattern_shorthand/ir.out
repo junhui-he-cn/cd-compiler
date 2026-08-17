@@ -1,0 +1,33 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 describe#0, v0
+0002  v1 = make_function $0 describe/1
+0003  assign_var @14 describe#0, v1
+0004  v2 = constant #4 3
+0005  v3 = constant #5 4
+0006  v4 = struct Point {x: v2, y: v3}
+0007  v5 = struct Box {point: v4}
+0008  store_var @20 box#4, v5
+0009  v6 = load_var @21 box#4
+0010  v7 = call_direct $0 describe/1(v6)
+0011  v8 = native_call @22 print(v7)
+
+function $0 describe(box#1)
+0000  v0 = load_var @1 box#1
+0001  v1 = constant #1 nil
+0002  v2 = field v0.point
+0003  v3 = field v2.x
+0004  v4 = field v2.y
+0005  store_var @8 x#2, v3
+0006  store_var @9 y#3, v4
+0007  v5 = load_var @10 x#2
+0008  v6 = native_call @11 str(v5)
+0009  v7 = constant #2 ":"
+0010  v8 = concat_str v6, v7
+0011  v9 = load_var @12 y#3
+0012  v10 = native_call @13 str(v9)
+0013  v11 = concat_str v8, v10
+0014  return v11
+0015  jump 0016
+0016  v12 = constant #3 nil
+0017  return v12
