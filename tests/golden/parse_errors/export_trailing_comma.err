@@ -1,3 +1,3 @@
-Parse error at <repo>/tests/golden/parse_errors/export_trailing_comma.cd:1:14: expected identifier after `,` in export list, found Semicolon `;`
-  export value,;
+Parse error at <repo>/tests/golden/parse_errors/export_trailing_comma.cd:2:14: expected identifier after `,` in export list, found Comma `,`
+  export value,,;
                ^

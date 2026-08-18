@@ -1,0 +1,94 @@
+native_import i0 = print abi=1
+main registers=47
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 first/1
+0004  set_global g0, b1
+0005  b2 = constant #2 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 sum/2
+0008  set_global g1, b3
+0009  b4 = constant #4 1
+0010  b5 = constant #5 2
+0011  b6 = array [b4, b5]
+0012  init_global g2, b6
+0013  b7 = constant #6 "a"
+0014  b8 = constant #7 1
+0015  b9 = constant #8 "b"
+0016  b10 = constant #9 2
+0017  b11 = map [b7: b8, b9: b10]
+0018  init_global g3, b11
+0019  b12 = constant #10 1
+0020  b13 = constant #11 2
+0021  b14 = make_struct t0 [b12, b13]
+0022  init_global g4, b14
+0023  b15 = constant #12 1
+0024  b16 = make_variant t1, v0 (b15)
+0025  init_global g5, b16
+0026  b17 = constant #13 1
+0027  b18 = constant #14 2
+0028  b19 = call_direct $1 [b17, b18]
+0029  b20 = call_direct $0 [b19]
+0030  b21 = call_native i0 [b20]
+0031  b22 = load_global g2
+0032  b23 = constant #15 1
+0033  b24 = array_get b22, b23
+0034  b25 = call_native i0 [b24]
+0035  b26 = load_global g3
+0036  b27 = constant #16 "b"
+0037  b28 = map_get b26, b27
+0038  b29 = call_native i0 [b28]
+0039  b30 = load_global g4
+0040  b31 = constant #17 nil
+0041  b32 = struct_get b30, t0, 0
+0042  b33 = struct_get b30, t0, 1
+0043  init_global g6, b32
+0044  init_global g7, b33
+0045  b34 = load_global g6
+0046  b35 = load_global g7
+0047  b36 = add_num b34, b35
+0048  b37 = call_native i0 [b36]
+0049  br b1
+0050  block
+0051  b38 = load_global g5
+0052  b39 = constant #18 nil
+0053  b40 = is_variant b38, t1, v0
+0054  br_if b40, b2, b3
+0055  block
+0056  b41 = variant_get b38, t1, v0, 0
+0057  init_global g8, b41
+0058  b42 = load_global g8
+0059  b43 = call_native i0 [b42]
+0060  return_nil
+0061  block
+0062  b44 = is_variant b38, t1, v1
+0063  br_if b44, b4, b5
+0064  block
+0065  b45 = constant #19 0
+0066  b46 = call_native i0 [b45]
+0067  return_nil
+0068  block
+0069  return_nil
+
+function $0 first/1 registers=2
+0000  block
+0001  b0 = load_local l0
+0002  return b0
+0003  block
+0004  b1 = constant #1 nil
+0005  return b1
+0006  block
+0007  return_nil
+
+function $1 sum/2 registers=4
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = add_num b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #3 nil
+0007  return b3
+0008  block
+0009  return_nil

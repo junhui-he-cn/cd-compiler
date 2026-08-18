@@ -1,6 +1,6 @@
-Parse error at <repo>/tests/golden/parse_errors/struct_trailing_comma.cd:2:25: expected struct field name, found RightBrace `}`
-  print(Person { name: 1, });
-                          ^
-Parse error at <repo>/tests/golden/parse_errors/struct_trailing_comma.cd:2:26: expected expression
-  print(Person { name: 1, });
-                           ^
+Parse error at <repo>/tests/golden/parse_errors/struct_trailing_comma.cd:2:24: expected struct field name, found Comma `,`
+  print(Person { name: 1,, });
+                         ^
+Parse error at <repo>/tests/golden/parse_errors/struct_trailing_comma.cd:2:27: expected expression
+  print(Person { name: 1,, });
+                            ^

@@ -1,0 +1,78 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 first#0, v0
+0002  v1 = make_function $0 first/1
+0003  assign_var @2 first#0, v1
+0004  v2 = constant #2 nil
+0005  store_var @3 sum#2, v2
+0006  v3 = make_function $1 sum/2
+0007  assign_var @6 sum#2, v3
+0008  v4 = constant #4 1
+0009  v5 = constant #5 2
+0010  v6 = array [v4, v5]
+0011  store_var @7 values#5, v6
+0012  v7 = constant #6 "a"
+0013  v8 = constant #7 1
+0014  v9 = constant #8 "b"
+0015  v10 = constant #9 2
+0016  v11 = map [v7: v8, v9: v10]
+0017  store_var @8 table#6, v11
+0018  v12 = constant #10 1
+0019  v13 = constant #11 2
+0020  v14 = struct Point {x: v12, y: v13}
+0021  store_var @12 point#7, v14
+0022  v15 = constant #12 1
+0023  v16 = variant Choice.First (v15)
+0024  store_var @15 choice#8, v16
+0025  v17 = constant #13 1
+0026  v18 = constant #14 2
+0027  v19 = call_direct $1 sum/2(v17, v18)
+0028  v20 = call_direct $0 first/1(v19)
+0029  v21 = native_call @16 print(v20)
+0030  v22 = load_var @17 values#5
+0031  v23 = constant #15 1
+0032  v24 = array_get v22, v23
+0033  v25 = native_call @18 print(v24)
+0034  v26 = load_var @19 table#6
+0035  v27 = constant #16 "b"
+0036  v28 = map_get v26, v27
+0037  v29 = native_call @20 print(v28)
+0038  v30 = load_var @21 point#7
+0039  v31 = constant #17 nil
+0040  v32 = field v30.x
+0041  v33 = field v30.y
+0042  store_var @26 x#9, v32
+0043  store_var @27 y#10, v33
+0044  v34 = load_var @28 x#9
+0045  v35 = load_var @29 y#10
+0046  v36 = add_num v34, v35
+0047  v37 = native_call @30 print(v36)
+0048  jump 0049
+0049  v38 = load_var @31 choice#8
+0050  v39 = constant #18 nil
+0051  v40 = variant_tag v38 Choice.First
+0052  jump_if_false v40, 0058
+0053  v41 = variant_field v38[0]
+0054  store_var @36 value#11, v41
+0055  v42 = load_var @37 value#11
+0056  v43 = native_call @38 print(v42)
+0057  jump 0063
+0058  v44 = variant_tag v38 Choice.Second
+0059  jump_if_false v44, 0063
+0060  v45 = constant #19 0
+0061  v46 = native_call @41 print(v45)
+0062  jump 0063
+
+function $0 first(value#1)
+0000  v0 = load_var @1 value#1
+0001  return v0
+0002  v1 = constant #1 nil
+0003  return v1
+
+function $1 sum(left#3, right#4)
+0000  v0 = load_var @4 left#3
+0001  v1 = load_var @5 right#4
+0002  v2 = add_num v0, v1
+0003  return v2
+0004  v3 = constant #3 nil
+0005  return v3

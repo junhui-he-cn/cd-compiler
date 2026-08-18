@@ -1,0 +1,3 @@
+Parse error at <repo>/tests/golden/parse_errors/trailing_comma_double.cd:1:17: expected expression
+  let values = [1,,];
+                  ^

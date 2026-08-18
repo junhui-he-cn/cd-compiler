@@ -199,6 +199,38 @@ void test_preserves_supported_trailing_commas()
     assert(astFor(source) == astFor(formatted));
 }
 
+void test_preserves_trailing_commas_across_lists()
+{
+    const std::string source =
+        "import{answer,greet as say,}from\"./lib.cd\";\n"
+        "export answer,greet,;\n"
+        "struct Point<T,>{x:T,y:T,}\n"
+        "fun first<T,>(value:T,):T{return value;}\n"
+        "let values=[1,2,];\n"
+        "let point=Point<number,>{x:1,y:2,};\n"
+        "print(first::<number,>(1,));\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "import { answer, greet as say, } from \"./lib.cd\";\n"
+        "export answer, greet,;\n"
+        "struct Point<T,> {\n"
+        "  x: T,\n"
+        "  y: T,\n"
+        "}\n"
+        "fun first<T,>(value: T, ): T {\n"
+        "  return value;\n"
+        "}\n"
+        "let values = [1, 2, ];\n"
+        "let point = Point<number,> {\n"
+        "  x: 1,\n"
+        "  y: 2,\n"
+        "};\n"
+        "print(first::<number,>(1, ));\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
 void test_wraps_long_delimited_lists()
 {
     const std::string first = "123456789012345678901234567890123456789012345";
@@ -252,6 +284,7 @@ int main()
     test_formats_optional_types_and_postfix_question();
     test_preserves_top_level_blank_lines_only();
     test_preserves_supported_trailing_commas();
+    test_preserves_trailing_commas_across_lists();
     test_wraps_long_delimited_lists();
     test_empty_and_invalid_options();
     return 0;

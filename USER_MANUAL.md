@@ -129,6 +129,8 @@ printf 'print(1 + 2);\n' | ./build/compiler_design
 
 格式化器从生产 lexer/parser 的无损 token/trivia 视图生成稳定源码：默认使用两格缩进，保留字符串和行注释文本，最多保留一个空白行，并对过宽的逗号列表使用固定规则换行。它不会把字符串或注释拆开，也不会自动插入或删除尾逗号。
 
+参数、泛型参数和类型参数、函数调用参数、数组/map/结构体字面量字段、导入/导出名称以及模式参数列表都允许一个尾逗号。例如 `fun f<T,>(value: T,): T { return value; }`、`f::<number,>(1,)` 和 `[1, 2,]`。尾逗号只表示列表结束，不允许空元素或连续逗号；格式化器保留源文件中已经写出的尾逗号。
+
 ```sh
 ./build/compiler_design --format hello.cd
 ./build/compiler_design --format-check hello.cd

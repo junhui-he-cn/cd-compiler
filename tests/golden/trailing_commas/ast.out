@@ -1,0 +1,25 @@
+Program
+  Enum Choice<T> {First(T), Second}
+  Struct Point<T> {x: T, y: T}
+  Fun first<T>(value: T): T
+    Return value
+  Fun sum(left: number, right: number): number
+    Return (+ left right)
+  Let values: [number] = (array 1 2)
+  Let table: map<string, number> = (map (entry "a" 1) (entry "b" 2))
+  Let point: Point<number> = (construct Point<number> x: 1 y: 2)
+  Let choice: Choice<number> = (member-call Choice First 1)
+  Expr (call print (call first<number> (call sum 1 2)))
+  Expr (call print (index values 1))
+  Expr (call print (index table "b"))
+  Match point
+    Arm Point {x: x, y: y}
+      Block
+        Expr (call print (+ x y))
+  Match choice
+    Arm Choice.First(value)
+      Block
+        Expr (call print value)
+    Arm Choice.Second
+      Block
+        Expr (call print 0)

@@ -1,0 +1,35 @@
+enum Choice<T,> {
+  First(T,),
+  Second,
+}
+
+struct Point<T,> {
+  x: T,
+  y: T,
+}
+
+fun first<T,>(value: T,): T {
+  return value;
+}
+
+fun sum(left: number, right: number,): number {
+  return left + right;
+}
+
+let values: [number] = [1, 2,];
+let table: map<string, number> = {"a": 1, "b": 2,};
+let point: Point<number,> = Point<number,> { x: 1, y: 2,};
+let choice: Choice<number,> = Choice.First(1,);
+
+print(first::<number,>(sum(1, 2,),));
+print(values[1]);
+print(table["b"]);
+
+match point {
+  Point { x, y, } => { print(x + y); },
+}
+
+match choice {
+  Choice.First(value,) => { print(value); },
+  Choice.Second => { print(0); },
+}

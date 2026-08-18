@@ -30,7 +30,7 @@ funDecl     = "fun", identifier, [ typeParameters ],
               block ;
 
 typeParameters = "<", typeParameter,
-                 { ",", typeParameter }, ">" ;
+                 { ",", typeParameter }, [ "," ], ">" ;
 
 typeParameter  = identifier, [ ":", typeExpr,
                               { "+", typeExpr } ] ;
@@ -48,7 +48,7 @@ enumVariant = identifier,
               [ "(", [ enumPayloads ], ")" ] ;
 
 enumPayloads = enumPayload,
-               { ",", enumPayload } ;
+               { ",", enumPayload }, [ "," ] ;
 
 enumPayload  = [ identifier, ":" ], typeExpr ;
 
@@ -66,12 +66,12 @@ methodDecl  = "fun", identifier, [ typeParameters ],
               block ;
 
 structFields = structField,
-               { ",", structField } ;
+               { ",", structField }, [ "," ] ;
 
 structField = [ "private" ], identifier, ":", typeExpr ;
 
 parameters  = parameter,
-              { ",", parameter } ;
+              { ",", parameter }, [ "," ] ;
 
 parameter   = identifier,
               [ ":", typeExpr ] ;
@@ -83,7 +83,7 @@ letDecl     = "let", [ "mut" ], identifier,
 importDecl  = "import", ( string,
               [ "as", identifier ]
             | "{", importSpecifier,
-              { ",", importSpecifier }, "}",
+              { ",", importSpecifier }, [ "," ], "}",
               "from", string ), ";" ;
 
 importSpecifier = identifier, [ "as", identifier ] ;
@@ -94,6 +94,7 @@ exportedStructDecl = "export", structDecl ;
 
 exportDecl  = "export", identifier,
               { ",", identifier },
+              [ "," ],
               [ "from", string ], ";" ;
 
 ifStmt      = "if", expression, block,
@@ -142,7 +143,7 @@ variantPattern = identifier, ".", identifier,
                  [ "(", [ patternArguments ], ")" ] ;
 
 patternArguments = patternArgument,
-                   { ",", patternArgument } ;
+                   { ",", patternArgument }, [ "," ] ;
 
 patternArgument = pattern ;
 
@@ -152,7 +153,7 @@ recordPattern = identifier, "{", [ recordPatternFields ], "}"
 recordPatternFields = ".."
                     | recordPatternField,
                       { ",", recordPatternField },
-                      [ ",", ".." ] ;
+                      ( [ ",", ".." ] | [ "," ] ) ;
 
 recordPatternField = identifier, [ ":", pattern ] ;
 
@@ -251,17 +252,17 @@ memberPostfix = ".", identifier,
    generic declarations and type annotations continue to use name<T>. *)
 
 callTypeArguments = "<", typeExpr,
-                    { ",", typeExpr }, ">" ;
+                    { ",", typeExpr }, [ "," ], ">" ;
 
 arguments   = expression,
-              { ",", expression } ;
+              { ",", expression }, [ "," ] ;
 
 array       = "[", [ arguments ], "]" ;
 
 map         = "{", [ mapEntries ], "}" ;
 
 mapEntries  = mapEntry,
-              { ",", mapEntry } ;
+              { ",", mapEntry }, [ "," ] ;
 
 mapEntry    = expression, ":", expression ;
 
@@ -275,7 +276,7 @@ structConstructor = [ identifier, "." ], identifier, [ typeArguments ],
                      "{", [ fields ], "}" ;
 
 fields      = field,
-              { ",", field } ;
+              { ",", field }, [ "," ] ;
 
 field       = identifier, ":", expression ;
 
@@ -350,7 +351,7 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
    locale collation. *)
 
 typeArguments = typeExpr,
-                { ",", typeExpr } ;
+                { ",", typeExpr }, [ "," ] ;
 identifier  = letter, { letter | digit | "_" } ;
 number      = digit, { digit }, [ ".", digit, { digit } ] ;
 string      = '"', { character }, '"' ;

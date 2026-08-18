@@ -346,6 +346,9 @@ StmtPtr Parser::exportDeclaration()
 
     names.push_back(consume(TokenType::Identifier, "expected identifier after `export`"));
     while (match(TokenType::Comma)) {
+        if (check(TokenType::Semicolon) || checkContextualIdentifier("from")) {
+            break;
+        }
         names.push_back(consume(TokenType::Identifier, "expected identifier after `,` in export list"));
     }
 
@@ -456,7 +459,7 @@ EnumVariantDecl Parser::enumVariant()
                     payloadTypes.push_back(
                         typeAnnotation("expected enum variant payload type"));
                 }
-            } while (match(TokenType::Comma));
+            } while (match(TokenType::Comma) && !check(TokenType::RightParen));
         }
         consume(TokenType::RightParen, "expected `)` after enum variant payload types");
     }
@@ -477,7 +480,7 @@ std::vector<StructFieldDecl> Parser::structFields()
                 recordParseError(error);
                 synchronizeDelimitedMember();
             }
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightBrace));
     }
     return fields;
 }
@@ -585,7 +588,7 @@ std::vector<TypeParameter> Parser::typeParameters()
             }
         }
         parameters.push_back(TypeParameter{std::move(name), std::move(constraints)});
-    } while (match(TokenType::Comma));
+    } while (match(TokenType::Comma) && !check(TokenType::Greater));
     consume(TokenType::Greater, "expected `>` after type parameters");
     return parameters;
 }
@@ -638,7 +641,7 @@ StmtPtr Parser::importDeclaration()
                 alias = consume(TokenType::Identifier, "expected local name after `as` in import list");
             }
             specifiers.push_back(ImportSpecifier{std::move(name), std::move(alias)});
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightBrace));
         consume(TokenType::RightBrace, "expected `}` after import list");
         if (!matchContextualIdentifier("from")) {
             throw ParseError(peek(), "expected `from` after import list");
@@ -664,7 +667,7 @@ std::vector<Parameter> Parser::parameters()
     if (!check(TokenType::RightParen)) {
         do {
             parsedParameters.push_back(parameter());
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightParen));
     }
     return parsedParameters;
 }
@@ -738,7 +741,7 @@ TypeAnnotation Parser::typeAnnotation(const std::string& simpleTypeMessage)
             }
             do {
                 annotation.typeArguments.push_back(typeAnnotation("expected type argument after `<`"));
-            } while (match(TokenType::Comma));
+            } while (match(TokenType::Comma) && !check(TokenType::Greater));
             consume(TokenType::Greater, "expected `>` after type arguments");
         }
     }
@@ -756,7 +759,7 @@ std::vector<TypeAnnotation> Parser::typeArguments()
     if (!check(TokenType::RightParen)) {
         do {
             arguments.push_back(typeAnnotation());
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightParen));
     }
     return arguments;
 }
@@ -1287,7 +1290,7 @@ std::vector<TypeAnnotation> Parser::explicitTypeArguments()
     }
     do {
         typeArguments.push_back(typeAnnotation("expected type argument after `<`"));
-    } while (match(TokenType::Comma));
+    } while (match(TokenType::Comma) && !check(TokenType::Greater));
     consume(TokenType::Greater, "expected `>` after type arguments");
     return typeArguments;
 }
@@ -1299,7 +1302,7 @@ ExprPtr Parser::finishCall(ExprPtr callee, std::vector<TypeAnnotation> typeArgum
     if (!check(TokenType::RightParen)) {
         do {
             arguments.push_back(expression());
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightParen));
     }
     Token paren = consume(TokenType::RightParen, "expected `)` after arguments");
 
@@ -1350,7 +1353,7 @@ ExprPtr Parser::arrayLiteral(Token bracket)
     if (!check(TokenType::RightBracket)) {
         do {
             elements.push_back(expression());
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightBracket));
     }
     consume(TokenType::RightBracket, "expected `]` after array elements");
     return withSpan(std::make_unique<ArrayExpr>(std::move(bracket), std::move(elements)), span);
@@ -1366,7 +1369,7 @@ ExprPtr Parser::mapLiteral(Token brace)
             Token colon = consume(TokenType::Colon, "expected `:` after map key");
             ExprPtr value = expression();
             entries.push_back(MapEntry{std::move(key), std::move(colon), std::move(value)});
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightBrace));
     }
     consume(TokenType::RightBrace, "expected `}` after map entries");
     return withSpan(std::make_unique<MapExpr>(std::move(brace), std::move(entries)), span);
@@ -1381,7 +1384,7 @@ std::vector<StructField> Parser::structLiteralFields()
             consume(TokenType::Colon, "expected `:` after struct field name");
             ExprPtr value = expression();
             fields.push_back(StructField{std::move(name), std::move(value)});
-        } while (match(TokenType::Comma));
+        } while (match(TokenType::Comma) && !check(TokenType::RightBrace));
     }
     return fields;
 }
@@ -1647,7 +1650,7 @@ PatternPtr Parser::recordPattern(std::optional<Token> qualifier, Token name)
                     fieldName);
             }
             fields.push_back(RecordPatternField{std::move(fieldName), std::move(fieldPattern)});
-            if (!match(TokenType::Comma)) {
+            if (!match(TokenType::Comma) || check(TokenType::RightBrace)) {
                 break;
             }
         }
@@ -1676,7 +1679,7 @@ PatternPtr Parser::variantPattern(Token qualifier, Token name)
         if (!check(TokenType::RightParen)) {
             do {
                 arguments.push_back(pattern());
-            } while (match(TokenType::Comma));
+            } while (match(TokenType::Comma) && !check(TokenType::RightParen));
         }
         consume(TokenType::RightParen, "expected `)` after variant pattern");
     }

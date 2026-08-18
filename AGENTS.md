@@ -283,6 +283,10 @@ File-backed lexer, parser, and type diagnostics always include the file path: `<
   through arrays, maps, function return types, generic arguments, and other
   optional types. Expression-position `expr?` keeps its existing early-return
   unwrap meaning.
+  Comma-delimited declaration, type, call, collection, import/export, and
+  pattern lists accept at most one trailing comma; empty elements and repeated
+  commas remain parse errors, and the formatter preserves an existing trailing
+  comma.
   `if let v = expr { } else { }` and `while let v = expr { }` bind a fresh
   non-nil value in a new scope (statement forms); `expr?` unwraps and returns
   nil from the enclosing function when the value is nil (only valid when the
