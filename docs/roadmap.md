@@ -19,7 +19,7 @@ execution remain unchanged until an explicit decision changes them.
 | --- | --- |
 | Verification | Versioned inventory, canonical runner, boundary and malformed corpora |
 | Front end | Typed source identities, lossless source, declaration/semantic indexes, import-aware module graph |
-| Language | Functions, closures, generics and constraints, `optional<T>`/`T?`, trailing commas, numeric separators/exponents, line/block comments, half-open `..<` ranges, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities |
+| Language | Functions, closures, generics and constraints, `optional<T>`/`T?`, trailing commas, numeric separators/exponents, line/block comments, half-open `..<` ranges, legacy C-style `for`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes |
 | IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` |
 | Tools | Formatter, open/closed-workspace LSP definition and references, trace and interactive VM debugger |
@@ -28,3 +28,10 @@ execution remain unchanged until an explicit decision changes them.
 The authoritative implementation contracts remain in `README.md`,
 `docs/language-grammar.ebnf`, and `docs/bytecode-text-format.md`; the full
 repository verification gate lives in `AGENTS.md`.
+
+## Active language decisions
+
+C-style `for` remains accepted as a legacy compatibility form. New code should
+prefer `for-in` over arrays, maps, and ranges. The compiler does not emit an
+implicit deprecation warning because it has no warning diagnostic channel;
+removal or warning behavior requires a separate decision.

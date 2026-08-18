@@ -169,6 +169,9 @@ forStmt     = "for", ( forInClause | cForClause ), block ;
 
 forInClause = identifier, "in", expression ;
 
+(* C-style `for` remains a supported legacy compatibility form. New code
+   should prefer `for-in`; no implicit deprecation diagnostic is emitted. *)
+
 cForClause  = [ forInitializer ], ";",
               [ expression ], ";",
               [ expression ] ;
