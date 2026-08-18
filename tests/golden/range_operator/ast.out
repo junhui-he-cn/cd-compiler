@@ -1,0 +1,13 @@
+Program
+  Let ascending = (..< 1 5)
+  Expr (call print ascending)
+  Expr (call print (member-call ascending len))
+  Expr (call print (index ascending 2))
+  ForIn item in (..< 0 4)
+    Block
+      Expr (call print item)
+  Let start = 2
+  Let stop = 5
+  ForIn item in (..< start stop)
+    Block
+      Expr (call print item)

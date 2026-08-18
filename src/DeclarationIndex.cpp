@@ -642,6 +642,11 @@ private:
             collectExpression(binary->right.get());
             return;
         }
+        if (const auto* range = dynamic_cast<const RangeExpr*>(expression)) {
+            collectExpression(range->start.get());
+            collectExpression(range->stop.get());
+            return;
+        }
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
             collectExpression(logical->left.get());
             collectExpression(logical->right.get());

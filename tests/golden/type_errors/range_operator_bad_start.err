@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/range_operator_bad_start.cd:1:18: range expects number as start argument, got string
+  let bad = "start"..<3;
+                   ^

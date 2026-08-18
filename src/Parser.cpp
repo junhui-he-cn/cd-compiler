@@ -1172,13 +1172,20 @@ ExprPtr Parser::comparison(bool allowStructConstructors)
 {
     ExprPtr expr = term(allowStructConstructors);
     while (match(TokenType::Greater) || match(TokenType::GreaterEqual)
-        || match(TokenType::Less) || match(TokenType::LessEqual)) {
+        || match(TokenType::Less) || match(TokenType::LessEqual)
+        || match(TokenType::Range)) {
         Token op = previous();
         ExprPtr right = term(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
-        expr = withSpan(
-            std::make_unique<BinaryExpr>(std::move(expr), std::move(op), std::move(right)),
-            span);
+        if (op.type == TokenType::Range) {
+            expr = withSpan(
+                std::make_unique<RangeExpr>(std::move(expr), std::move(op), std::move(right)),
+                span);
+        } else {
+            expr = withSpan(
+                std::make_unique<BinaryExpr>(std::move(expr), std::move(op), std::move(right)),
+                span);
+        }
     }
     return expr;
 }

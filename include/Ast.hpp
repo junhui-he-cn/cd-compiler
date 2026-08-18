@@ -154,6 +154,15 @@ struct BinaryExpr final : Expr {
     ExprPtr right;
 };
 
+struct RangeExpr final : Expr {
+    RangeExpr(ExprPtr start, Token op, ExprPtr stop);
+    void print(std::ostream& out) const override;
+
+    ExprPtr start;
+    Token op;
+    ExprPtr stop;
+};
+
 struct LogicalExpr final : Expr {
     LogicalExpr(ExprPtr left, Token op, ExprPtr right);
     void print(std::ostream& out) const override;

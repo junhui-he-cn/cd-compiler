@@ -1,0 +1,12 @@
+let ascending = 1..<5;
+print(ascending);
+print(ascending.len());
+print(ascending[2]);
+for item in 0..<4 {
+  print(item);
+}
+let start = 2;
+let stop = 5;
+for item in start..<stop {
+  print(item);
+}

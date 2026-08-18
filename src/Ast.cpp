@@ -584,6 +584,22 @@ void BinaryExpr::print(std::ostream& out) const
     out << ')';
 }
 
+RangeExpr::RangeExpr(ExprPtr start, Token op, ExprPtr stop)
+    : start(std::move(start))
+    , op(std::move(op))
+    , stop(std::move(stop))
+{
+}
+
+void RangeExpr::print(std::ostream& out) const
+{
+    out << '(' << op.lexeme << ' ';
+    writeExpr(out, start);
+    out << ' ';
+    writeExpr(out, stop);
+    out << ')';
+}
+
 LogicalExpr::LogicalExpr(ExprPtr left, Token op, ExprPtr right)
     : left(std::move(left))
     , op(std::move(op))
@@ -1607,6 +1623,16 @@ void populateExpr(Expr& expression)
             populateExpr(*binary->right);
             mergeRange(result, binary->right->range);
         }
+    } else if (auto* range = dynamic_cast<RangeExpr*>(&expression)) {
+        mergeRange(result, tokenRange(range->op));
+        if (range->start) {
+            populateExpr(*range->start);
+            mergeRange(result, range->start->range);
+        }
+        if (range->stop) {
+            populateExpr(*range->stop);
+            mergeRange(result, range->stop->range);
+        }
     } else if (auto* logical = dynamic_cast<LogicalExpr*>(&expression)) {
         mergeRange(result, tokenRange(logical->op));
         if (logical->left) {
@@ -2125,6 +2151,9 @@ void assignExprIds(Expr& expression, std::size_t& next)
     } else if (auto* binary = dynamic_cast<BinaryExpr*>(&expression)) {
         assign(binary->left);
         assign(binary->right);
+    } else if (auto* range = dynamic_cast<RangeExpr*>(&expression)) {
+        assign(range->start);
+        assign(range->stop);
     } else if (auto* logical = dynamic_cast<LogicalExpr*>(&expression)) {
         assign(logical->left);
         assign(logical->right);

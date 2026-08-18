@@ -1359,6 +1359,24 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
         return result;
     }
 
+    if (const auto* range = dynamic_cast<const RangeExpr*>(&expression)) {
+        const TypeInfo start = checkExpression(*range->start);
+        if (start.kind != StaticType::Unknown && start.kind != StaticType::Number) {
+            throw TypeError(
+                range->op,
+                "range expects number as start argument, got " + typeInfoName(start));
+        }
+        const TypeInfo stop = checkExpression(*range->stop);
+        if (stop.kind != StaticType::Unknown && stop.kind != StaticType::Number) {
+            throw TypeError(
+                range->op,
+                "range expects number as stop argument, got " + typeInfoName(stop));
+        }
+        const TypeInfo resultType = simpleType(StaticType::Range);
+        declarationIndex_.recordTypedExpression(*range, resultType);
+        return CheckedExpression{resultType};
+    }
+
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
         const TypeInfo left = checkExpression(*logical->left);
         const TypeInfo right = checkExpression(*logical->right);

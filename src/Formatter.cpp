@@ -99,6 +99,7 @@ bool isBinaryOperator(TokenType type)
     case TokenType::AmpersandAmpersand:
     case TokenType::Pipe:
     case TokenType::PipePipe:
+    case TokenType::Range:
     case TokenType::QuestionQuestion:
     case TokenType::FatArrow:
         return true;
@@ -138,6 +139,7 @@ bool isUnaryMinus(const std::vector<const Token*>& tokens, std::size_t index)
     case TokenType::AmpersandAmpersand:
     case TokenType::Pipe:
     case TokenType::PipePipe:
+    case TokenType::Range:
     case TokenType::FatArrow:
         return true;
     default:
@@ -874,6 +876,10 @@ void emitToken(
         }
         break;
     case TokenType::Dot:
+        state.trimTrailingSpaces();
+        state.writeRaw(token.lexeme);
+        break;
+    case TokenType::Range:
         state.trimTrailingSpaces();
         state.writeRaw(token.lexeme);
         break;

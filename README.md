@@ -52,6 +52,10 @@ Use `-I` or `--import-path` to add module search paths. Every source file is
 an independent module: passing multiple files compiles an ordered set of entry
 modules, and cross-file visibility requires `import` plus `export`.
 
+The language supports half-open integer ranges with `start..<stop`, for example
+`for item in 0..<3 { print(item); }`. Use `range(start, stop, step)` when a
+custom step is required; slicing and closed ranges are not part of this syntax.
+
 ## Compile and Run Bytecode
 
 Emit a `.cdbc` artifact with the C++ compiler and run it with the Rust VM:

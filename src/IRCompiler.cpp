@@ -1363,6 +1363,14 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
         return emitBinary(binary->op.type, left, right, operandType, resultType);
     }
 
+    if (const auto* range = dynamic_cast<const RangeExpr*>(&expression)) {
+        typedExpressionType(*range, StaticType::Range, "range expression");
+        std::vector<IRRegister> arguments;
+        arguments.push_back(compileExpression(*range->start));
+        arguments.push_back(compileExpression(*range->stop));
+        return ir_.emitNativeCall("range", std::move(arguments));
+    }
+
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
         return emitLogical(*logical);
     }

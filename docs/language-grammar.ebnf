@@ -219,7 +219,11 @@ equality    = comparison,
               { ( "==" | "!=" ), comparison } ;
 
 comparison  = term,
-              { ( "<" | "<=" | ">" | ">=" ), term } ;
+              { ( "<" | "<=" | ">" | ">=" | "..<" ), term } ;
+
+(* `start..<stop` creates a half-open range with step 1. The operator shares
+   the comparison precedence and does not provide slicing or a closed-range
+   form; use `range(start, stop, step)` when a custom step is needed. *)
 
 term        = factor,
               { ( "+" | "-" ), factor } ;

@@ -130,7 +130,13 @@ void Lexer::scanToken()
         addToken(TokenType::Comma);
         break;
     case '.':
-        addToken(TokenType::Dot);
+        if (peek() == '.' && peekNext() == '<') {
+            advance();
+            advance();
+            addToken(TokenType::Range);
+        } else {
+            addToken(TokenType::Dot);
+        }
         break;
     case '?':
         if (peek() == '?') {
@@ -445,6 +451,8 @@ std::string tokenTypeName(TokenType type)
         return "Comma";
     case TokenType::Dot:
         return "Dot";
+    case TokenType::Range:
+        return "Range";
     case TokenType::Question:
         return "Question";
     case TokenType::QuestionQuestion:

@@ -148,6 +148,22 @@ void test_formats_optional_types_and_postfix_question()
     assert(astFor(source) == astFor(formatted));
 }
 
+void test_formats_range_operator()
+{
+    const std::string source =
+        "let values = 0 ..< 3;\n"
+        "for item in 0 ..< 2 { print(item); }\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "let values = 0..<3;\n"
+        "for item in 0..<2 {\n"
+        "  print(item);\n"
+        "}\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
 void test_preserves_top_level_blank_lines_only()
 {
     const std::string source =
@@ -329,6 +345,7 @@ int main()
     test_formats_selective_imports();
     test_formats_declarative_exports();
     test_formats_optional_types_and_postfix_question();
+    test_formats_range_operator();
     test_preserves_top_level_blank_lines_only();
     test_preserves_supported_trailing_commas();
     test_preserves_trailing_commas_across_lists();

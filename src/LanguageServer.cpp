@@ -728,6 +728,11 @@ private:
             visitExpression(binary->right.get());
             return;
         }
+        if (const auto* range = dynamic_cast<const RangeExpr*>(expression)) {
+            visitExpression(range->start.get());
+            visitExpression(range->stop.get());
+            return;
+        }
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
             visitExpression(logical->left.get());
             visitExpression(logical->right.get());
@@ -1112,6 +1117,11 @@ private:
         if (const auto* binary = dynamic_cast<const BinaryExpr*>(expression)) {
             visitExpression(binary->left.get());
             visitExpression(binary->right.get());
+            return;
+        }
+        if (const auto* range = dynamic_cast<const RangeExpr*>(expression)) {
+            visitExpression(range->start.get());
+            visitExpression(range->stop.get());
             return;
         }
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {

@@ -224,7 +224,7 @@ print(inc());
 | `string` | `"hello"` | 字符串；字符串操作按 Unicode scalar value 计算位置 |
 | `[T]` | `[number]`, `[optional<string>]` | 数组；数组是可变的引用值 |
 | `map<K, V>` | `map<string, number>` | 映射；键只能是 `nil`、`number`、`bool` 或 `string` |
-| `range` | `range(0, 3)` | 不可变的有限整数范围 |
+| `range` | `range(0, 3)`、`0..<3` | 不可变的有限整数范围 |
 | `fun(...) : T` | `fun(number): string` | 函数值和闭包 |
 | 命名结构体 | `Person`, `Box<number>` | 名义类型，字段形状由 `struct` 声明定义 |
 | 枚举 | `Result`, `Result<number>` | 名义类型，由多个 variant 构成 |
@@ -412,6 +412,10 @@ for value in range(1, 4) {
   print(value);
 }
 
+for value in 1..<4 {
+  print(value);
+}
+
 let prices = { "tea": 8, "coffee": 12 };
 for key in prices {
   print(key);
@@ -541,9 +545,10 @@ map 的键只能是 `nil`、`number`、`bool` 或 `string`。读取不存在的�
 ```cd
 let ascending = range(1, 5);          // 1, 2, 3, 4
 let descending = range(5, 0, -1);     // 5, 4, 3, 2, 1
+let short = 1..<5;                    // 1, 2, 3, 4
 ```
 
-形式可以是 `range(stop)`、`range(start, stop)` 或 `range(start, stop, step)`。步长不能为零，参数必须是有限整数。range 支持索引、`len`、`contains` 和 `for-in`，本身不可变。
+形式可以是 `range(stop)`、`range(start, stop)` 或 `range(start, stop, step)`；`start..<stop` 是步长为 1 的半开简写。步长不能为零，参数必须是有限整数。range 支持索引、`len`、`contains` 和 `for-in`，本身不可变。当前没有闭区间 `..=` 或 slicing 语法。
 
 ## 8. 结构体、枚举和模式匹配
 
@@ -787,7 +792,7 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 | `remove(map, key)` / `clear(map)` | 原地删除键或清空 map |
 | `merge(left, right)` | 创建浅拷贝 map；右侧值覆盖同键值 |
 | `keys(map)` / `values(map)` | 按插入顺序返回新数组 |
-| `range(...)` | 创建半开整数范围 |
+| `range(...)` / `start..<stop` | 创建半开整数范围 |
 | `floor` / `ceil` / `sqrt` | 数值运算；负数 `sqrt` 会产生运行时错误 |
 | `str(value)` | 将值转换为与 `print` 相同的文本表示 |
 | `substr(string, start, length)` / `charAt(string, index)` | 按 Unicode scalar value 进行字符串切片和字符访问 |
@@ -800,7 +805,7 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 
 map 是有插入顺序的共享引用值。`map[key] = value` 会插入或更新，更新不会移动既有 key；缺失 key 的读取和 `remove` 会产生 `map key not found`。`clear` 原地清空并返回 `nil`；`keys`、`values` 返回按插入顺序排列的新数组；`merge(left, right)` 返回新 map，左侧顺序不变，右侧重复 key 只替换值，新 key 追加，输入 map 不被修改。内置 map 的 key 仍只允许 `nil`、`number`、`bool` 和 `string`；泛型哈希容器使用库级 `Eq + Hash` 契约。
 
-`range(stop)`、`range(start, stop)` 和 `range(start, stop, step)` 生成不可变半开整数范围；step 不能为零，边界和 step 必须是有限整数。range 支持索引、`len`、`contains`、`for-in` 和按 `(start, stop, step)` 的结构比较。
+`range(stop)`、`range(start, stop)`、`range(start, stop, step)` 和 `start..<stop` 生成不可变半开整数范围；`..<` 只接受两个数值边界并使用 step 1，step 不能为零，边界和 step 必须是有限整数。range 支持索引、`len`、`contains`、`for-in` 和按 `(start, stop, step)` 的结构比较。
 
 `substr` 和 `charAt` 使用 Unicode scalar value 偏移，而不是 UTF-8 字节偏移；组合字符仍按多个 scalar value 计算，不提供 grapheme 分割或 Unicode normalization。`str` 与 `print` 使用相同的文本表示。`typeOf` 返回 `nil`、`number`、`bool`、`string`、`function`、`array`、`map`、`range`、枚举名或命名结构体名。`hash` 是确定性的 32 位 FNV-1a 结果，受 `Hash` 编译期约束保护；公共库提供 `HashSet<T: Eq + Hash>` 和 `HashMap<K: Eq + Hash, V>`，但不会放宽内置 map key 类型。
 
