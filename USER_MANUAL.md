@@ -227,9 +227,10 @@ print(inc());
 ```cd
 let score: number = 100;
 let maybeScore: optional<number> = nil;
-let values: [optional<number>] = [1, nil, 3];
+let shorthandScore: number? = 100;
+let values: [number?] = [1, nil, 3];
 
-fun parseScore(text: string): optional<number> {
+fun parseScore(text: string): number? {
   return nil;
 }
 
@@ -238,10 +239,10 @@ let addOne: fun(number): number = fun (value: number): number {
 };
 ```
 
-`optional<T>` 表示 `T` 或 `nil`。非空值可以赋给 `optional<T>`，但 `optional<T>` 不能直接当作 `T` 使用。nil 检查不会收窄类型，`optional<T>` 必须显式解包：
+`optional<T>` 表示 `T` 或 `nil`；类型位置的 `T?` 是完全等价的简写。两种写法可以嵌套在数组、map、函数、泛型和其他可选类型中。非空值可以赋给 `optional<T>`，但 `optional<T>` 不能直接当作 `T` 使用。nil 检查不会收窄类型，可选值必须显式解包：
 
 ```cd
-fun printName(name: optional<string>) {
+fun printName(name: string?) {
   if let n = name {
     // 这里 n 是 string
     print(n);
@@ -249,7 +250,7 @@ fun printName(name: optional<string>) {
 }
 ```
 
-显式解包形式包括语句级 `if let` / `while let`（在作用域内绑定一个全新的非 nil 值）、表达式后缀 `?`（值为 nil 时从当前函数提前返回 nil，仅当函数返回 `optional<U>` 时可用）、`??`（为 nil 时取右侧值），以及 `match` 的绑定臂。`if`/`while`/`for` 的条件必须是 `bool`；可选值用 `if let` 显式解包，`nil` 比较本身只是普通布尔表达式。
+显式解包形式包括语句级 `if let` / `while let`（在作用域内绑定一个全新的非 nil 值）、表达式后缀 `?`（值为 nil 时从当前函数提前返回 nil，仅当函数返回可选类型时可用）、`??`（为 nil 时取右侧值），以及 `match` 的绑定臂。类型位置的 `T?` 与表达式位置的 `expr?` 由上下文区分；`if`/`while`/`for` 的条件必须是 `bool`，可选值用 `if let` 显式解包，`nil` 比较本身只是普通布尔表达式。
 
 ### 类型推断和泛型
 

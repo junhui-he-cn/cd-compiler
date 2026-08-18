@@ -744,9 +744,8 @@ TypeAnnotation Parser::typeAnnotation(const std::string& simpleTypeMessage)
     }
 
     if (match(TokenType::Question)) {
-        throw ParseError(
-            previous(),
-            "postfix `?` nullable syntax was removed; use `optional<T>`");
+        Token question = previous();
+        annotation = TypeAnnotation::nullable(std::move(question), std::move(annotation));
     }
     return annotation;
 }

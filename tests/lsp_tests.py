@@ -711,6 +711,7 @@ def main() -> int:
                             "let box: LocalBox = LocalBox { value: 1 };\n"
                             "let result: Outcome = Outcome.Ok(2);\n"
                             "print(box.get());\n"
+                            "let maybe: number? = 1;\n"
                         ),
                     }
                 },

@@ -1,15 +1,15 @@
-struct Box { value: optional<number> }
+struct Box { value: number? }
 
-fun unwrap(value: optional<number>): optional<number> {
+fun unwrap(value: number?): number? {
   if (value != nil) {
     return value;
   }
   return 0;
 }
 
-let age: optional<number> = nil;
-let values: [optional<number>] = [1, nil];
-let maybeValues: optional<[number]> = nil;
+let age: number? = nil;
+let values: [number?] = [1, nil];
+let maybeValues: [number]? = nil;
 let box: Box = Box { value: 2 };
 
 print(unwrap(age));
@@ -18,8 +18,8 @@ print(maybeValues);
 print(box.value);
 
 let optional = 7;
-let maybe: optional<number> = nil;
-let nested: optional<[optional<number>]> = nil;
+let maybe: number? = nil;
+let nested: [number?]? = nil;
 let callback: optional<fun(number): string> = nil;
 
 print(optional);

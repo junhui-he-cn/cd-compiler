@@ -19,7 +19,7 @@ execution remain unchanged until an explicit decision changes them.
 | --- | --- |
 | Verification | Versioned inventory, canonical runner, boundary and malformed corpora |
 | Front end | Typed source identities, lossless source, declaration/semantic indexes, import-aware module graph |
-| Language | Functions, closures, generics and constraints, `optional<T>`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities |
+| Language | Functions, closures, generics and constraints, `optional<T>`/`T?`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes |
 | IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` |
 | Tools | Formatter, open/closed-workspace LSP definition and references, trace and interactive VM debugger |

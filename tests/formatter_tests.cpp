@@ -132,12 +132,12 @@ void test_formats_declarative_exports()
 void test_formats_optional_types_and_postfix_question()
 {
     const std::string source =
-        "let maybe:optional<[optional<number>]> = nil;\n"
+        "let maybe:[number?]? = nil;\n"
         "if let v = maybe { print(v); }\n"
         "print(maybe??0);\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
     const std::string expected =
-        "let maybe: optional<[optional<number>]> = nil;\n"
+        "let maybe: [number?]? = nil;\n"
         "if let v = maybe {\n"
         "  print(v);\n"
         "}\n"

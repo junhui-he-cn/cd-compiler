@@ -86,11 +86,11 @@ arm 用逗号分隔、返回值），但：
 
 ### 3. optional\<T\> / T?
 
-- 手册、EBNF、TypeChecker 均只支持 `optional<T>`；
-- 没有任何 `T?` 类型后缀（Lexer 的 `?` 只用于表达式后缀 unwrap 与 `??`）；
-- 表达式后缀 `?` 与 `??` 三层一致。
+- `optional<T>` 与类型位置的 `T?` 都由 Parser 构造 nullable AST；
+- TypeChecker、AST、LSP 类型导航和接口输出将两种写法归一为同一 `optional<T>` 类型；
+- 表达式后缀 `?` 仍表示 unwrap，`??` 仍表示 coalesce，三者按语法上下文区分。
 
-结论：一致，`T?` 属于 Phase 13 可选项，当前不存在。
+结论：一致；`T?` 是在保留 `optional<T>` 兼容写法基础上新增的类型语法糖。
 
 ### 4. explicit generic call syntax
 

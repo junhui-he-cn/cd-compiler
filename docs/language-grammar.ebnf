@@ -296,12 +296,12 @@ primary     = functionExpr
             | identifier
             | "(", expression, ")" ;
 
-typeExpr    = optionalType ;
+typeExpr    = nullableType ;
 
-optionalType = "optional", "<", typeExpr, ">"
-             | primaryType ;
+nullableType = primaryType, [ "?" ] ;
 
-primaryType = arrayType
+primaryType = "optional", "<", typeExpr, ">"
+            | arrayType
             | mapType
             | functionType
             | qualifiedType
@@ -321,8 +321,12 @@ genericTypeArguments = "<", typeExpr,
 
 functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
 
+(* In a type position, `T?` is shorthand for `optional<T>`. The same `?`
+   token has a separate expression meaning below: `expr?` unwraps an
+   optional value and returns nil from the enclosing function. *)
+
 (* A single `|` separates OR-pattern alternatives; `||` remains the logical
-   expression operator. `optional<T>` means `T` or `nil`. Nil checks do not
+   expression operator. `optional<T>` and `T?` mean `T` or `nil`. Nil checks do not
    narrow: `if let v = expr` / `while let v = expr` bind a fresh non-nil
    value, `expr?` unwraps with an early nil return, `left ?? right` provides a
    fallback, and `match` binding arms bind the non-nil type. `if`/`while`/

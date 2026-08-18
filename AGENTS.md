@@ -278,7 +278,11 @@ File-backed lexer, parser, and type diagnostics always include the file path: `<
 ## Current Language Semantics and Limitations
 
 - There is no nullable flow analysis: nil checks and truthiness conditions are plain boolean tests with no type effect, and assignment, capture, call, index, and loop boundaries carry no narrowing facts to invalidate. Code must use one of the explicit unwrap forms below before treating an `optional<T>` value as its inner type, including re-checking captured nullable bindings inside function and closure bodies.
-- `optional<T>` values are unwrapped explicitly; nil checks do not narrow.
+- `optional<T>` and type-position `T?` values are unwrapped explicitly; nil checks do not narrow.
+  The postfix type shorthand is equivalent to `optional<T>` and may be nested
+  through arrays, maps, function return types, generic arguments, and other
+  optional types. Expression-position `expr?` keeps its existing early-return
+  unwrap meaning.
   `if let v = expr { } else { }` and `while let v = expr { }` bind a fresh
   non-nil value in a new scope (statement forms); `expr?` unwraps and returns
   nil from the enclosing function when the value is nil (only valid when the
