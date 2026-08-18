@@ -1,0 +1,10 @@
+let groupedInteger = 1_000_000;
+let groupedFraction = 3.141_592;
+let lowerExponent = 1e10;
+let signedExponent = 1e-6;
+let upperExponent = 2.5E10;
+print(groupedInteger);
+print(groupedFraction);
+print(lowerExponent);
+print(signedExponent);
+print(upperExponent);

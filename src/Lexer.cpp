@@ -156,6 +156,8 @@ void Lexer::scanToken()
             while (peek() != '\n' && !isAtEnd()) {
                 advance();
             }
+        } else if (match('*')) {
+            blockComment();
         } else {
             addToken(match('=') ? TokenType::SlashEqual : TokenType::Slash);
         }
@@ -298,19 +300,83 @@ void Lexer::stringLiteral()
     addToken(TokenType::String);
 }
 
-void Lexer::numberLiteral()
+void Lexer::blockComment()
 {
-    while (std::isdigit(static_cast<unsigned char>(peek()))) {
+    const int commentLine = line_;
+    const int commentColumn = tokenColumn_;
+    while (!isAtEnd()) {
+        if (peek() == '*' && peekNext() == '/') {
+            advance();
+            advance();
+            return;
+        }
         advance();
     }
 
-    // Accept a fractional part only when at least one digit follows the dot,
-    // so `1.` can be diagnosed by the parser as a separate token sequence.
-    if (peek() == '.' && std::isdigit(static_cast<unsigned char>(peekNext()))) {
-        advance();
-        while (std::isdigit(static_cast<unsigned char>(peek()))) {
+    recordError(DiagnosticError(
+        DiagnosticKind::Lex,
+        SourceLocation{commentLine, commentColumn},
+        "unterminated block comment"));
+}
+
+void Lexer::numberLiteral()
+{
+    bool invalid = false;
+    std::string invalidMessage;
+    const auto markInvalid = [&](std::string message) {
+        if (!invalid) {
+            invalid = true;
+            invalidMessage = std::move(message);
+        }
+    };
+    const auto consumeDigitRun = [&](bool hasLeadingDigit, const char* part) {
+        bool hasDigit = hasLeadingDigit;
+        bool previousUnderscore = false;
+        while (std::isdigit(static_cast<unsigned char>(peek())) || peek() == '_') {
+            if (peek() == '_') {
+                if (!hasDigit || previousUnderscore) {
+                    markInvalid("digit separator must appear between digits");
+                }
+                previousUnderscore = true;
+            } else {
+                hasDigit = true;
+                previousUnderscore = false;
+            }
             advance();
         }
+        if (previousUnderscore) {
+            markInvalid("digit separator must appear between digits");
+        }
+        if (!hasDigit) {
+            markInvalid(std::string(part) + " requires at least one digit");
+        }
+        return hasDigit;
+    };
+
+    consumeDigitRun(true, "integer part");
+
+    // Keep `1.` as a parser-level error, but treat `1._2` as an invalid
+    // numeric separator rather than splitting it into unrelated tokens.
+    if (peek() == '.' && (std::isdigit(static_cast<unsigned char>(peekNext()))
+                          || peekNext() == '_')) {
+        advance();
+        consumeDigitRun(false, "fractional part");
+    }
+
+    if (peek() == 'e' || peek() == 'E') {
+        advance();
+        if (peek() == '+' || peek() == '-') {
+            advance();
+        }
+        consumeDigitRun(false, "exponent");
+    }
+
+    if (invalid) {
+        recordError(DiagnosticError(
+            DiagnosticKind::Lex,
+            SourceLocation{line_, tokenColumn_},
+            "invalid numeric literal `" + source_.substr(start_, current_ - start_)
+                + "`: " + invalidMessage));
     }
 
     addToken(TokenType::Number);

@@ -353,9 +353,14 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
 typeArguments = typeExpr,
                 { ",", typeExpr }, [ "," ] ;
 identifier  = letter, { letter | digit | "_" } ;
-number      = digit, { digit }, [ ".", digit, { digit } ] ;
+number      = digitRun,
+              [ ".", digitRun ],
+              [ ( "e" | "E" ), [ "+" | "-" ], digitRun ] ;
+digitRun    = digit, { [ "_" ], digit } ;
 string      = '"', { character }, '"' ;
 
 (* Source strings support the escapes \n \r \t \0 \\ and \". Bare
    newlines, incomplete escapes, and unknown escapes are lexer errors.
+   Line comments start with //; block comments use non-nested /* ... */ and
+   are skipped by the lexer. An unterminated block comment is a lexer error.
    The `.cdbc` artifact text format has its own separate escaping rules. *)

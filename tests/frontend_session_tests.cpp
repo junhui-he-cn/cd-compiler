@@ -881,13 +881,15 @@ void test_module_type_error_recovery(const fs::path& root)
 void assertLosslessFile(
     const LosslessSourceFileView& view,
     const SourceFile& source,
-    std::size_t expectedComments)
+    std::size_t expectedLineComments,
+    std::size_t expectedBlockComments = 0)
 {
     assert(view.sourceId() == source.id);
     assert(view.roundTrips(source.text));
 
     std::size_t cursor = 0;
-    std::size_t commentCount = 0;
+    std::size_t lineCommentCount = 0;
+    std::size_t blockCommentCount = 0;
     for (const LosslessPiece& piece : view.pieces()) {
         assert(piece.range.source == source.id);
         assert(piece.range.start == cursor);
@@ -903,13 +905,16 @@ void assertLosslessFile(
             assert(!piece.token.has_value());
             assert(piece.triviaKind.has_value());
             if (*piece.triviaKind == TriviaKind::LineComment) {
-                ++commentCount;
+                ++lineCommentCount;
+            } else if (*piece.triviaKind == TriviaKind::BlockComment) {
+                ++blockCommentCount;
             }
         }
         cursor = piece.range.end;
     }
     assert(cursor == source.text.size());
-    assert(commentCount == expectedComments);
+    assert(lineCommentCount == expectedLineComments);
+    assert(blockCommentCount == expectedBlockComments);
 }
 
 void test_lossless_source_view_round_trips_comments(const fs::path& root)
@@ -935,6 +940,27 @@ void test_lossless_source_view_round_trips_comments(const fs::path& root)
     assertLosslessFile(view.file(SourceFileId{1}), program.sources[1], 1);
 }
 
+void test_lossless_source_view_round_trips_block_comments(const fs::path& root)
+{
+    fs::remove_all(root);
+    const fs::path sourcePath = root / "block_comments.cd";
+    const std::string sourceText =
+        "/* header\n"
+        " * block\n"
+        " */\n"
+        "let value = 1; /* inline */\n"
+        "print(value);\n";
+    writeFile(sourcePath, sourceText);
+
+    FrontendSession session;
+    Program program = session.loadFiles({sourcePath.string()});
+    assertLosslessFile(
+        session.losslessSourceView().file(SourceFileId{0}),
+        program.sources[0],
+        0,
+        2);
+}
+
 } // namespace
 
 int main()
@@ -956,6 +982,7 @@ int main()
     test_direct_diagnostics_keep_source_ranges(root / "direct_diagnostics");
     test_module_type_error_recovery(root / "module_type_error_recovery");
     test_lossless_source_view_round_trips_comments(root / "lossless_sources");
+    test_lossless_source_view_round_trips_block_comments(root / "block_comments");
 
     fs::remove_all(root);
 }

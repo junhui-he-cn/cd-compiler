@@ -10,7 +10,7 @@ struct FormatterOptions {
 };
 
 // Format one source file from the production lossless token/trivia view.
-// Token lexemes, string contents, and line-comment text are copied verbatim;
+// Token lexemes, string contents, and comment text are copied verbatim;
 // whitespace is normalized using the stable formatter layout. At top level,
 // at most one source blank line between syntax items is retained, and
 // parser-accepted trailing comma tokens are preserved. Comma-separated array

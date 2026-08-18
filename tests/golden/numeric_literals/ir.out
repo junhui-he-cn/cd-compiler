@@ -1,0 +1,21 @@
+IR
+0000  v0 = constant #0 1000000
+0001  store_var @0 groupedInteger#0, v0
+0002  v1 = constant #1 3.1415920000000002
+0003  store_var @1 groupedFraction#1, v1
+0004  v2 = constant #2 10000000000
+0005  store_var @2 lowerExponent#2, v2
+0006  v3 = constant #3 9.9999999999999995e-07
+0007  store_var @3 signedExponent#3, v3
+0008  v4 = constant #4 25000000000
+0009  store_var @4 upperExponent#4, v4
+0010  v5 = load_var @5 groupedInteger#0
+0011  v6 = native_call @6 print(v5)
+0012  v7 = load_var @7 groupedFraction#1
+0013  v8 = native_call @8 print(v7)
+0014  v9 = load_var @9 lowerExponent#2
+0015  v10 = native_call @10 print(v9)
+0016  v11 = load_var @11 signedExponent#3
+0017  v12 = native_call @12 print(v11)
+0018  v13 = load_var @13 upperExponent#4
+0019  v14 = native_call @14 print(v13)

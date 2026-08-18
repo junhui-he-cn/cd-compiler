@@ -1,0 +1,7 @@
+IR
+0000  v0 = constant #0 42
+0001  store_var @0 value#0, v0
+0002  v1 = load_var @1 value#0
+0003  v2 = native_call @2 print(v1)
+0004  v3 = load_var @3 value#0
+0005  v4 = native_call @4 print(v3)

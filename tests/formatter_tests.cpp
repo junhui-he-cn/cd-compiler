@@ -108,6 +108,8 @@ void test_formats_selective_imports()
     assert(formatted == expected);
     assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
     assert(astFor(source) == astFor(formatted));
+    assert(formatLosslessSource(losslessViewFor("/* only a comment */"))
+        == "/* only a comment */\n");
 }
 
 void test_formats_declarative_exports()
@@ -231,6 +233,51 @@ void test_preserves_trailing_commas_across_lists()
     assert(astFor(source) == astFor(formatted));
 }
 
+void test_preserves_numeric_literal_spelling()
+{
+    const std::string source =
+        "let grouped=1_000_000;\n"
+        "let fraction=3.141_592;\n"
+        "let exponent=1e-6;\n"
+        "let upper=2.5E10;\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "let grouped = 1_000_000;\n"
+        "let fraction = 3.141_592;\n"
+        "let exponent = 1e-6;\n"
+        "let upper = 2.5E10;\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
+void test_preserves_block_and_doc_comments()
+{
+    const std::string source =
+        "/* file header\n"
+        " * block comments keep their bytes\n"
+        " */\n"
+        "/// value declaration\n"
+        "let value = 42;\n"
+        "/* inline */ print(value);\n"
+        "/* trailing\n"
+        " */\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "/* file header\n"
+        " * block comments keep their bytes\n"
+        " */\n"
+        "/// value declaration\n"
+        "let value = 42;\n"
+        "/* inline */\n"
+        "print(value);\n"
+        "/* trailing\n"
+        " */\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
 void test_wraps_long_delimited_lists()
 {
     const std::string first = "123456789012345678901234567890123456789012345";
@@ -285,6 +332,8 @@ int main()
     test_preserves_top_level_blank_lines_only();
     test_preserves_supported_trailing_commas();
     test_preserves_trailing_commas_across_lists();
+    test_preserves_numeric_literal_spelling();
+    test_preserves_block_and_doc_comments();
     test_wraps_long_delimited_lists();
     test_empty_and_invalid_options();
     return 0;

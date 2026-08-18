@@ -37,6 +37,7 @@ private:
     void recordError(DiagnosticError error);
     void throwIfErrors();
     void stringLiteral();
+    void blockComment();
     void numberLiteral();
     void identifier();
 

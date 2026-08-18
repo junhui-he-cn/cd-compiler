@@ -1,0 +1,12 @@
+Lex error at <repo>/tests/golden/parse_errors/numeric_invalid_forms.cd:1:16: invalid numeric literal `1_`: digit separator must appear between digits
+  let trailing = 1_;
+                 ^
+Lex error at <repo>/tests/golden/parse_errors/numeric_invalid_forms.cd:2:16: invalid numeric literal `1__2`: digit separator must appear between digits
+  let repeated = 1__2;
+                 ^
+Lex error at <repo>/tests/golden/parse_errors/numeric_invalid_forms.cd:3:15: invalid numeric literal `1e`: exponent requires at least one digit
+  let missing = 1e;
+                ^
+Lex error at <repo>/tests/golden/parse_errors/numeric_invalid_forms.cd:4:19: invalid numeric literal `1e+`: exponent requires at least one digit
+  let missingSign = 1e+;
+                    ^

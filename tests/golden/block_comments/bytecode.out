@@ -1,0 +1,10 @@
+native_import i0 = print abi=1
+main registers=5
+0000  block
+0001  b0 = constant #0 42
+0002  init_global g0, b0
+0003  b1 = load_global g0
+0004  b2 = call_native i0 [b1]
+0005  b3 = load_global g0
+0006  b4 = call_native i0 [b3]
+0007  return_nil

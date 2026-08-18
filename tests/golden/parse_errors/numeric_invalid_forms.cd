@@ -1,0 +1,4 @@
+let trailing = 1_;
+let repeated = 1__2;
+let missing = 1e;
+let missingSign = 1e+;

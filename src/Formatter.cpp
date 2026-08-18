@@ -69,6 +69,15 @@ bool isWordLike(TokenType type)
         || isKeyword(type);
 }
 
+bool isCommentTrivia(const LosslessPiece& piece)
+{
+    if (!piece.isTrivia() || !piece.triviaKind) {
+        return false;
+    }
+    return *piece.triviaKind == TriviaKind::LineComment
+        || *piece.triviaKind == TriviaKind::BlockComment;
+}
+
 bool isBinaryOperator(TokenType type)
 {
     switch (type) {
@@ -778,9 +787,7 @@ void emitToken(
         for (std::size_t pieceIndex = currentPieceIndex + 1;
              pieceIndex < nextTokenPieceIndex;
              ++pieceIndex) {
-            if (pieces[pieceIndex].isTrivia()
-                && pieces[pieceIndex].triviaKind
-                && *pieces[pieceIndex].triviaKind == TriviaKind::LineComment) {
+            if (isCommentTrivia(pieces[pieceIndex])) {
                 hasComment = true;
                 break;
             }
@@ -959,14 +966,14 @@ std::string formatLosslessSource(const LosslessSourceFileView& source, Formatter
     if (tokens.empty()) {
         std::string comments;
         for (const LosslessPiece& piece : pieces) {
-            if (piece.isTrivia() && piece.triviaKind && *piece.triviaKind == TriviaKind::LineComment) {
-                if (!comments.empty()) {
+            if (isCommentTrivia(piece)) {
+                if (!comments.empty() && comments.back() != '\n') {
                     comments.push_back('\n');
                 }
                 comments += piece.text;
             }
         }
-        if (!comments.empty()) {
+        if (!comments.empty() && comments.back() != '\n') {
             comments.push_back('\n');
         }
         return comments;
@@ -980,7 +987,7 @@ std::string formatLosslessSource(const LosslessSourceFileView& source, Formatter
     for (std::size_t pieceIndex = 0; pieceIndex < pieces.size(); ++pieceIndex) {
         const LosslessPiece& piece = pieces[pieceIndex];
         if (piece.isTrivia()) {
-            if (piece.triviaKind && *piece.triviaKind == TriviaKind::LineComment) {
+            if (isCommentTrivia(piece)) {
                 if (state.sourceBlankLineSinceLastItem && state.delimiters.empty()) {
                     state.ensureBlankLine();
                 }

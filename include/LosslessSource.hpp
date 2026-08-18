@@ -15,6 +15,7 @@ enum class LosslessPieceKind {
 enum class TriviaKind {
     Whitespace,
     LineComment,
+    BlockComment,
     Other,
 };
 

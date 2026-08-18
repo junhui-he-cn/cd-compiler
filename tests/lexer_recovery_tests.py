@@ -74,6 +74,23 @@ def main() -> int:
         require(result.stdout == "", f"unexpected unterminated-string stdout: {result.stdout!r}")
         require(result.stderr.count("Lex error") == 1, f"expected one unterminated-string error: {result.stderr!r}")
         require("unterminated string" in result.stderr, f"missing unterminated-string diagnostic: {result.stderr!r}")
+
+    with tempfile.TemporaryDirectory(prefix="compiler-lexer-recovery-block-comment-") as directory:
+        source_path = Path(directory) / "input.cd"
+        source_path.write_text(
+            "/* header\n"
+            " * second line\n"
+            " */\n"
+            "print(1 @ 2);\n",
+            encoding="utf-8",
+        )
+        result = run(compiler, [str(source_path)])
+        require(result.returncode == 1, f"unexpected block-comment exit: {result.returncode}")
+        require(result.stdout == "", f"unexpected block-comment stdout: {result.stdout!r}")
+        require(
+            f"Lex error at {source_path}:4:9: unexpected character `@`" in result.stderr,
+            f"block comment changed following source location: {result.stderr!r}",
+        )
     return 0
 
 

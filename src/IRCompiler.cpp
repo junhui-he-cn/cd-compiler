@@ -63,9 +63,17 @@ Value literalValue(const std::string& text)
         return Value::string(decodeStringEscapes(text.substr(1, text.size() - 2)));
     }
 
+    std::string normalized;
+    normalized.reserve(text.size());
+    for (const char character : text) {
+        if (character != '_') {
+            normalized.push_back(character);
+        }
+    }
+
     std::size_t parsed = 0;
-    const double number = std::stod(text, &parsed);
-    if (parsed != text.size()) {
+    const double number = std::stod(normalized, &parsed);
+    if (parsed != normalized.size()) {
         throw IRCompileError("invalid literal: " + text);
     }
     return Value::number(number);

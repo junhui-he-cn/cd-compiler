@@ -1,0 +1,9 @@
+/* file header
+ * block comments keep their bytes
+ */
+/// value declaration
+let value = 42;
+/* inline */ print(value);
+/* trailing
+ */
+print(value);

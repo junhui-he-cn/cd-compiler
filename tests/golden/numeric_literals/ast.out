@@ -1,0 +1,11 @@
+Program
+  Let groupedInteger = 1_000_000
+  Let groupedFraction = 3.141_592
+  Let lowerExponent = 1e10
+  Let signedExponent = 1e-6
+  Let upperExponent = 2.5E10
+  Expr (call print groupedInteger)
+  Expr (call print groupedFraction)
+  Expr (call print lowerExponent)
+  Expr (call print signedExponent)
+  Expr (call print upperExponent)

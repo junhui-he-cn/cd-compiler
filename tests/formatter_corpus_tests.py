@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ERROR_CASES = {"runtime_errors", "parse_errors", "type_errors", "import_errors"}
-EXPECTED_CASE_COUNT = 241
+EXPECTED_CASE_COUNT = 243
 
 
 def compiler_inputs(case_dir: Path) -> list[Path]:
@@ -61,6 +61,15 @@ def comments(source: str) -> list[str]:
         if character == '"':
             in_string = True
             index += 1
+            continue
+        if character == "/" and index + 1 < len(source) and source[index + 1] == "*":
+            end = source.find("*/", index + 2)
+            if end == -1:
+                end = len(source)
+            else:
+                end += 2
+            result.append(source[index:end])
+            index = end
             continue
         if character == "/" and index + 1 < len(source) and source[index + 1] == "/":
             end = source.find("\n", index)

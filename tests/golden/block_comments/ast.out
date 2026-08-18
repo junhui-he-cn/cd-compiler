@@ -1,0 +1,4 @@
+Program
+  Let value = 42
+  Expr (call print value)
+  Expr (call print value)

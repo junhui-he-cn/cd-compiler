@@ -50,11 +50,37 @@ void appendTrivia(
             continue;
         }
 
+        const bool startsBlockComment = source.text[cursor] == '/'
+            && cursor + 1 < end
+            && source.text[cursor + 1] == '*';
+        if (startsBlockComment) {
+            std::size_t commentEnd = cursor + 2;
+            while (commentEnd + 1 < end
+                && !(source.text[commentEnd] == '*'
+                    && source.text[commentEnd + 1] == '/')) {
+                ++commentEnd;
+            }
+            if (commentEnd + 1 < end) {
+                commentEnd += 2;
+            } else {
+                commentEnd = end;
+            }
+            pieces.push_back(LosslessPiece{
+                LosslessPieceKind::Trivia,
+                SourceRange{sourceId, cursor, commentEnd},
+                source.text.substr(cursor, commentEnd - cursor),
+                std::nullopt,
+                TriviaKind::BlockComment});
+            cursor = commentEnd;
+            continue;
+        }
+
         std::size_t triviaEnd = cursor + 1;
         while (triviaEnd < end
             && !(source.text[triviaEnd] == '/'
                 && triviaEnd + 1 < end
-                && source.text[triviaEnd + 1] == '/')) {
+                && (source.text[triviaEnd + 1] == '/'
+                    || source.text[triviaEnd + 1] == '*'))) {
             ++triviaEnd;
         }
         const std::string text = source.text.substr(cursor, triviaEnd - cursor);
