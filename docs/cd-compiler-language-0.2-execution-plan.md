@@ -871,46 +871,26 @@ range operator
 
 # 21. Phase 19：Capability System 决策
 
-当前如果只有：
+状态：已完成并于 2026-08-24 重新记录
+`docs/decisions/language-capability-001.md` 选择方案 A：`Eq`、`Ord`、
+`Hash` 保留为编译期内建泛型约束，不实现用户自定义 capability、trait
+对象或运行时 witness。该决策不引入新的语法、字节码或 VM 行为。
+
+当前采用方案 A。以下约束继续可用：
 
 ```cd
 fun same<T: Eq>(...)
 fun before<T: Ord>(...)
 ```
 
-但用户不能自定义 capability impl，则必须二选一：
-
 ## A. 明确只是 built-in generic constraints
 
-文档不要包装成完整 trait/capability system。
+文档将它们描述为编译期泛型约束，而不是完整 trait/capability system。
+用户自定义 capability、`impl`、trait object、witness dictionary 和动态派发
+均不属于 Language 0.2。未来若重新开启方案 B，必须新增独立决策并重新评估
+语法、模块接口、IR/bytecode 和 VM 边界。
 
-## B. 长期实现完整 capability
-
-例如：
-
-```cd
-capability Eq {
-    fun equals(other: Self): bool;
-}
-```
-
-```cd
-impl Eq for Person {
-    fun equals(other: Person): bool {
-        return this.id == other.id;
-    }
-}
-```
-
-推荐长期走 B，但不属于 Language 0.2 核心 P0。
-
-无论哪种方案：
-
-```text
-VM 不应理解 capability 名字
-```
-
-应在编译器 lowering 成 witness / direct function call。
+Capability 名字只参与前端类型检查，不进入 IR、bytecode 或 VM。
 
 ---
 

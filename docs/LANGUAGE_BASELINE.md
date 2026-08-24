@@ -47,7 +47,7 @@
 | enum 命名 payload `Ok(value: number)` | 仅文档 | — | — | — | — | — | — | 漂移 #2 |
 | enum variant pattern | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致（按位置绑定） |
 | `impl` 方法 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
-| capability 约束 `T: Eq/Ord/Hash` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致（仅内置约束，见 Phase 19） |
+| capability 约束 `T: Eq/Ord/Hash` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致（仅内置约束，Phase 19 已决策） |
 | `import` / `export` / 转导出 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
 | 多文件 CLI 语义 | 仅文档（组合程序） | — | — | 仅实现（每文件一模块） | — | — | ✓ | 漂移 #3 |
 | array | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
@@ -149,7 +149,7 @@ FrontendSession 模块图语义一致（直接导入暴露导出名、选择性�
 2. 字符串无转义、无 `else if`（Phase 6/8）。尾逗号已在逗号分隔的声明、
    类型、调用、集合、导入/导出和模式列表中统一接受并保留。
 3. 数字仍只有 `f64`-backed `number`，没有新的整数类型或十六进制字面量。
-4. capability 只是内置约束，非完整 trait/capability 系统（Phase 19 决策）。
+4. capability 只是内置约束，非完整 trait/capability 系统（Phase 19 已决策）。
 
 ## 验证
 

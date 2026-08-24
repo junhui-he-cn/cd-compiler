@@ -1,9 +1,8 @@
 # Compiler Design Roadmap
 
-Current-state record for the compiler, language, and compiler tools. All
-previously planned slices are void as of 2026-08-15: completed work lives in
-decision records and Git history, and future work starts from a fresh
-explicit decision. The Rust runtime has a separate current-state record in
+Current-state record for the compiler, language, and compiler tools. Language
+0.2 follows the staged execution plan and its accepted decision records. The
+Rust runtime has a separate current-state record in
 [`docs/vm-roadmap.md`](vm-roadmap.md).
 
 ## Compatibility contracts
@@ -35,3 +34,9 @@ C-style `for` remains accepted as a legacy compatibility form. New code should
 prefer `for-in` over arrays, maps, and ranges. The compiler does not emit an
 implicit deprecation warning because it has no warning diagnostic channel;
 removal or warning behavior requires a separate decision.
+
+Phase 19 is decided: `Eq`, `Ord`, and `Hash` remain built-in compile-time
+generic constraints. They are erased before runtime, user-defined capability
+implementations and trait objects remain out of scope, and structs do not
+satisfy `Ord` after struct ordering operators were removed. See
+[`language-capability-001`](decisions/language-capability-001.md).
