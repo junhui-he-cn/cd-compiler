@@ -1,0 +1,21 @@
+native_import i0 = print abi=1
+main registers=8
+0000  block
+0001  b0 = constant #0 "A🙂中"
+0002  b1 = iter_init b0
+0003  b2 = constant #1 nil
+0004  init_global g0, b2
+0005  br b1
+0006  block
+0007  b3 = iter_has b1
+0008  br_if b3, b2, b3
+0009  block
+0010  b4 = iter_next b1
+0011  set_global g0, b4
+0012  b5 = load_global g0
+0013  init_global g1, b5
+0014  b6 = load_global g1
+0015  b7 = call_native i0 [b6]
+0016  br b1
+0017  block
+0018  return_nil

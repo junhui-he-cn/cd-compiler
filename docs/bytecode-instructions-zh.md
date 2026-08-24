@@ -177,7 +177,8 @@ VM 是寄存器机。每个函数体拥有一块预分配寄存器数组和一�
   共享同一底层对象。
 - **字符串**：长度与 `substr`/`charAt` 按 Unicode 标量（scalar value）计数和切片，
   不会切开一个标量的 UTF-8 编码；grapheme 与归一化不属于该格式版本。
-- **确定性**：map 保插入序；数组/map/range 的 for-in 迭代使用长度或键列表快照；
+- **确定性**：map 保插入序；数组/map/range/string 的 for-in 迭代使用长度、键列表或
+  Unicode scalar value 序列快照；
   原生回调按左到右顺序执行。
 - **资源与取消**：指令步数、调用深度、运行时元素数、输出字节量都有预算；超限产生
   `resource` 类运行时错误。协作调度器在指令/原生调用边界检查取消与 GC 安全点。
@@ -460,8 +461,8 @@ rValue = iter_next rIter
 for-in 通过 VM 内部迭代器协议降级（迭代器是 VM 内部值，不暴露为源语言值）：
 
 - `iter_init`：数组在进入时快照**长度**（迭代期间读活数组元素）、map 快照成按插入序
-  排列的键数组、range 保持不可变；非数组/map/range 报
-  `for-in expects array, range, or map`。
+  排列的键数组、range 保持不可变、string 快照按顺序排列的 Unicode scalar value
+  字符串；非数组/map/range/string 报 `for-in expects array, range, map, or string`。
 - `iter_has`：纯查询，返回是否还有元素，不推进位置。
 - `iter_next`：返回当前元素并推进一位；越界报 `iterator exhausted`。
 

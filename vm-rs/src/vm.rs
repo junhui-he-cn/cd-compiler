@@ -9567,7 +9567,15 @@ impl<'a> VM<'a> {
                         source: IteratorSource::Range(range.clone()),
                         position: Rc::new(std::cell::Cell::new(0)),
                     },
-                    _ => return Err(RuntimeError::new("for-in expects array, range, or map")),
+                    Value::String(text) => IteratorValue {
+                        source: IteratorSource::StringScalars(
+                            text.chars().map(|character| character.to_string()).collect(),
+                        ),
+                        position: Rc::new(std::cell::Cell::new(0)),
+                    },
+                    _ => return Err(RuntimeError::new(
+                        "for-in expects array, range, map, or string",
+                    )),
                 };
                 self.write_register(frame, *dest, Value::iterator(iterator))
             }
@@ -9583,6 +9591,7 @@ impl<'a> VM<'a> {
                         position < array.elements.borrow().len()
                     }
                     IteratorSource::Range(range) => position < range.length,
+                    IteratorSource::StringScalars(values) => position < values.len(),
                 };
                 self.write_register(frame, *dest, Value::boolean(has))
             }
@@ -9618,6 +9627,11 @@ impl<'a> VM<'a> {
                         let value = range.start as i128 + range.step as i128 * position as i128;
                         Value::number(value as i64 as f64)
                     }
+                    IteratorSource::StringScalars(values) => values
+                        .get(position)
+                        .cloned()
+                        .map(Value::string)
+                        .ok_or_else(|| RuntimeError::new("iterator exhausted"))?,
                 };
                 iterator.position.set(position + 1);
                 self.write_register(frame, *dest, element)

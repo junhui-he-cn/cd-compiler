@@ -666,9 +666,10 @@ void TypeChecker::checkStatement(const Stmt& statement)
         if (iterableType.kind != StaticType::Unknown
             && iterableType.kind != StaticType::Array
             && iterableType.kind != StaticType::Range
-            && iterableType.kind != StaticType::Map) {
+            && iterableType.kind != StaticType::Map
+            && iterableType.kind != StaticType::String) {
             throw TypeError(forInStmt->variable,
-                "for-in expects array, range, or map, got " + typeInfoName(iterableType));
+                "for-in expects array, range, map, or string, got " + typeInfoName(iterableType));
         }
 
         TypeInfo elementType = unknownType();
@@ -678,6 +679,8 @@ void TypeChecker::checkStatement(const Stmt& statement)
             elementType = simpleType(StaticType::Number);
         } else if (iterableType.kind == StaticType::Map && iterableType.keyType) {
             elementType = *iterableType.keyType;
+        } else if (iterableType.kind == StaticType::String) {
+            elementType = simpleType(StaticType::String);
         }
 
         beginScope();

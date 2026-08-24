@@ -1,0 +1,4 @@
+for character in "A🙂中" {
+  let scalar: string = character;
+  print(scalar);
+}

@@ -169,6 +169,10 @@ forStmt     = "for", ( forInClause | cForClause ), block ;
 
 forInClause = identifier, "in", expression ;
 
+(* The current semantic implementation accepts statically known arrays, maps,
+   ranges, and strings here. String elements are Unicode scalar-value strings;
+   generic user-defined iterators are not part of this grammar contract yet. *)
+
 (* C-style `for` remains a supported legacy compatibility form. New code
    should prefer `for-in`; no implicit deprecation diagnostic is emitted. *)
 

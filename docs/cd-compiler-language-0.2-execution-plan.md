@@ -896,40 +896,33 @@ Capability 名字只参与前端类型检查，不进入 IR、bytecode 或 VM。
 
 # 22. Phase 20：Iterable / Iterator 语言协议
 
-长期让：
+Phase 20 采用分阶段交付。首个窄切片复用现有 VM 内部的
+`iter_init` / `iter_has` / `iter_next` 协议，为字符串增加稳定的源语言
+迭代语义：
 
 ```cd
-for item in value {
+for character in "A🙂中" {
+  print(character);
 }
 ```
 
-不再硬编码：
+字符串在 `iter_init` 时按 Rust `str::chars()` 快照 Unicode scalar value
+序列；每个元素都是 `string`。组合标记仍是独立 scalar value，不提供
+grapheme 分割或归一化。该切片不新增源语法、AST、IR、bytecode opcode 或
+`cdbc 0.2` 版本。
 
-```text
-array
-map
-range
-```
-
-未来可引入：
+通用：
 
 ```text
 Iterable<T>
 Iterator<T>
 ```
 
-或 capability 等价物。
+声明、用户自定义 iterator、capability witness、trait object 和动态派发仍
+延期。它们需要单独的协议决策，覆盖泛型约束、模块接口、IR/bytecode 边界、
+运行时生命周期和 C++/Rust parity 后才可实施。
 
-与 Bytecode 0.2：
-
-```text
-iter_init
-iter_next
-```
-
-协调。
-
-此项为 P3，不要早于核心语法稳定实施。
+参见 [`language-iterator-string-001`](decisions/language-iterator-string-001.md)。
 
 ---
 

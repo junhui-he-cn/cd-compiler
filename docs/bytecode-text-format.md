@@ -535,10 +535,11 @@ rValue = iter_next rIter
 Iterators are VM-internal values and are never exposed to the source
 language. `iter_init` snapshots array length at entry while reading live
 elements during iteration, snapshots map keys into an insertion-ordered
-array, and keeps ranges immutable; `iter_has` is pure and `iter_next`
-advances one position. The compiler arranges `iter_has` + `iter_next` into
-the loop blocks, so `break`/`continue` and mutation-during-iteration behavior
-match the previous lowering exactly.
+array, keeps ranges immutable, and snapshots string scalar values in order;
+`iter_has` is pure and `iter_next` advances one position. String iteration uses
+Unicode scalar values, not UTF-8 bytes or grapheme clusters. The compiler
+arranges `iter_has` + `iter_next` into the loop blocks, so `break`/`continue`
+and mutation-during-iteration behavior match the previous lowering exactly.
 
 The `range` native is also supported with one to three numeric arguments. Its
 result is consumed by the existing `len_range` and `range_get` instructions

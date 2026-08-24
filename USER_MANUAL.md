@@ -399,12 +399,13 @@ for let mut i = 0; i < 3; i += 1 {
 
 `continue` 在 C 风格循环中会先执行递增子句，再进行下一次条件检查。
 
-该形式为兼容性保留的 legacy 语法。新代码优先使用 `for-in` 遍历数组、map 或
-range；当前编译器不会因为使用 C 风格 `for` 额外输出弃用警告。
+该形式为兼容性保留的 legacy 语法。新代码优先使用 `for-in` 遍历数组、map、range
+或字符串；当前编译器不会因为使用 C 风格 `for` 额外输出弃用警告。
 
 ### `for-in`
 
-数组按索引顺序遍历，range 按范围值遍历，map 按插入顺序遍历键：
+数组按索引顺序遍历，range 按范围值遍历，map 按插入顺序遍历键，字符串按
+Unicode scalar value 顺序遍历，每个元素都是一个 `string`：
 
 ```cd
 for item in [1, 2, 3] {
@@ -423,9 +424,15 @@ let prices = { "tea": 8, "coffee": 12 };
 for key in prices {
   print(key);
 }
+
+for character in "A🙂中" {
+  print(character);
+}
 ```
 
-数组迭代会在开始时记录长度，map 迭代会在开始时记录键列表。`break` 和 `continue` 作用于最近的循环；它们在循环外或嵌套函数中不能跳出外层循环。
+数组迭代会在开始时记录长度，map 迭代会在开始时记录键列表，字符串迭代会在开始时
+快照 Unicode scalar value 序列。组合字符仍按多个 scalar value 处理，不提供 grapheme
+分割。`break` 和 `continue` 作用于最近的循环；它们在循环外或嵌套函数中不能跳出外层循环。
 
 ## 6. 函数和闭包
 
@@ -919,7 +926,8 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 当前实现仍是实验性语言，以下能力尚未提供或仍较保守：
 
 - 没有包管理、包清单、import map、导出重命名和通配符导出；
-- 没有字符串或自定义迭代器的 `for-in`；
+- 没有用户自定义 `Iterable<T>` / `Iterator<T>` 或自定义迭代器协议；字符串 `for-in`
+  已按 Unicode scalar value 实现；
 - 没有 `Person(...)` 形式的结构体构造函数；
 - 命名结构体支持有限递归字段类型（例如 `optional<Node>`，以及数组、函数、泛型和互相递归的 nominal shape）；Rust VM 会在安全点回收不可达的强引用环，活动路径上的重复节点格式化为 `<cycle>`；C++ `Value` 层没有独立的 cycle collection；
 - 没有继承、重载、动态派发、静态方法和函数值字段调用；
@@ -929,7 +937,7 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 没有自动 nullable 收窄，`optional<T>` 必须显式解包（`if let`/`while let`/`?`/`??` 或 `match` 绑定臂）；
 - 当函数签名或集合元素类型无法可靠推断时，需要补充显式类型注解。
 
-交互式 REPL、动态派发、包管理和自定义 iterator 不属于当前 `master` 发布面；`trace`、`debug` 和 `profile` 是可用的源码级确定性执行/调试/观测工具。profile 的 wall-clock 与 allocation/peak 扩展仍需独立的 VM 决策和 workload 证据。
+交互式 REPL、动态派发、包管理和用户自定义 iterator 不属于当前 `master` 发布面；`trace`、`debug` 和 `profile` 是可用的源码级确定性执行/调试/观测工具。profile 的 wall-clock 与 allocation/peak 扩展仍需独立的 VM 决策和 workload 证据。
 
 ### 发布维护者检查
 

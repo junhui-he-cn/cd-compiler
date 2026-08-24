@@ -1,0 +1,14 @@
+IR
+0000  v0 = constant #0 "A🙂中"
+0001  v1 = iter_init v0
+0002  v2 = constant #1 nil
+0003  store_var @0 character#0, v2
+0004  v3 = iter_has v1
+0005  jump_if_false v3, 0013
+0006  v4 = iter_next v1
+0007  assign_var @1 character#0, v4
+0008  v5 = load_var @2 character#0
+0009  store_var @3 scalar#1, v5
+0010  v6 = load_var @4 scalar#1
+0011  v7 = native_call @5 print(v6)
+0012  jump 0004

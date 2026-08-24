@@ -1,4 +1,4 @@
-Runtime error at tests/golden/runtime_errors/for_in_dynamic_non_array.cd:2:1: for-in expects array, range, or map
+Runtime error at tests/golden/runtime_errors/for_in_dynamic_non_array.cd:2:1: for-in expects array, range, map, or string
   for x in id(123) {
   ^
 Call stack:

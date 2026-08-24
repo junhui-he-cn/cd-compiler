@@ -1,0 +1,5 @@
+Program
+  ForIn character in "A🙂中"
+    Block
+      Let scalar: string = character
+      Expr (call print scalar)

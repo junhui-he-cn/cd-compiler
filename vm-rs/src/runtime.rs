@@ -56,6 +56,8 @@ pub enum IteratorSource {
     /// Insertion-ordered key snapshot produced when iteration started.
     MapKeys(ArrayValue),
     Range(RangeValue),
+    /// Unicode scalar-value snapshot produced when iteration started.
+    StringScalars(Vec<String>),
 }
 
 #[derive(Clone, Debug)]
@@ -386,7 +388,7 @@ fn collect_value_references(value: &Value, outgoing: &mut Vec<usize>) {
             IteratorSource::Array(array, _) | IteratorSource::MapKeys(array) => {
                 outgoing.push(Rc::as_ptr(&array.elements) as usize)
             }
-            IteratorSource::Range(_) => {}
+            IteratorSource::Range(_) | IteratorSource::StringScalars(_) => {}
         },
         Value::Nil | Value::Number(_) | Value::Bool(_) | Value::String(_) | Value::Range(_) => {}
     }
