@@ -572,6 +572,25 @@ print(user.name);
 
 结构体是引用值，字段修改会对所有别名可见。匿名的 `{ name: "Ada" }` 在表达式位置是 map，不是匿名结构体；必须写成 `User { name: "Ada" }`。
 
+命名结构体字段支持有限递归的 nominal handle，例如：
+
+```cd
+struct Node {
+  value: number,
+  next: optional<Node>
+}
+
+let tail = Node { value: 2, next: nil };
+let head = Node { value: 1, next: tail };
+head.next = nil;
+```
+
+结构体赋值、参数传递、闭包捕获和字段存储都会复制共享 handle；断开一个链接不会使仍被
+其他别名持有的节点失效。仍可达的强引用环会在根存活期间保留，格式化时活动路径上的重复
+节点显示为 `<cycle>`。Rust VM 使用非移动 tracing heap，在安全点回收已经不可达的环；当前
+没有 weak reference。C++ `Value` 层使用 `shared_ptr`，只提供环安全格式化，不提供独立的
+cycle collection。
+
 ### 枚举
 
 枚举 variant 的构造参数按位置传入：
@@ -902,7 +921,7 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 没有包管理、包清单、import map、导出重命名和通配符导出；
 - 没有字符串或自定义迭代器的 `for-in`；
 - 没有 `Person(...)` 形式的结构体构造函数；
-- 递归枚举 payload 可以使用，递归命名结构体字段（例如 `struct Node { next: optional<Node> }`）仍被拒绝；
+- 命名结构体支持有限递归字段类型（例如 `optional<Node>`，以及数组、函数、泛型和互相递归的 nominal shape）；Rust VM 会在安全点回收不可达的强引用环，活动路径上的重复节点格式化为 `<cycle>`；C++ `Value` 层没有独立的 cycle collection；
 - 没有继承、重载、动态派发、静态方法和函数值字段调用；
 - `Eq`/`Ord` 目前只能作为编译期泛型约束使用，尚无用户自定义 capability
   实现；`Hash` 只提供编译期约束和 `hash(value)` 入口，公共库的哈希容器使用
