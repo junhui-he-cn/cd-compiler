@@ -19,6 +19,11 @@ class BoundaryComparisonTests(unittest.TestCase):
         expected = "<repo>/tests/golden/case/input.cd:1:1\n"
         self.assertEqual(boundary_comparison.canonicalize(actual, allowlist), expected)
         self.assertEqual(boundary_comparison.canonicalize("tests/golden/case/input.cd\n", allowlist), "tests/golden/case/input.cd\n")
+        library_path = "/old/checkout/library/sets.cd:465:7\n"
+        self.assertEqual(
+            boundary_comparison.canonicalize(library_path, allowlist),
+            "<repo>/library/sets.cd:465:7\n",
+        )
         malformed_path = "/tmp/compiler-design-malformed-source-ab12/input.cd:1:1\n"
         self.assertEqual(
             boundary_comparison.canonicalize(malformed_path, allowlist),

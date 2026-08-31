@@ -14,6 +14,12 @@
       "reason": "Rust VM paths must compare independently of the checkout root."
     },
     {
+      "name": "checkout-root-before-library",
+      "pattern": "(?:[A-Za-z]:)?[/\\\\][^\\n]*?(?=[/\\\\]library[/\\\\])",
+      "replacement": "<repo>",
+      "reason": "Imported library diagnostics must compare independently of the checkout root."
+    },
+    {
       "name": "malformed-source-temporary-path",
       "pattern": "(?:[A-Za-z]:)?[/\\\\][^\\n]*?[/\\\\]compiler-design-malformed-source-[A-Za-z0-9_-]+[/\\\\]input\\.cd",
       "replacement": "<malformed-source>/input.cd",
