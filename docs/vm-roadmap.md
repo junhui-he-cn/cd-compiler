@@ -2,8 +2,11 @@
 
 Current-state record for the Rust VM in `vm-rs/`. All previously planned VM
 slices are void as of 2026-08-15: completed work lives in decision records and
-Git history, and future work starts from a fresh explicit decision. The
-compiler, language, and compiler tools have a separate current-state record in
+Git history. The active cdbc 0.3 Machine Foundation iteration is governed by
+[`plan-0.3.md`](plan-0.3.md); VM03-00 is now specified in
+[`cdbc-0.3-machine-foundation.md`](cdbc-0.3-machine-foundation.md), and its
+implementation has not started yet. The compiler, language, and compiler tools
+have a separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 
 ## VM product boundary
