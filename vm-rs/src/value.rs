@@ -20,6 +20,12 @@ pub enum Value {
     Struct(StructValue),
     Variant(VariantValue),
     Iterator(IteratorValue),
+    /// Exact 64-bit raw integer bits; width and signedness belong to an opcode.
+    MachineInt(u64),
+    /// IEEE floating-point value; the instruction supplies F32 or F64 format.
+    MachineFloat(f64),
+    /// Deterministic VM virtual byte address; zero is the null address.
+    Address(u64),
 }
 
 impl Value {
@@ -63,6 +69,18 @@ impl Value {
         Self::Iterator(value)
     }
 
+    pub fn machine_int(value: u64) -> Self {
+        Self::MachineInt(value)
+    }
+
+    pub fn machine_float(value: f64) -> Self {
+        Self::MachineFloat(value)
+    }
+
+    pub fn address(value: u64) -> Self {
+        Self::Address(value)
+    }
+
     pub fn type_name(&self) -> &str {
         match self {
             Self::Nil => "nil",
@@ -76,6 +94,9 @@ impl Value {
             Self::Struct(value) => value.type_name.as_deref().unwrap_or("struct"),
             Self::Variant(value) => &value.enum_name,
             Self::Iterator(_) => "iterator",
+            Self::MachineInt(_) => "machine_int",
+            Self::MachineFloat(_) => "machine_float",
+            Self::Address(_) => "address",
         }
     }
 
@@ -109,6 +130,9 @@ impl Value {
             (Self::Iterator(left), Self::Iterator(right)) => {
                 Rc::as_ptr(&left.position) == Rc::as_ptr(&right.position)
             }
+            (Self::MachineInt(left), Self::MachineInt(right)) => left == right,
+            (Self::MachineFloat(left), Self::MachineFloat(right)) => left == right,
+            (Self::Address(left), Self::Address(right)) => left == right,
             _ => false,
         }
     }
@@ -167,6 +191,9 @@ fn hash_value_into(hash: &mut Fnv1a32, value: &Value) {
         Value::Struct(_) => 8,
         Value::Variant(_) => 9,
         Value::Iterator(_) => 10,
+        Value::MachineInt(_) => 11,
+        Value::MachineFloat(_) => 12,
+        Value::Address(_) => 13,
     });
 
     match value {
@@ -201,6 +228,19 @@ fn hash_value_into(hash: &mut Fnv1a32, value: &Value) {
             }
         }
         Value::Iterator(value) => hash.number(Rc::as_ptr(&value.position) as usize as u64),
+        Value::MachineInt(value) => hash.number(*value),
+        Value::MachineFloat(value) => hash.number(canonical_float_bits(*value)),
+        Value::Address(value) => hash.number(*value),
+    }
+}
+
+fn canonical_float_bits(value: f64) -> u64 {
+    if value.is_nan() {
+        0x7ff8_0000_0000_0000
+    } else if value == 0.0 {
+        0
+    } else {
+        value.to_bits()
     }
 }
 
@@ -290,6 +330,11 @@ fn format_value(value: &Value, active_references: &mut HashSet<(u8, usize)>) -> 
             output
         }
         Value::Iterator(_) => "<iterator>".to_string(),
+        Value::MachineInt(value) => {
+            format!("machine_int({}, 0x{:016x})", value, value)
+        }
+        Value::MachineFloat(value) => format!("machine_float({})", format_number(*value)),
+        Value::Address(value) => format!("address(0x{:016x})", value),
     }
 }
 
@@ -314,6 +359,48 @@ use crate::runtime::{Heap, VariantValue};
         assert_eq!(Value::boolean(true).to_string(), "true");
         assert_eq!(Value::boolean(false).to_string(), "false");
         assert_eq!(Value::string("hello").to_string(), "hello");
+    }
+
+    #[test]
+    fn machine_values_preserve_raw_bits_and_display_their_domain() {
+        let integer = Value::machine_int(u64::MAX);
+        let float = Value::machine_float(-0.0);
+        let address = Value::address(0x40);
+
+        assert!(matches!(integer, Value::MachineInt(u64::MAX)));
+        assert_eq!(integer.type_name(), "machine_int");
+        assert_eq!(integer.to_string(), "machine_int(18446744073709551615, 0xffffffffffffffff)");
+        assert_eq!(format!("{:?}", integer), "MachineInt(18446744073709551615)");
+
+        assert!(matches!(float, Value::MachineFloat(value) if value.to_bits() == (-0.0f64).to_bits()));
+        assert_eq!(float.type_name(), "machine_float");
+        assert_eq!(float.to_string(), "machine_float(-0)");
+        assert_eq!(format!("{:?}", float), "MachineFloat(-0.0)");
+
+        assert!(matches!(address, Value::Address(0x40)));
+        assert_eq!(address.type_name(), "address");
+        assert_eq!(address.to_string(), "address(0x0000000000000040)");
+        assert_eq!(format!("{:?}", address), "Address(64)");
+    }
+
+    #[test]
+    fn machine_values_have_domain_specific_equality_and_hashing() {
+        assert!(Value::machine_int(7).runtime_equals(&Value::machine_int(7)));
+        assert!(!Value::machine_int(7).runtime_equals(&Value::number(7.0)));
+        assert!(!Value::machine_int(7).runtime_equals(&Value::machine_int(8)));
+        assert_eq!(
+            Value::machine_int(7).runtime_hash(),
+            Value::machine_int(7).runtime_hash()
+        );
+
+        assert!(Value::machine_float(1.5).runtime_equals(&Value::machine_float(1.5)));
+        assert!(!Value::machine_float(f64::NAN).runtime_equals(&Value::machine_float(f64::NAN)));
+        assert_eq!(
+            Value::machine_float(0.0).runtime_hash(),
+            Value::machine_float(-0.0).runtime_hash()
+        );
+        assert!(Value::address(12).runtime_equals(&Value::address(12)));
+        assert!(!Value::address(12).runtime_equals(&Value::machine_int(12)));
     }
 
     #[test]

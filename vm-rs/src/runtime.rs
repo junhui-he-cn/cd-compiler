@@ -390,7 +390,14 @@ fn collect_value_references(value: &Value, outgoing: &mut Vec<usize>) {
             }
             IteratorSource::Range(_) | IteratorSource::StringScalars(_) => {}
         },
-        Value::Nil | Value::Number(_) | Value::Bool(_) | Value::String(_) | Value::Range(_) => {}
+        Value::Nil
+        | Value::Number(_)
+        | Value::Bool(_)
+        | Value::String(_)
+        | Value::Range(_)
+        | Value::MachineInt(_)
+        | Value::MachineFloat(_)
+        | Value::Address(_) => {}
     }
 }
 
