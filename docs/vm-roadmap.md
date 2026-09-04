@@ -17,10 +17,13 @@ the existing call stack, allocates upward-growing 8-byte-aligned frames, adds
 task an independent machine stack. VM03-07 now adds in-memory RODATA, DATA,
 and BSS descriptors, deterministic static placement, initialization/zero-fill,
 and segment permission validation before execution; linked module products
-carry their segment descriptors in expansion order. Floating-point and mixed
-integer/float conversions from VM03-03 remain pending. Machine execution
-remains interpreter-first; neither machine instructions nor segment descriptors
-are part of the cdbc 0.2 text artifact writer.
+carry their segment descriptors in expansion order. VM03-08 now adds checked
+interpreter execution for `MEMCPY`, `MEMMOVE`, and `MEMSET`, including
+zero-length operations, overlap-safe moves, deterministic overlap traps, and
+atomic range/permission validation. Floating-point and mixed integer/float
+conversions from VM03-03 remain pending. Machine execution remains
+interpreter-first; neither machine instructions nor segment descriptors are
+part of the cdbc 0.2 text artifact writer.
 The compiler, language, and compiler tools have a separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 
@@ -53,7 +56,7 @@ compatibility constraints.
 | --- | --- |
 | Artifact safety | Shared `cdbc 0.2` parser/formatter/verifier, malformed corpus, resource limits, cancellation |
 | Execution | Register VM for the complete emitted instruction set and native surface |
-| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting, in-memory cdbc 0.3 machine scalar values, typed machine memory, and task-owned machine frames |
+| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting, in-memory cdbc 0.3 machine scalar values, typed/bulk machine memory, and task-owned machine frames |
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds |

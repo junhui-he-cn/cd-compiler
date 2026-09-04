@@ -1828,6 +1828,21 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         | Instruction::AShr { value, amount, .. } => vec![*value, *amount],
         Instruction::Load { address, .. } => vec![*address],
         Instruction::Store { address, source, .. } => vec![*address, *source],
+        Instruction::Memcpy {
+            destination,
+            source,
+            size,
+        }
+        | Instruction::Memmove {
+            destination,
+            source,
+            size,
+        } => vec![*destination, *source, *size],
+        Instruction::Memset {
+            destination,
+            value,
+            size,
+        } => vec![*destination, *value, *size],
         _ => Vec::new(),
     }
 }
@@ -2607,6 +2622,29 @@ fn validate_instruction(
             register(*address, "store address")?;
             register(*source, "store source")?;
         }
+        Instruction::Memcpy {
+            destination,
+            source,
+            size,
+        }
+        | Instruction::Memmove {
+            destination,
+            source,
+            size,
+        } => {
+            register(*destination, "destination address")?;
+            register(*source, "source address")?;
+            register(*size, "byte count")?;
+        }
+        Instruction::Memset {
+            destination,
+            value,
+            size,
+        } => {
+            register(*destination, "destination address")?;
+            register(*value, "byte value")?;
+            register(*size, "byte count")?;
+        }
         Instruction::Trunc {
             dest,
             value,
@@ -2948,6 +2986,9 @@ fn machine_instruction_opcode(instruction: &Instruction) -> Option<&'static str>
         Instruction::ICmp { .. } => "icmp",
         Instruction::Load { .. } => "load",
         Instruction::Store { .. } => "store",
+        Instruction::Memcpy { .. } => "memcpy",
+        Instruction::Memmove { .. } => "memmove",
+        Instruction::Memset { .. } => "memset",
         Instruction::FrameAddr { .. } => "frame_addr",
         _ => return None,
     })
@@ -3904,6 +3945,21 @@ fn format_instruction(instruction: &Instruction) -> String {
             source,
             memory_type.as_str()
         ),
+        Instruction::Memcpy {
+            destination,
+            source,
+            size,
+        } => format!("memcpy r{}, r{}, r{}", destination, source, size),
+        Instruction::Memmove {
+            destination,
+            source,
+            size,
+        } => format!("memmove r{}, r{}, r{}", destination, source, size),
+        Instruction::Memset {
+            destination,
+            value,
+            size,
+        } => format!("memset r{}, r{}, r{}", destination, value, size),
         Instruction::FrameAddr { dest, offset } => {
             format!("r{} = frame_addr {}", dest, offset)
         }
@@ -4607,6 +4663,105 @@ mod tests {
                 }
             );
         }
+    }
+
+    #[test]
+    fn formats_and_rejects_machine_bulk_opcodes_at_the_0_2_boundary() {
+        let mut program = program_with_data_segments(Vec::new());
+        program.functions[0].registers = 3;
+        for (instruction, expected_text, opcode) in [
+            (
+                Instruction::Memcpy {
+                    destination: 0,
+                    source: 1,
+                    size: 2,
+                },
+                "memcpy r0, r1, r2",
+                "memcpy",
+            ),
+            (
+                Instruction::Memmove {
+                    destination: 0,
+                    source: 1,
+                    size: 2,
+                },
+                "memmove r0, r1, r2",
+                "memmove",
+            ),
+            (
+                Instruction::Memset {
+                    destination: 0,
+                    value: 1,
+                    size: 2,
+                },
+                "memset r0, r1, r2",
+                "memset",
+            ),
+        ] {
+            assert_eq!(format_instruction(&instruction), expected_text);
+            program.functions[0].instructions = vec![instruction];
+            program.functions[0].locations = vec![None];
+            let error = format_program_checked(&program)
+                .expect_err("machine bulk opcode must remain outside cdbc 0.2");
+            assert_eq!(
+                error,
+                FormatError::UnsupportedMachineInstruction {
+                    function: 0,
+                    instruction: 0,
+                    opcode,
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn verifies_machine_bulk_register_shapes() {
+        let mut program = program_with_data_segments(Vec::new());
+        program.functions[0].registers = 3;
+        program.functions[0].instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::IConst {
+                dest: 0,
+                width: MachineIntWidth::W64,
+                raw: 0,
+            },
+            Instruction::IConst {
+                dest: 1,
+                width: MachineIntWidth::W64,
+                raw: 0,
+            },
+            Instruction::IConst {
+                dest: 2,
+                width: MachineIntWidth::W64,
+                raw: 0,
+            },
+            Instruction::Memcpy {
+                destination: 0,
+                source: 1,
+                size: 2,
+            },
+            Instruction::Memmove {
+                destination: 0,
+                source: 1,
+                size: 2,
+            },
+            Instruction::Memset {
+                destination: 0,
+                value: 1,
+                size: 2,
+            },
+            Instruction::ReturnNil,
+        ];
+        program.functions[0].locations = vec![None; 8];
+        verify_program(&program).expect("bulk operands should verify");
+
+        program.functions[0].instructions[4] = Instruction::Memcpy {
+            destination: 3,
+            source: 1,
+            size: 2,
+        };
+        let error = verify_program(&program).expect_err("out-of-range bulk register should fail");
+        assert!(error.message.contains("destination address register r3 out of range"));
     }
 
     #[test]

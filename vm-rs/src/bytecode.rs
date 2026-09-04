@@ -656,6 +656,21 @@ pub enum Instruction {
         source: usize,
         memory_type: MachineMemoryType,
     },
+    Memcpy {
+        destination: usize,
+        source: usize,
+        size: usize,
+    },
+    Memmove {
+        destination: usize,
+        source: usize,
+        size: usize,
+    },
+    Memset {
+        destination: usize,
+        value: usize,
+        size: usize,
+    },
     FrameAddr {
         dest: usize,
         offset: u64,

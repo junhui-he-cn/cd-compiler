@@ -97,6 +97,7 @@ pub enum MemoryErrorKind {
     InvalidAddress,
     MemoryOutOfBounds,
     WriteToReadOnlyMemory,
+    InvalidMemoryOperation,
 }
 
 impl MemoryErrorKind {
@@ -109,6 +110,7 @@ impl MemoryErrorKind {
             Self::InvalidAddress => "invalid_address",
             Self::MemoryOutOfBounds => "memory_out_of_bounds",
             Self::WriteToReadOnlyMemory => "write_to_read_only_memory",
+            Self::InvalidMemoryOperation => "invalid_memory_operation",
         }
     }
 }
@@ -148,6 +150,12 @@ pub enum MemoryError {
         size: usize,
         region: MemoryRegionKind,
     },
+    InvalidMemoryOperation {
+        operation: &'static str,
+        destination: VmAddress,
+        source: VmAddress,
+        size: usize,
+    },
 }
 
 impl MemoryError {
@@ -160,6 +168,7 @@ impl MemoryError {
             Self::InvalidAddress { .. } => MemoryErrorKind::InvalidAddress,
             Self::MemoryOutOfBounds { .. } => MemoryErrorKind::MemoryOutOfBounds,
             Self::WriteToReadOnlyMemory { .. } => MemoryErrorKind::WriteToReadOnlyMemory,
+            Self::InvalidMemoryOperation { .. } => MemoryErrorKind::InvalidMemoryOperation,
         }
     }
 }
@@ -203,6 +212,18 @@ impl fmt::Display for MemoryError {
             } => write!(
                 formatter,
                 "write of {} bytes at 0x{address:016x} is not permitted in {region}",
+                size
+            ),
+            Self::InvalidMemoryOperation {
+                operation,
+                destination,
+                source,
+                size,
+            } => write!(
+                formatter,
+                "{operation} source range 0x{source:016x}..0x{:016x} overlaps destination range 0x{destination:016x}..0x{:016x} for {} bytes",
+                source.saturating_add(u64::try_from(*size).unwrap_or(u64::MAX)),
+                destination.saturating_add(u64::try_from(*size).unwrap_or(u64::MAX)),
                 size
             ),
         }
@@ -534,6 +555,150 @@ impl LinearMemory {
         Ok(())
     }
 
+    /// Copy bytes between two checked VM ranges. Unlike libc `memcpy`, an
+    /// overlapping source and destination is a deterministic VM error.
+    pub fn memcpy(
+        &mut self,
+        destination: VmAddress,
+        source: VmAddress,
+        size: usize,
+    ) -> Result<(), MemoryError> {
+        if size == 0 {
+            return Ok(());
+        }
+        let (destination_index, destination_range) =
+            self.checked_range(destination, size, true)?;
+        let (source_index, source_range) = self.checked_range(source, size, false)?;
+        let destination_end = checked_range_end(destination, size)?;
+        let source_end = checked_range_end(source, size)?;
+        if destination < source_end && source < destination_end {
+            return Err(MemoryError::InvalidMemoryOperation {
+                operation: "memcpy",
+                destination,
+                source,
+                size,
+            });
+        }
+        self.copy_validated_ranges(
+            destination,
+            destination_index,
+            destination_range,
+            source,
+            source_index,
+            source_range,
+            size,
+        )
+    }
+
+    /// Copy bytes between two checked VM ranges with overlap-safe semantics.
+    pub fn memmove(
+        &mut self,
+        destination: VmAddress,
+        source: VmAddress,
+        size: usize,
+    ) -> Result<(), MemoryError> {
+        if size == 0 {
+            return Ok(());
+        }
+        let (destination_index, destination_range) =
+            self.checked_range(destination, size, true)?;
+        let (source_index, source_range) = self.checked_range(source, size, false)?;
+        self.copy_validated_ranges(
+            destination,
+            destination_index,
+            destination_range,
+            source,
+            source_index,
+            source_range,
+            size,
+        )
+    }
+
+    /// Fill a checked VM range with one byte value.
+    pub fn memset(
+        &mut self,
+        destination: VmAddress,
+        value: u8,
+        size: usize,
+    ) -> Result<(), MemoryError> {
+        self.fill_bytes(destination, size, value)
+    }
+
+    fn copy_validated_ranges(
+        &mut self,
+        destination: VmAddress,
+        destination_index: usize,
+        destination_range: Range<usize>,
+        source: VmAddress,
+        source_index: usize,
+        source_range: Range<usize>,
+        size: usize,
+    ) -> Result<(), MemoryError> {
+        if destination_index == source_index {
+            let Some(backing) = self.backings.get_mut(destination_index) else {
+                return Err(MemoryError::InvalidAddress {
+                    address: destination,
+                    size,
+                });
+            };
+            if backing.get(destination_range.clone()).is_none()
+                || backing.get(source_range.clone()).is_none()
+            {
+                return Err(MemoryError::InvalidAddress {
+                    address: destination,
+                    size,
+                });
+            }
+            backing.copy_within(source_range, destination_range.start);
+            return Ok(());
+        }
+
+        if source_index < destination_index {
+            let (before, after) = self.backings.split_at_mut(destination_index);
+            let Some(source_bytes) = before
+                .get(source_index)
+                .and_then(|backing| backing.get(source_range))
+            else {
+                return Err(MemoryError::InvalidAddress {
+                    address: source,
+                    size,
+                });
+            };
+            let Some(destination_bytes) = after
+                .first_mut()
+                .and_then(|backing| backing.get_mut(destination_range))
+            else {
+                return Err(MemoryError::InvalidAddress {
+                    address: destination,
+                    size,
+                });
+            };
+            destination_bytes.copy_from_slice(source_bytes);
+        } else {
+            let (before, after) = self.backings.split_at_mut(source_index);
+            let Some(destination_bytes) = before
+                .get_mut(destination_index)
+                .and_then(|backing| backing.get_mut(destination_range))
+            else {
+                return Err(MemoryError::InvalidAddress {
+                    address: destination,
+                    size,
+                });
+            };
+            let Some(source_bytes) = after
+                .first()
+                .and_then(|backing| backing.get(source_range))
+            else {
+                return Err(MemoryError::InvalidAddress {
+                    address: source,
+                    size,
+                });
+            };
+            destination_bytes.copy_from_slice(source_bytes);
+        }
+        Ok(())
+    }
+
     pub fn read(&self, address: VmAddress, size: usize) -> Result<&[u8], MemoryError> {
         self.read_bytes(address, size)
     }
@@ -621,6 +786,14 @@ fn align_up(address: VmAddress, alignment: VmAddress) -> Result<VmAddress, Memor
     address
         .checked_add(padding)
         .ok_or(MemoryError::InvalidAddress { address, size: 0 })
+}
+
+fn checked_range_end(address: VmAddress, size: usize) -> Result<VmAddress, MemoryError> {
+    let size_u64 =
+        u64::try_from(size).map_err(|_| MemoryError::InvalidAddress { address, size })?;
+    address
+        .checked_add(size_u64)
+        .ok_or(MemoryError::InvalidAddress { address, size })
 }
 
 fn allocate_backing(size: VmAddress) -> Result<Vec<u8>, MemoryError> {
@@ -771,6 +944,51 @@ mod tests {
     }
 
     #[test]
+    fn bulk_memory_operations_check_ranges_permissions_and_overlap_atomically() {
+        let mut memory = LinearMemory::new();
+        let rodata = memory
+            .allocate_region_with_bytes(MemoryRegionKind::Rodata, 1, &[9, 8, 7, 6])
+            .expect("rodata allocation");
+        let data = memory
+            .allocate_region_with_bytes(MemoryRegionKind::Data, 1, &[1, 2, 3, 4])
+            .expect("data allocation");
+
+        memory
+            .memcpy(data.base, rodata.base, 4)
+            .expect("non-overlapping memcpy should succeed");
+        assert_eq!(memory.read_bytes(data.base, 4).unwrap(), &[9, 8, 7, 6]);
+
+        let error = memory
+            .memcpy(data.base + 1, data.base, 3)
+            .expect_err("overlapping memcpy should fail");
+        assert_eq!(error.kind(), MemoryErrorKind::InvalidMemoryOperation);
+        assert_eq!(memory.read_bytes(data.base, 4).unwrap(), &[9, 8, 7, 6]);
+
+        memory
+            .memmove(data.base + 1, data.base, 3)
+            .expect("overlapping memmove should succeed");
+        assert_eq!(memory.read_bytes(data.base, 4).unwrap(), &[9, 9, 8, 7]);
+        memory
+            .memset(data.base + 2, 0xab, 2)
+            .expect("memset should fill bytes");
+        assert_eq!(memory.read_bytes(data.base, 4).unwrap(), &[9, 9, 0xab, 0xab]);
+
+        let before = memory.read_bytes(data.base, 4).unwrap().to_vec();
+        let error = memory
+            .memcpy(data.base, rodata.base, 5)
+            .expect_err("overlong memcpy should fail");
+        assert_eq!(error.kind(), MemoryErrorKind::MemoryOutOfBounds);
+        assert_eq!(memory.read_bytes(data.base, 4).unwrap(), before);
+        assert_eq!(
+            memory
+                .memset(rodata.base, 0, 1)
+                .unwrap_err()
+                .kind(),
+            MemoryErrorKind::WriteToReadOnlyMemory
+        );
+    }
+
+    #[test]
     fn zero_length_operations_do_not_dereference_addresses() {
         let mut memory = LinearMemory::new();
         assert_eq!(memory.read_bytes(NULL_ADDRESS, 0).unwrap(), &[]);
@@ -780,6 +998,15 @@ mod tests {
         memory
             .fill_bytes(u64::MAX, 0, 0xff)
             .expect("unmapped zero-length fill is a no-op");
+        memory
+            .memcpy(NULL_ADDRESS, u64::MAX, 0)
+            .expect("zero-length memcpy is a no-op");
+        memory
+            .memmove(NULL_ADDRESS, u64::MAX, 0)
+            .expect("zero-length memmove is a no-op");
+        memory
+            .memset(NULL_ADDRESS, 0xff, 0)
+            .expect("zero-length memset is a no-op");
     }
 
     #[test]

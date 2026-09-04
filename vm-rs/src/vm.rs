@@ -243,6 +243,7 @@ pub enum RuntimeErrorKind {
     NullPointerAccess,
     WriteToReadOnlyMemory,
     InvalidAddress,
+    InvalidMemoryOperation,
     StackOverflow,
 }
 
@@ -257,6 +258,7 @@ impl RuntimeErrorKind {
             Self::NullPointerAccess => "null_pointer_access",
             Self::WriteToReadOnlyMemory => "write_to_read_only_memory",
             Self::InvalidAddress => "invalid_address",
+            Self::InvalidMemoryOperation => "invalid_memory_operation",
             Self::StackOverflow => "stack_overflow",
         }
     }
@@ -1578,6 +1580,142 @@ mod tests {
                 .kind(),
             MemoryErrorKind::WriteToReadOnlyMemory
         );
+    }
+
+    #[test]
+    fn machine_bulk_instructions_copy_move_and_fill_bytes() {
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Memset {
+                    destination: 0,
+                    value: 3,
+                    size: 2,
+                },
+                Instruction::IConst {
+                    dest: 3,
+                    width: MachineIntWidth::W64,
+                    raw: 1,
+                },
+                Instruction::Store {
+                    address: 4,
+                    source: 3,
+                    memory_type: MachineMemoryType::I8,
+                },
+                Instruction::Memcpy {
+                    destination: 1,
+                    source: 0,
+                    size: 2,
+                },
+                Instruction::Memmove {
+                    destination: 4,
+                    source: 0,
+                    size: 2,
+                },
+                Instruction::Load {
+                    dest: 3,
+                    address: 0,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::ReturnNil,
+            ],
+            5,
+        );
+        let mut vm = VM::new(&program);
+        let region = vm
+            .memory_mut()
+            .allocate_region_with_bytes(MemoryRegionKind::Data, 16, &[0; 16])
+            .expect("bulk operation region should allocate");
+        let registers = run_machine_body(
+            &mut vm,
+            vec![
+                Value::address(region.base),
+                Value::address(region.base + 8),
+                Value::machine_int(4),
+                Value::machine_int(0x1ab),
+                Value::address(region.base + 1),
+            ],
+        )
+        .expect("bulk instructions should execute");
+
+        assert!(matches!(
+            registers[3],
+            Value::MachineInt(value) if value == 0xab01_abab
+        ));
+        assert_eq!(vm.memory().read_bytes(region.base, 4).unwrap(), &[0xab, 0xab, 1, 0xab]);
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 8, 4).unwrap(),
+            &[0xab, 1, 0xab, 0xab]
+        );
+    }
+
+    #[test]
+    fn machine_memcpy_overlap_is_a_typed_atomic_trap() {
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Memcpy {
+                    destination: 0,
+                    source: 1,
+                    size: 2,
+                },
+                Instruction::ReturnNil,
+            ],
+            3,
+        );
+        let mut vm = VM::new(&program);
+        let region = vm
+            .memory_mut()
+            .allocate_region_with_bytes(MemoryRegionKind::Data, 8, &[1, 2, 3, 4, 5, 6, 7, 8])
+            .expect("overlap test region should allocate");
+        let error = run_machine_body(
+            &mut vm,
+            vec![
+                Value::address(region.base + 1),
+                Value::address(region.base),
+                Value::machine_int(4),
+            ],
+        )
+        .expect_err("overlapping memcpy should trap");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidMemoryOperation);
+        assert_eq!(vm.memory().read_bytes(region.base, 8).unwrap(), &[1, 2, 3, 4, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn machine_bulk_instructions_accept_null_addresses_for_zero_size() {
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Memcpy {
+                    destination: 0,
+                    source: 1,
+                    size: 2,
+                },
+                Instruction::Memmove {
+                    destination: 0,
+                    source: 1,
+                    size: 2,
+                },
+                Instruction::Memset {
+                    destination: 0,
+                    value: 3,
+                    size: 2,
+                },
+                Instruction::ReturnNil,
+            ],
+            4,
+        );
+        let mut vm = VM::new(&program);
+        run_machine_body(
+            &mut vm,
+            vec![
+                Value::address(0),
+                Value::address(0),
+                Value::machine_int(0),
+                Value::machine_int(0),
+            ],
+        )
+        .expect("zero-size bulk operations should not dereference addresses");
     }
 
     #[test]
@@ -8614,6 +8752,12 @@ impl RuntimeError {
         error
     }
 
+    fn invalid_memory_operation(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::InvalidMemoryOperation;
+        error
+    }
+
     fn stack_overflow(requested: u64, available: u64) -> Self {
         let mut error = Self::new(format!(
             "machine stack overflow: requested frame of {} bytes with {} bytes available",
@@ -8685,6 +8829,7 @@ impl From<MemoryError> for RuntimeError {
             MemoryErrorKind::NullPointerAccess => RuntimeErrorKind::NullPointerAccess,
             MemoryErrorKind::WriteToReadOnlyMemory => RuntimeErrorKind::WriteToReadOnlyMemory,
             MemoryErrorKind::InvalidAddress => RuntimeErrorKind::InvalidAddress,
+            MemoryErrorKind::InvalidMemoryOperation => RuntimeErrorKind::InvalidMemoryOperation,
             MemoryErrorKind::InvalidAlignment
             | MemoryErrorKind::RegionOverlap
             | MemoryErrorKind::AllocationFailure => RuntimeErrorKind::Runtime,
@@ -11620,6 +11765,21 @@ impl<'a> VM<'a> {
                 source,
                 memory_type,
             } => self.execute_machine_store(frame, *address, *source, *memory_type),
+            Instruction::Memcpy {
+                destination,
+                source,
+                size,
+            } => self.execute_machine_memcpy(frame, *destination, *source, *size),
+            Instruction::Memmove {
+                destination,
+                source,
+                size,
+            } => self.execute_machine_memmove(frame, *destination, *source, *size),
+            Instruction::Memset {
+                destination,
+                value,
+                size,
+            } => self.execute_machine_memset(frame, *destination, *value, *size),
             Instruction::Trunc {
                 dest,
                 value,
@@ -14805,6 +14965,63 @@ impl<'a> VM<'a> {
             }
         };
         self.memory.write_bytes(address, &bytes)?;
+        Ok(())
+    }
+
+    fn expect_machine_byte_count(
+        &self,
+        frame: &Frame,
+        value: usize,
+        op_name: &str,
+    ) -> Result<usize, RuntimeError> {
+        let value = self.expect_machine_int(frame, value, op_name)?;
+        usize::try_from(value).map_err(|_| {
+            RuntimeError::invalid_address(format!(
+                "{} byte count {} does not fit a host index",
+                op_name, value
+            ))
+        })
+    }
+
+    fn execute_machine_memcpy(
+        &mut self,
+        frame: &Frame,
+        destination: usize,
+        source: usize,
+        size: usize,
+    ) -> Result<(), RuntimeError> {
+        let destination = self.expect_address(frame, destination, "memcpy destination")?;
+        let source = self.expect_address(frame, source, "memcpy source")?;
+        let size = self.expect_machine_byte_count(frame, size, "memcpy")?;
+        self.memory.memcpy(destination, source, size)?;
+        Ok(())
+    }
+
+    fn execute_machine_memmove(
+        &mut self,
+        frame: &Frame,
+        destination: usize,
+        source: usize,
+        size: usize,
+    ) -> Result<(), RuntimeError> {
+        let destination = self.expect_address(frame, destination, "memmove destination")?;
+        let source = self.expect_address(frame, source, "memmove source")?;
+        let size = self.expect_machine_byte_count(frame, size, "memmove")?;
+        self.memory.memmove(destination, source, size)?;
+        Ok(())
+    }
+
+    fn execute_machine_memset(
+        &mut self,
+        frame: &Frame,
+        destination: usize,
+        value: usize,
+        size: usize,
+    ) -> Result<(), RuntimeError> {
+        let destination = self.expect_address(frame, destination, "memset destination")?;
+        let value = self.expect_machine_int(frame, value, "memset")? as u8;
+        let size = self.expect_machine_byte_count(frame, size, "memset")?;
+        self.memory.memset(destination, value, size)?;
         Ok(())
     }
 

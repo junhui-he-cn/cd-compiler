@@ -871,6 +871,42 @@ mod tests {
                     memory_type: MachineMemoryType::F64,
                 },
             ),
+            (
+                Instruction::Memcpy {
+                    destination: 5,
+                    source: 6,
+                    size: 7,
+                },
+                Instruction::Memcpy {
+                    destination: 15,
+                    source: 16,
+                    size: 17,
+                },
+            ),
+            (
+                Instruction::Memmove {
+                    destination: 8,
+                    source: 9,
+                    size: 10,
+                },
+                Instruction::Memmove {
+                    destination: 18,
+                    source: 19,
+                    size: 20,
+                },
+            ),
+            (
+                Instruction::Memset {
+                    destination: 11,
+                    value: 12,
+                    size: 13,
+                },
+                Instruction::Memset {
+                    destination: 21,
+                    value: 22,
+                    size: 23,
+                },
+            ),
         ];
 
         for (instruction, expected) in cases {
@@ -1420,6 +1456,33 @@ fn map_instruction(
             address: register(*address)?,
             source: register(*source)?,
             memory_type: *memory_type,
+        },
+        Instruction::Memcpy {
+            destination,
+            source,
+            size,
+        } => Instruction::Memcpy {
+            destination: register(*destination)?,
+            source: register(*source)?,
+            size: register(*size)?,
+        },
+        Instruction::Memmove {
+            destination,
+            source,
+            size,
+        } => Instruction::Memmove {
+            destination: register(*destination)?,
+            source: register(*source)?,
+            size: register(*size)?,
+        },
+        Instruction::Memset {
+            destination,
+            value,
+            size,
+        } => Instruction::Memset {
+            destination: register(*destination)?,
+            value: register(*value)?,
+            size: register(*size)?,
         },
         Instruction::FrameAddr { dest, offset } => Instruction::FrameAddr {
             dest: register(*dest)?,
