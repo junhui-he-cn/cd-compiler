@@ -160,6 +160,8 @@ pub(crate) struct JitFrameMaterialization {
     function: Rc<str>,
     function_index: Option<usize>,
     return_target: Option<ReturnTarget>,
+    machine_frame_base: Option<u64>,
+    machine_frame_size: u64,
     task_id: Option<TaskId>,
     safepoint: JitSafepoint,
 }
@@ -182,6 +184,8 @@ impl JitFrameMaterialization {
             function: frame.function.clone(),
             function_index: frame.function_index,
             return_target: frame.return_target.clone(),
+            machine_frame_base: frame.machine_frame_base,
+            machine_frame_size: frame.machine_frame_size,
             task_id,
             safepoint,
         }
@@ -199,6 +203,8 @@ impl JitFrameMaterialization {
         frame.function = self.function.clone();
         frame.function_index = self.function_index;
         frame.return_target = self.return_target.clone();
+        frame.machine_frame_base = self.machine_frame_base;
+        frame.machine_frame_size = self.machine_frame_size;
     }
 
     pub(crate) fn body(&self) -> Option<&Function> {
@@ -1799,6 +1805,7 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::IConst { .. } => "iconst",
         Instruction::Load { .. } => "load",
         Instruction::Store { .. } => "store",
+        Instruction::FrameAddr { .. } => "frame_addr",
         Instruction::Trunc { .. } => "trunc",
         Instruction::ZExt { .. } => "zext",
         Instruction::SExt { .. } => "sext",
@@ -1838,6 +1845,7 @@ mod tests {
             id: FuncId(index as u32 + 1),
             name: format!("function{index}"),
             arity: 0,
+            machine_frame_size: 0,
             local_count: 0,
             upvalues: Vec::new(),
             registers: 4,
@@ -1852,6 +1860,7 @@ mod tests {
             id: FuncId(0),
             name: "main".to_string(),
             arity: 0,
+            machine_frame_size: 0,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -1906,6 +1915,7 @@ mod tests {
             id: FuncId(0),
             name: String::new(),
             arity: 0,
+            machine_frame_size: 0,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),

@@ -66,6 +66,7 @@ fn arithmetic_workload() -> Program {
             id: FuncId(0),
             name: "main".to_string(),
             arity: 0,
+            machine_frame_size: 0,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -79,6 +80,7 @@ fn arithmetic_workload() -> Program {
             upvalues: Vec::new(),
             name: "arithmetic_worker".to_string(),
             arity: 1,
+            machine_frame_size: 0,
             registers: 7,
             params: vec!["limit".to_string()],
             instructions: vec![
@@ -159,6 +161,7 @@ fn callback_workload() -> Program {
             id: FuncId(0),
             name: "main".to_string(),
             arity: 0,
+            machine_frame_size: 0,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -172,6 +175,7 @@ fn callback_workload() -> Program {
                 upvalues: Vec::new(),
                 name: "callback_worker".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 6,
                 params: Vec::new(),
                 instructions: vec![
@@ -211,6 +215,7 @@ fn callback_workload() -> Program {
                 upvalues: Vec::new(),
                 name: "identity_callback".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![

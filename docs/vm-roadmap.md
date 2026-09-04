@@ -11,10 +11,13 @@ VM-owned deterministic `LinearMemory` region allocator, VM address/range
 checking, region permissions, and the memory error categories. VM03-05 now adds
 interpreter execution for typed `LOAD`/`STORE` across integer, floating-point,
 and address domains, including little-endian unaligned access and the existing
-memory trap mappings. Floating-point and mixed integer/float conversions from
-VM03-03 remain pending. Machine instructions remain interpreter-first and are
-not yet part of the cdbc 0.2 text artifact writer. The compiler, language, and
-compiler tools have a separate current-state record in
+memory trap mappings. VM03-06 now attaches checked machine frame metadata to
+the existing call stack, allocates upward-growing 8-byte-aligned frames, adds
+`FRAME_ADDR`, unwinds frames on return and traps, and gives each cooperative
+task an independent machine stack. Floating-point and mixed integer/float
+conversions from VM03-03 remain pending. Machine instructions remain
+interpreter-first and are not yet part of the cdbc 0.2 text artifact writer.
+The compiler, language, and compiler tools have a separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 
 ## VM product boundary
@@ -46,7 +49,7 @@ compatibility constraints.
 | --- | --- |
 | Artifact safety | Shared `cdbc 0.2` parser/formatter/verifier, malformed corpus, resource limits, cancellation |
 | Execution | Register VM for the complete emitted instruction set and native surface |
-| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting, and in-memory cdbc 0.3 machine scalar values |
+| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting, in-memory cdbc 0.3 machine scalar values, typed machine memory, and task-owned machine frames |
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds |

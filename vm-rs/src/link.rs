@@ -399,6 +399,7 @@ impl Linker {
                 id: FuncId((function_base + position + 1) as u32),
                 name: function.name.clone(),
                 arity: function.arity,
+                machine_frame_size: function.machine_frame_size,
                 local_count: function.local_count,
                 upvalues: function
                     .upvalues
@@ -448,6 +449,7 @@ impl Linker {
             id: FuncId(0),
             name: "main".to_string(),
             arity: 0,
+            machine_frame_size: 0,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -589,6 +591,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -1385,6 +1388,10 @@ fn map_instruction(
             address: register(*address)?,
             source: register(*source)?,
             memory_type: *memory_type,
+        },
+        Instruction::FrameAddr { dest, offset } => Instruction::FrameAddr {
+            dest: register(*dest)?,
+            offset: *offset,
         },
         Instruction::Trunc {
             dest,

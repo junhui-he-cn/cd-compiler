@@ -287,6 +287,9 @@ pub struct Function {
     pub id: FuncId,
     pub name: String,
     pub arity: usize,
+    /// Reserved machine stack bytes for one invocation. Zero preserves the
+    /// dynamic-only function representation.
+    pub machine_frame_size: u64,
     /// Number of compiler-assigned local slots (excluding parameters).
     pub local_count: usize,
     /// Explicit upvalue descriptors.
@@ -636,6 +639,10 @@ pub enum Instruction {
         address: usize,
         source: usize,
         memory_type: MachineMemoryType,
+    },
+    FrameAddr {
+        dest: usize,
+        offset: u64,
     },
     Trunc {
         dest: usize,

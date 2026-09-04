@@ -11,7 +11,7 @@ use crate::jit::{
     JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
 };
 use crate::format::ParseError;
-use crate::memory::{LinearMemory, MemoryError, MemoryErrorKind};
+use crate::memory::{LinearMemory, MemoryError, MemoryErrorKind, MemoryRegion, VmAddress};
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{
@@ -240,6 +240,7 @@ pub enum RuntimeErrorKind {
     NullPointerAccess,
     WriteToReadOnlyMemory,
     InvalidAddress,
+    StackOverflow,
 }
 
 impl RuntimeErrorKind {
@@ -253,6 +254,7 @@ impl RuntimeErrorKind {
             Self::NullPointerAccess => "null_pointer_access",
             Self::WriteToReadOnlyMemory => "write_to_read_only_memory",
             Self::InvalidAddress => "invalid_address",
+            Self::StackOverflow => "stack_overflow",
         }
     }
 }
@@ -264,6 +266,7 @@ pub const DEFAULT_MAX_OUTPUT_BYTES: usize = 16 * 1024 * 1024;
 pub const DEFAULT_MAX_ARTIFACT_BYTES: usize = 64 * 1024 * 1024;
 pub const DEFAULT_MAX_MODULE_COUNT: usize = 1_024;
 pub const DEFAULT_MAX_MODULE_INSTRUCTIONS: usize = 1_000_000;
+pub const DEFAULT_MAX_MACHINE_STACK_BYTES: usize = 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum NativeId {
@@ -933,6 +936,9 @@ pub struct RunConfig {
     pub max_artifact_bytes: Option<usize>,
     pub max_module_count: Option<usize>,
     pub max_module_instructions: Option<usize>,
+    /// Capacity reserved for each task's upward-growing machine stack.
+    /// `None` selects the default finite capacity.
+    pub max_machine_stack_bytes: Option<usize>,
     pub cancellation: Option<CancellationToken>,
 }
 
@@ -946,12 +952,18 @@ impl RunConfig {
             max_artifact_bytes: None,
             max_module_count: None,
             max_module_instructions: None,
+            max_machine_stack_bytes: None,
             cancellation: None,
         }
     }
 
     pub fn with_cancellation(mut self, cancellation: CancellationToken) -> Self {
         self.cancellation = Some(cancellation);
+        self
+    }
+
+    pub fn with_machine_stack_bytes(mut self, bytes: usize) -> Self {
+        self.max_machine_stack_bytes = Some(bytes);
         self
     }
 }
@@ -966,6 +978,7 @@ impl Default for RunConfig {
             max_artifact_bytes: Some(DEFAULT_MAX_ARTIFACT_BYTES),
             max_module_count: Some(DEFAULT_MAX_MODULE_COUNT),
             max_module_instructions: Some(DEFAULT_MAX_MODULE_INSTRUCTIONS),
+            max_machine_stack_bytes: Some(DEFAULT_MAX_MACHINE_STACK_BYTES),
             cancellation: None,
         }
     }
@@ -1276,6 +1289,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -1304,6 +1318,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -1316,11 +1331,61 @@ mod tests {
         }
     }
 
+    fn machine_program_with_frame(
+        machine_frame_size: u64,
+        instructions: Vec<Instruction>,
+        registers: usize,
+    ) -> Program {
+        let mut program = machine_program(instructions, registers);
+        program.functions[0].machine_frame_size = machine_frame_size;
+        program
+    }
+
+    fn machine_function(
+        id: u32,
+        name: &str,
+        arity: usize,
+        machine_frame_size: u64,
+        local_count: usize,
+        params: &[&str],
+        registers: usize,
+        instructions: Vec<Instruction>,
+    ) -> Function {
+        let instruction_count = instructions.len();
+        Function {
+            id: FuncId(id),
+            name: name.to_string(),
+            arity,
+            machine_frame_size,
+            local_count,
+            upvalues: Vec::new(),
+            params: params.iter().map(|param| (*param).to_string()).collect(),
+            registers,
+            instructions,
+            locations: vec![None; instruction_count],
+        }
+    }
+
+    fn machine_program_with_functions(functions: Vec<Function>) -> Program {
+        Program {
+            constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
+            names: Vec::new(),
+            functions,
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        }
+    }
+
     fn run_machine_body(
         vm: &mut VM<'_>,
         registers: Vec<Value>,
     ) -> Result<Vec<Value>, RuntimeError> {
         let body = vm.program.functions[0].clone();
+        let machine_frame_size = body.machine_frame_size;
         let mut frame = Frame {
             body: None,
             ip: 0,
@@ -1333,10 +1398,578 @@ mod tests {
             function: Rc::from("main"),
             function_index: None,
             return_target: None,
+            machine_frame_base: None,
+            machine_frame_size,
         };
-        let result = vm.execute_body(&body, &mut frame)?;
+        vm.machine_stack = Some(vm.new_machine_stack()?);
+        vm.allocate_current_machine_frame(&mut frame)?;
+        let result = vm.execute_body(&body, &mut frame);
+        let cleanup = vm.release_current_machine_frame(&frame);
+        vm.machine_stack.take();
+        let result = match (result, cleanup) {
+            (Err(error), _) => Err(error),
+            (Ok(value), Ok(())) => Ok(value),
+            (Ok(_), Err(error)) => Err(error),
+        }?;
         assert!(matches!(result, Some(Value::Nil)));
         Ok(frame.registers)
+    }
+
+    #[test]
+    fn frame_addr_returns_offsets_from_the_live_machine_frame() {
+        let program = machine_program_with_frame(
+            16,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FrameAddr { dest: 0, offset: 0 },
+                Instruction::FrameAddr { dest: 1, offset: 8 },
+                Instruction::FrameAddr { dest: 2, offset: 16 },
+                Instruction::ReturnNil,
+            ],
+            3,
+        );
+        let mut vm = VM::new(&program);
+        let registers = run_machine_body(&mut vm, vec![Value::Nil; 3])
+            .expect("frame address instructions should execute");
+
+        let address = |register: usize| match registers.get(register) {
+            Some(Value::Address(address)) => *address,
+            other => panic!("expected address in r{register}, got {other:?}"),
+        };
+        let base = address(0);
+        assert_eq!(address(1), base + 8);
+        assert_eq!(address(2), base + 16);
+    }
+
+    #[test]
+    fn verifier_rejects_frame_addr_past_function_frame() {
+        let program = machine_program_with_frame(
+            8,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FrameAddr { dest: 0, offset: 9 },
+                Instruction::ReturnNil,
+            ],
+            1,
+        );
+        let error = crate::format::verify_program(&program)
+            .expect_err("frame address past the declared frame must be rejected");
+        assert!(error
+            .message
+            .contains("frame_addr offset 9 exceeds machine frame size 8"));
+    }
+
+    #[test]
+    fn released_machine_frame_addresses_are_no_longer_dereferenceable() {
+        let program = machine_program_with_frame(
+            8,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FrameAddr { dest: 0, offset: 0 },
+                Instruction::ReturnNil,
+            ],
+            1,
+        );
+        let mut vm = VM::new(&program);
+        let registers = run_machine_body(&mut vm, vec![Value::Nil])
+            .expect("frame address instruction should execute");
+        let base = match registers[0] {
+            Value::Address(address) => address,
+            ref other => panic!("expected frame address, got {other:?}"),
+        };
+
+        assert!(vm.memory().region_for_address(base).is_some());
+        assert!(!vm.memory().is_mapped(base));
+        assert_eq!(
+            vm.memory().read_bytes(base, 1).unwrap_err().kind(),
+            MemoryErrorKind::InvalidAddress
+        );
+    }
+
+    fn recursive_frame_address_program() -> Program {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            8,
+            0,
+            &[],
+            4,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FrameAddr { dest: 0, offset: 0 },
+                Instruction::IConst {
+                    dest: 1,
+                    width: MachineIntWidth::W64,
+                    raw: 2,
+                },
+                Instruction::CallDirect {
+                    dest: 2,
+                    function: FuncId(1),
+                    arguments: vec![0, 1],
+                },
+                Instruction::Load {
+                    dest: 3,
+                    address: 0,
+                    memory_type: MachineMemoryType::Addr,
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let recurse = machine_function(
+            1,
+            "recurse",
+            2,
+            8,
+            2,
+            &["parent", "depth"],
+            8,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 1, slot: 0 },
+                Instruction::LoadLocal { dest: 2, slot: 1 },
+                Instruction::FrameAddr { dest: 0, offset: 0 },
+                Instruction::Store {
+                    address: 1,
+                    source: 0,
+                    memory_type: MachineMemoryType::Addr,
+                },
+                Instruction::IConst {
+                    dest: 3,
+                    width: MachineIntWidth::W64,
+                    raw: 0,
+                },
+                Instruction::ICmp {
+                    dest: 4,
+                    left: 2,
+                    right: 3,
+                    width: MachineIntWidth::W64,
+                    predicate: MachineIntPredicate::Eq,
+                },
+                Instruction::BrIf {
+                    condition: 4,
+                    if_true: BlockId(1),
+                    if_false: BlockId(2),
+                },
+                Instruction::BlockStart { id: BlockId(1) },
+                Instruction::ReturnNil,
+                Instruction::BlockStart { id: BlockId(2) },
+                Instruction::IConst {
+                    dest: 5,
+                    width: MachineIntWidth::W64,
+                    raw: 1,
+                },
+                Instruction::ISub {
+                    dest: 6,
+                    left: 2,
+                    right: 5,
+                    width: MachineIntWidth::W64,
+                },
+                Instruction::CallDirect {
+                    dest: 7,
+                    function: FuncId(1),
+                    arguments: vec![0, 6],
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        machine_program_with_functions(vec![main, recurse])
+    }
+
+    #[test]
+    fn recursive_calls_receive_distinct_machine_frame_addresses() {
+        let program = recursive_frame_address_program();
+        let mut vm = VM::new(&program);
+        let registers = run_machine_body(&mut vm, vec![Value::Nil; 4])
+            .expect("recursive machine frames should execute");
+        let base = match registers[0] {
+            Value::Address(address) => address,
+            ref other => panic!("expected root frame address, got {other:?}"),
+        };
+        let child = match registers[3] {
+            Value::Address(address) => address,
+            ref other => panic!("expected child frame address, got {other:?}"),
+        };
+
+        assert_eq!(child, base + 8);
+        assert_ne!(child, base);
+        assert!(!vm.memory().is_mapped(base));
+        assert!(!vm.memory().is_mapped(child));
+    }
+
+    fn machine_call_program(main_frame_size: u64, callee_frame_size: u64) -> Program {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            main_frame_size,
+            0,
+            &[],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: 0,
+                    function: FuncId(1),
+                    arguments: Vec::new(),
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let callee = machine_function(
+            1,
+            "callee",
+            0,
+            callee_frame_size,
+            0,
+            &[],
+            2,
+            vec![Instruction::ReturnNil],
+        );
+        machine_program_with_functions(vec![main, callee])
+    }
+
+    #[test]
+    fn machine_stack_overflow_is_a_typed_trap_and_releases_the_root_frame() {
+        let program = machine_call_program(8, 8);
+        let config = RunConfig::unlimited().with_machine_stack_bytes(8);
+        let mut vm = VM::with_config(&program, config);
+        let error = vm
+            .run_inner()
+            .expect_err("callee frame should exceed the configured machine stack");
+
+        assert_eq!(error.kind, RuntimeErrorKind::StackOverflow);
+        assert!(error.message.contains("machine stack overflow"));
+        assert!(vm.machine_stack.is_none());
+        let stack = vm
+            .memory()
+            .regions()
+            .iter()
+            .find(|region| region.kind == crate::memory::MemoryRegionKind::Stack)
+            .expect("machine stack reservation should be recorded");
+        assert!(!vm.memory().is_mapped(stack.base));
+    }
+
+    #[test]
+    fn machine_traps_unwind_callee_and_root_frames() {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            8,
+            0,
+            &[],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: 0,
+                    function: FuncId(1),
+                    arguments: Vec::new(),
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let callee = machine_function(
+            1,
+            "trap",
+            0,
+            8,
+            0,
+            &[],
+            2,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FrameAddr { dest: 0, offset: 8 },
+                Instruction::Load {
+                    dest: 1,
+                    address: 0,
+                    memory_type: MachineMemoryType::I8,
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let program = machine_program_with_functions(vec![main, callee]);
+        let mut vm = VM::new(&program);
+        let error = vm
+            .run_inner()
+            .expect_err("dereferencing a frame-end address should trap");
+
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidAddress);
+        assert!(vm.machine_stack.is_none());
+        assert!(vm
+            .memory()
+            .regions()
+            .iter()
+            .filter(|region| region.kind == crate::memory::MemoryRegionKind::Stack)
+            .all(|region| !vm.memory().is_mapped(region.base)));
+    }
+
+    fn cooperative_machine_frame_program() -> Program {
+        let main = machine_function(0, "main", 0, 0, 0, &[], 0, Vec::new());
+        let worker = machine_function(
+            1,
+            "worker",
+            0,
+            8,
+            0,
+            &[],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FrameAddr { dest: 0, offset: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        machine_program_with_functions(vec![main, worker])
+    }
+
+    #[test]
+    fn cooperative_tasks_use_independent_machine_stacks() {
+        let program = cooperative_machine_frame_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("cooperative session should start");
+        let first = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("first machine task should spawn");
+        let second = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("second machine task should spawn");
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("machine tasks should complete"),
+            CooperativeStep::Complete
+        );
+        let first_outcome = run
+            .task_outcome(first)
+            .expect("first task outcome should be readable")
+            .expect("first task should be terminal");
+        let second_outcome = run
+            .task_outcome(second)
+            .expect("second task outcome should be readable")
+            .expect("second task should be terminal");
+        let frame_address = |outcome: &TaskOutcome| match outcome {
+            TaskOutcome::Completed(Value::Address(address)) => *address,
+            other => panic!("expected completed address outcome, got {other:?}"),
+        };
+
+        let first_address = frame_address(&first_outcome);
+        let second_address = frame_address(&second_outcome);
+        assert_ne!(first_address, second_address);
+        assert_eq!(
+            run.memory()
+                .regions()
+                .iter()
+                .filter(|region| region.kind == crate::memory::MemoryRegionKind::Stack)
+                .count(),
+            2
+        );
+        assert!(!run.memory().is_mapped(first_address));
+        assert!(!run.memory().is_mapped(second_address));
+    }
+
+    #[test]
+    fn failed_cooperative_frame_creation_does_not_reserve_a_stack() {
+        let program = cooperative_machine_frame_program();
+        let mut run = VM::with_config(
+            &program,
+            RunConfig::unlimited().with_machine_stack_bytes(4),
+        )
+        .start_cooperative(1)
+        .expect("cooperative session should start");
+        let error = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect_err("an oversized initial frame should be rejected");
+
+        assert_eq!(error.kind, RuntimeErrorKind::StackOverflow);
+        assert!(run
+            .memory()
+            .regions()
+            .iter()
+            .all(|region| region.kind != crate::memory::MemoryRegionKind::Stack));
+    }
+
+    fn machine_integration_program() -> Program {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            24,
+            0,
+            &[],
+            24,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FrameAddr { dest: 0, offset: 0 },
+                Instruction::FrameAddr { dest: 1, offset: 4 },
+                Instruction::FrameAddr { dest: 2, offset: 8 },
+                Instruction::FrameAddr { dest: 3, offset: 12 },
+                Instruction::IConst {
+                    dest: 4,
+                    width: MachineIntWidth::W32,
+                    raw: 1,
+                },
+                Instruction::Store {
+                    address: 0,
+                    source: 4,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::IConst {
+                    dest: 5,
+                    width: MachineIntWidth::W32,
+                    raw: 2,
+                },
+                Instruction::Store {
+                    address: 1,
+                    source: 5,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::IConst {
+                    dest: 6,
+                    width: MachineIntWidth::W32,
+                    raw: 3,
+                },
+                Instruction::Store {
+                    address: 2,
+                    source: 6,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::IConst {
+                    dest: 7,
+                    width: MachineIntWidth::W32,
+                    raw: 4,
+                },
+                Instruction::Store {
+                    address: 3,
+                    source: 7,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::CallDirect {
+                    dest: 8,
+                    function: FuncId(1),
+                    arguments: vec![0, 1, 2, 3],
+                },
+                Instruction::FrameAddr { dest: 9, offset: 16 },
+                Instruction::Store {
+                    address: 9,
+                    source: 8,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::IConst {
+                    dest: 10,
+                    width: MachineIntWidth::W32,
+                    raw: 2,
+                },
+                Instruction::FrameAddr { dest: 11, offset: 20 },
+                Instruction::Store {
+                    address: 11,
+                    source: 10,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::FrameAddr { dest: 12, offset: 16 },
+                Instruction::Load {
+                    dest: 13,
+                    address: 12,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::FrameAddr { dest: 14, offset: 20 },
+                Instruction::Load {
+                    dest: 15,
+                    address: 14,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::IAdd {
+                    dest: 16,
+                    left: 13,
+                    right: 15,
+                    width: MachineIntWidth::W32,
+                },
+                Instruction::Return { value: 16 },
+            ],
+        );
+        let sum = machine_function(
+            1,
+            "sum",
+            4,
+            8,
+            4,
+            &["a0", "a1", "a2", "a3"],
+            11,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::LoadLocal { dest: 1, slot: 1 },
+                Instruction::LoadLocal { dest: 2, slot: 2 },
+                Instruction::LoadLocal { dest: 3, slot: 3 },
+                Instruction::Load {
+                    dest: 4,
+                    address: 0,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::Load {
+                    dest: 5,
+                    address: 1,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::Load {
+                    dest: 6,
+                    address: 2,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::Load {
+                    dest: 7,
+                    address: 3,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::IAdd {
+                    dest: 8,
+                    left: 4,
+                    right: 5,
+                    width: MachineIntWidth::W32,
+                },
+                Instruction::IAdd {
+                    dest: 9,
+                    left: 8,
+                    right: 6,
+                    width: MachineIntWidth::W32,
+                },
+                Instruction::IAdd {
+                    dest: 10,
+                    left: 9,
+                    right: 7,
+                    width: MachineIntWidth::W32,
+                },
+                Instruction::Return { value: 10 },
+            ],
+        );
+        machine_program_with_functions(vec![main, sum])
+    }
+
+    #[test]
+    fn hand_built_machine_program_returns_twelve() {
+        let program = machine_integration_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("cooperative session should start");
+        let task = run
+            .spawn(TaskSpec::main())
+            .expect("machine integration task should spawn");
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("hand-built machine program should complete"),
+            CooperativeStep::Complete
+        );
+        let outcome = run
+            .task_outcome(task)
+            .expect("integration outcome should be readable")
+            .expect("integration task should be terminal");
+        assert!(matches!(
+            outcome,
+            TaskOutcome::Completed(Value::MachineInt(12))
+        ));
     }
 
     fn machine_memory_error(
@@ -1668,6 +2301,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -1771,6 +2405,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -2546,6 +3181,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -2643,6 +3279,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -2716,6 +3353,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     id: FuncId(0),
                     name: "main".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -2739,6 +3377,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     id: FuncId(1),
                     name: "seven".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -2790,6 +3429,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -2852,6 +3492,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             function: Rc::from("returner"),
             function_index: Some(0),
             return_target: None,
+            machine_frame_base: None,
+            machine_frame_size: 0,
         };
 
         let value = vm
@@ -2876,6 +3518,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -2911,6 +3554,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -2937,6 +3581,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "answer".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 1,
                 params: Vec::new(),
                 instructions: vec![
@@ -2965,6 +3610,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3019,6 +3665,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3056,6 +3703,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3088,6 +3736,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "identity".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -3116,6 +3765,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3137,6 +3787,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "worker".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 5,
                     params: Vec::new(),
                     instructions: vec![
@@ -3162,6 +3813,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "identity".to_string(),
                     arity: 1,
+                    machine_frame_size: 0,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -3188,6 +3840,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3231,6 +3884,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3244,6 +3898,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "target".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
@@ -3258,6 +3913,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "waiter".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
@@ -3272,6 +3928,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "failure".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
@@ -3292,6 +3949,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "pending".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
@@ -3327,6 +3985,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3340,6 +3999,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "odd".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
@@ -3365,6 +4025,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "even".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
@@ -3411,6 +4072,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     id: FuncId(0),
                     name: "main".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -3424,6 +4086,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "odd".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 2,
                     params: Vec::new(),
                     instructions: vec![
@@ -3449,6 +4112,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "even".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 2,
                     params: Vec::new(),
                     instructions: vec![
@@ -4571,6 +5235,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4594,6 +5259,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "fail".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 4,
                 params: Vec::new(),
                 instructions: vec![
@@ -4630,6 +5296,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4687,6 +5354,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4755,6 +5423,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4776,6 +5445,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "recurse".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 7,
                 params: vec!["n".to_string()],
                 instructions: vec![
@@ -4862,6 +5532,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4875,6 +5546,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "eligible".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 1,
                 params: Vec::new(),
                 instructions: vec![
@@ -5193,6 +5865,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5206,6 +5879,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "identity".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -5252,6 +5926,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5265,6 +5940,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "expand".to_string(),
                     arity: 1,
+                    machine_frame_size: 0,
                     registers: 5,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -5293,6 +5969,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "identity".to_string(),
                     arity: 1,
+                    machine_frame_size: 0,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -5359,6 +6036,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5372,6 +6050,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "greater_than_one".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 3,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -5424,6 +6103,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5437,6 +6117,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "no_args".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 0,
                     params: Vec::new(),
                     instructions: Vec::new(),
@@ -5448,6 +6129,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "returns_nil".to_string(),
                     arity: 1,
+                    machine_frame_size: 0,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -5524,6 +6206,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5537,6 +6220,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "is_two".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 3,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -5633,6 +6317,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5646,6 +6331,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "no_args".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     registers: 0,
                     params: Vec::new(),
                     instructions: Vec::new(),
@@ -5657,6 +6343,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     upvalues: Vec::new(),
                     name: "returns_nil".to_string(),
                     arity: 1,
+                    machine_frame_size: 0,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -5733,6 +6420,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5746,6 +6434,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "add".to_string(),
                 arity: 2,
+                machine_frame_size: 0,
                 registers: 3,
                 params: vec!["acc".to_string(), "item".to_string()],
                 instructions: vec![
@@ -5803,6 +6492,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5816,6 +6506,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "one_arg".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 0,
                 params: vec!["item".to_string()],
                 instructions: Vec::new(),
@@ -5941,6 +6632,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6423,6 +7115,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6542,6 +7235,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6576,6 +7270,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     id: FuncId(0),
                     name: "main".to_string(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -6603,6 +7298,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             upvalues: Vec::new(),
             name: "recurse".to_string(),
             arity: 0,
+            machine_frame_size: 0,
             registers: 2,
             params: Vec::new(),
             instructions: vec![
@@ -6627,6 +7323,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6666,6 +7363,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6679,6 +7377,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "identity".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 0,
                 params: vec!["item".to_string()],
                 instructions: Vec::new(),
@@ -6720,6 +7419,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6760,6 +7460,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6830,6 +7531,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                     name: String::new(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -6894,6 +7596,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                     name: String::new(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -6931,6 +7634,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "answer".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 3,
                 params: Vec::new(),
                 instructions: vec![
@@ -7070,6 +7774,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7083,6 +7788,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "wide_add".to_string(),
                 arity: 1,
+                machine_frame_size: 0,
                 registers: 33,
                 params: vec!["value".to_string()],
                 instructions: function_instructions,
@@ -7189,6 +7895,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "divide".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 3,
                 params: Vec::new(),
                 instructions: vec![
@@ -7270,6 +7977,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7283,6 +7991,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "add".to_string(),
                 arity: 2,
+                machine_frame_size: 0,
                 registers: 3,
                 params: vec!["left".to_string(), "right".to_string()],
                 instructions: vec![
@@ -7357,6 +8066,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7370,6 +8080,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "protocol_failure".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 3,
                 params: Vec::new(),
                 instructions: instructions.clone(),
@@ -7385,6 +8096,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                     name: String::new(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -7430,6 +8142,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7443,6 +8156,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 upvalues: Vec::new(),
                 name: "divide".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 registers: 3,
                 params: Vec::new(),
                 instructions: vec![
@@ -7511,6 +8225,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7531,6 +8246,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                     name: String::new(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -7625,6 +8341,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 id: FuncId(0),
                     name: String::new(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -7687,6 +8404,21 @@ impl RuntimeError {
             stack: Vec::new(),
             sources: Vec::new(),
         }
+    }
+
+    fn invalid_address(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::InvalidAddress;
+        error
+    }
+
+    fn stack_overflow(requested: u64, available: u64) -> Self {
+        let mut error = Self::new(format!(
+            "machine stack overflow: requested frame of {} bytes with {} bytes available",
+            requested, available
+        ));
+        error.kind = RuntimeErrorKind::StackOverflow;
+        error
     }
 
     fn resource(kind: ResourceKind, limit: usize) -> Self {
@@ -8007,6 +8739,116 @@ enum InstructionAction {
     Return(Value),
 }
 
+struct MachineStackFrame {
+    base: VmAddress,
+    size: u64,
+    cursor_before: u64,
+}
+
+struct MachineStack {
+    region: MemoryRegion,
+    capacity: u64,
+    cursor: u64,
+    frames: Vec<MachineStackFrame>,
+}
+
+impl MachineStack {
+    fn new(memory: &mut LinearMemory, capacity: usize) -> Result<Self, RuntimeError> {
+        let capacity = u64::try_from(capacity)
+            .map_err(|_| RuntimeError::new("machine stack capacity is too large"))?;
+        let region = memory
+            .allocate_machine_stack(capacity)
+            .map_err(RuntimeError::from)?;
+        Ok(Self {
+            region,
+            capacity,
+            cursor: 0,
+            frames: Vec::new(),
+        })
+    }
+
+    fn allocate_frame(
+        &mut self,
+        memory: &mut LinearMemory,
+        frame: &mut Frame,
+    ) -> Result<(), RuntimeError> {
+        if frame.machine_frame_base.is_some() {
+            return Err(RuntimeError::new("machine frame is already allocated"));
+        }
+        let cursor_before = self.cursor;
+        let aligned_cursor = align_machine_stack_offset(cursor_before)?;
+        let frame_end = aligned_cursor
+            .checked_add(frame.machine_frame_size)
+            .ok_or_else(|| RuntimeError::invalid_address("machine frame offset overflow"))?;
+        if frame_end > self.capacity {
+            return Err(RuntimeError::stack_overflow(
+                frame.machine_frame_size,
+                self.capacity.saturating_sub(aligned_cursor),
+            ));
+        }
+        let base = self
+            .region
+            .base
+            .checked_add(aligned_cursor)
+            .ok_or_else(|| RuntimeError::invalid_address("machine frame base overflow"))?;
+        memory
+            .activate_stack_frame(self.region.base, base, frame.machine_frame_size)
+            .map_err(RuntimeError::from)?;
+        self.frames.push(MachineStackFrame {
+            base,
+            size: frame.machine_frame_size,
+            cursor_before,
+        });
+        self.cursor = frame_end;
+        frame.machine_frame_base = Some(base);
+        Ok(())
+    }
+
+    fn release_frame(
+        &mut self,
+        memory: &mut LinearMemory,
+        base: Option<VmAddress>,
+        size: u64,
+    ) -> Result<(), RuntimeError> {
+        let Some(base) = base else {
+            return Ok(());
+        };
+        let Some(active) = self.frames.last() else {
+            return Err(RuntimeError::new("machine frame stack is empty"));
+        };
+        if active.base != base || active.size != size {
+            return Err(RuntimeError::new("machine frame release is not LIFO"));
+        }
+        if active.size != 0 {
+            memory
+                .release_stack_frame(self.region.base, active.base, active.size)
+                .map_err(RuntimeError::from)?;
+        }
+        let active = self
+            .frames
+            .pop()
+            .expect("machine frame stack was checked above");
+        self.cursor = active.cursor_before;
+        Ok(())
+    }
+
+    fn release_all(&mut self, memory: &mut LinearMemory) {
+        while let Some(active) = self.frames.pop() {
+            if active.size != 0 {
+                let _ = memory.release_stack_frame(self.region.base, active.base, active.size);
+            }
+            self.cursor = active.cursor_before;
+        }
+    }
+}
+
+fn align_machine_stack_offset(offset: u64) -> Result<u64, RuntimeError> {
+    let padding = (8 - (offset & 7)) & 7;
+    offset
+        .checked_add(padding)
+        .ok_or_else(|| RuntimeError::invalid_address("machine stack alignment overflow"))
+}
+
 #[derive(Default)]
 struct TaskTraceState {
     started: bool,
@@ -8130,6 +8972,7 @@ fn empty_profile_functions(program: &Program) -> Vec<ProfileFunction> {
 
 struct ScheduledVmTask {
     frames: FrameStack,
+    machine_stack: Option<MachineStack>,
     result: Option<Value>,
     error: Option<RuntimeError>,
     trace: TaskTraceState,
@@ -8222,6 +9065,7 @@ pub struct VM<'a> {
     instruction_checkpoint: InstructionCheckpoint,
     heap: Heap,
     memory: LinearMemory,
+    machine_stack: Option<MachineStack>,
     global_cells: Vec<Option<Cell>>,
     global_names: Vec<String>,
     decoded_constants: Vec<Value>,
@@ -8849,15 +9693,16 @@ impl<'a> CooperativeRun<'a> {
             .collect::<Vec<_>>();
         for task_id in terminal_ids {
             if let Ok(task) = self.scheduler.task_payload_mut(task_id) {
-                task.release_frames();
+                self.vm.release_task_frames(task);
             }
         }
     }
 
     fn make_task(&mut self, spec: TaskSpec) -> Result<ScheduledVmTask, RuntimeError> {
-        let frame = match spec {
+        let mut frame = match spec {
             TaskSpec::Main => {
                 let entry = self.vm.program.entry.0 as usize;
+                let machine_frame_size = self.vm.program.functions[entry].machine_frame_size;
                 Frame {
                     body: Some(Rc::new(self.vm.program.functions[entry].clone())),
                     ip: 0,
@@ -8870,6 +9715,8 @@ impl<'a> CooperativeRun<'a> {
                     function: Rc::from("main"),
                     function_index: None,
                     return_target: None,
+                    machine_frame_base: None,
+                    machine_frame_size,
                 }
             }
             TaskSpec::Function { index, arguments } => {
@@ -8893,9 +9740,14 @@ impl<'a> CooperativeRun<'a> {
                 )
             }
         };
+        self.vm.ensure_machine_frame_fits(frame.machine_frame_size)?;
+        let mut machine_stack = self.vm.new_machine_stack()?;
+        self.vm
+            .allocate_task_machine_frame(&mut machine_stack, &mut frame)?;
         let frames = FrameStack::new(frame).map_err(|error| RuntimeError::new(error.to_string()))?;
         Ok(ScheduledVmTask {
             frames,
+            machine_stack: Some(machine_stack),
             result: None,
             error: None,
             trace: TaskTraceState::default(),
@@ -8997,6 +9849,7 @@ impl<'a> VM<'a> {
             instruction_checkpoint,
             heap,
             memory,
+            machine_stack: None,
             global_cells: vec![None; global_count],
             global_names,
             block_maps,
@@ -9058,6 +9911,74 @@ impl<'a> VM<'a> {
     /// Mutably access machine memory before or between execution boundaries.
     pub fn memory_mut(&mut self) -> &mut LinearMemory {
         &mut self.memory
+    }
+
+    fn machine_stack_capacity(&self) -> usize {
+        self.config
+            .max_machine_stack_bytes
+            .unwrap_or(DEFAULT_MAX_MACHINE_STACK_BYTES)
+    }
+
+    fn ensure_machine_frame_fits(&self, frame_size: u64) -> Result<(), RuntimeError> {
+        let capacity = u64::try_from(self.machine_stack_capacity())
+            .map_err(|_| RuntimeError::new("machine stack capacity is too large"))?;
+        if frame_size > capacity {
+            return Err(RuntimeError::stack_overflow(frame_size, capacity));
+        }
+        Ok(())
+    }
+
+    fn new_machine_stack(&mut self) -> Result<MachineStack, RuntimeError> {
+        let capacity = self.machine_stack_capacity();
+        MachineStack::new(&mut self.memory, capacity)
+    }
+
+    fn allocate_current_machine_frame(&mut self, frame: &mut Frame) -> Result<(), RuntimeError> {
+        let stack = self
+            .machine_stack
+            .as_mut()
+            .ok_or_else(|| RuntimeError::new("machine stack is not active"))?;
+        stack.allocate_frame(&mut self.memory, frame)
+    }
+
+    fn release_current_machine_frame(&mut self, frame: &Frame) -> Result<(), RuntimeError> {
+        let base = frame.machine_frame_base;
+        let size = frame.machine_frame_size;
+        let Some(stack) = self.machine_stack.as_mut() else {
+            return Ok(());
+        };
+        stack.release_frame(&mut self.memory, base, size)
+    }
+
+    fn allocate_task_machine_frame(
+        &mut self,
+        stack: &mut MachineStack,
+        frame: &mut Frame,
+    ) -> Result<(), RuntimeError> {
+        stack.allocate_frame(&mut self.memory, frame)
+    }
+
+    fn release_task_current_machine_frame(
+        &mut self,
+        task: &mut ScheduledVmTask,
+    ) -> Result<(), RuntimeError> {
+        let (base, size) = task
+            .frames
+            .current()
+            .map(|frame| (frame.machine_frame_base, frame.machine_frame_size))
+            .map_err(|error| RuntimeError::new(error.to_string()))?;
+        task.machine_stack
+            .as_mut()
+            .ok_or_else(|| RuntimeError::new("task machine stack is not active"))?
+            .release_frame(&mut self.memory, base, size)
+    }
+
+    fn release_task_frames(&mut self, task: &mut ScheduledVmTask) {
+        if let Some(stack) = task.machine_stack.as_mut() {
+            stack.release_all(&mut self.memory);
+        }
+        task.frames.clear();
+        task.trace = TaskTraceState::default();
     }
 
     pub fn run(mut self) -> Result<String, RuntimeError> {
@@ -9238,8 +10159,9 @@ impl<'a> VM<'a> {
 
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
         self.check_cancellation()?;
+        let entry = self.program.entry.0 as usize;
+        self.machine_stack = Some(self.new_machine_stack()?);
         let execution = {
-            let entry = self.program.entry.0 as usize;
             let mut frame = Frame {
                 body: None,
                 ip: 0,
@@ -9252,12 +10174,23 @@ impl<'a> VM<'a> {
                 function: Rc::from("main"),
                 function_index: None,
                 return_target: None,
+                machine_frame_base: None,
+                machine_frame_size: self.program.functions[entry].machine_frame_size,
             };
             // The entry body is immutable after artifact verification. Borrow it
             // directly instead of cloning its instruction and debug-location
             // vectors for the one execution of this VM instance.
-            self.execute_body(&self.program.functions[entry], &mut frame)
+            let execution = self
+                .allocate_current_machine_frame(&mut frame)
+                .and_then(|_| self.execute_body(&self.program.functions[entry], &mut frame));
+            let cleanup = self.release_current_machine_frame(&frame);
+            match (execution, cleanup) {
+                (Err(error), _) => Err(error),
+                (Ok(value), Ok(())) => Ok(value),
+                (Ok(_), Err(error)) => Err(error),
+            }
         };
+        self.machine_stack.take();
         let result = match execution {
             Ok(value) => {
                 drop(value);
@@ -9286,17 +10219,20 @@ impl<'a> VM<'a> {
             .map_err(|error| RuntimeError::new(error.to_string()))?;
         let entry = self.program.entry.0 as usize;
         let main_body = Rc::new(self.program.functions[entry].clone());
-        let root = Frame::main(
+        let mut root = Frame::main(
             main_body,
             self.program.functions[entry].registers,
             self.heap.new_local_slots(),
             self.heap.new_environment(),
         );
+        let mut machine_stack = self.new_machine_stack()?;
+        self.allocate_task_machine_frame(&mut machine_stack, &mut root)?;
         let frames = FrameStack::new(root)
             .map_err(|error| RuntimeError::new(error.to_string()))?;
         let task_id = scheduler
             .spawn(ScheduledVmTask {
-                frames,
+            frames,
+            machine_stack: Some(machine_stack),
                 result: None,
                 error: None,
                 trace: TaskTraceState::default(),
@@ -9344,6 +10280,9 @@ impl<'a> VM<'a> {
                 Ok(std::mem::take(&mut self.output))
             }
         };
+        if let Ok(task) = scheduler.task_payload_mut(task_id) {
+            self.release_task_frames(task);
+        }
         drop(scheduler);
         self.heap.collect_garbage();
         result
@@ -9436,6 +10375,9 @@ impl<'a> VM<'a> {
                         return TaskStep::Fail;
                     }
                 }
+                if let Err(error) = self.release_task_current_machine_frame(task) {
+                    return self.stop_scheduled_task(context.task_id, task, error);
+                }
                 match task.frames.return_value(Value::Nil) {
                     Ok(Some(value)) => {
                         task.result = Some(value);
@@ -9517,6 +10459,17 @@ impl<'a> VM<'a> {
                     state: std::mem::take(&mut task.profile),
                 });
             }
+            let active_stack = match task.machine_stack.take() {
+                Some(stack) => stack,
+                None => {
+                    return self.stop_scheduled_task(
+                        context.task_id,
+                        task,
+                        RuntimeError::new("task machine stack is not active"),
+                    )
+                }
+            };
+            let saved_stack = self.machine_stack.replace(active_stack);
             let action = match task.frames.current_mut() {
                 Ok(frame) => {
                     if self.profile_enabled {
@@ -9535,6 +10488,19 @@ impl<'a> VM<'a> {
                 }
                 Err(error) => Err(RuntimeError::new(error.to_string())),
             };
+            let active_stack = match self.machine_stack.take() {
+                Some(stack) => stack,
+                None => {
+                    self.machine_stack = saved_stack;
+                    return self.stop_scheduled_task(
+                        context.task_id,
+                        task,
+                        RuntimeError::new("machine stack was lost during task execution"),
+                    );
+                }
+            };
+            task.machine_stack = Some(active_stack);
+            self.machine_stack = saved_stack;
             if self.task_trace_enabled {
                 let active = self
                     .active_task_trace
@@ -9593,6 +10559,9 @@ impl<'a> VM<'a> {
                             task.error = Some(error);
                             return TaskStep::Fail;
                         }
+                    }
+                    if let Err(error) = self.release_task_current_machine_frame(task) {
+                        return self.stop_scheduled_task(context.task_id, task, error);
                     }
                     match task.frames.return_value(value) {
                         Ok(Some(value)) => {
@@ -9667,6 +10636,11 @@ impl<'a> VM<'a> {
                 call_site: request.call_site,
             }),
         );
+        let mut frame = frame;
+        task.machine_stack
+            .as_mut()
+            .ok_or_else(|| RuntimeError::new("task machine stack is not active"))
+            .and_then(|stack| self.allocate_task_machine_frame(stack, &mut frame))?;
         if self.profile_enabled {
             self.profile_function_entry(&frame);
             task.profile.function_entry(&frame);
@@ -9742,6 +10716,7 @@ impl<'a> VM<'a> {
             && self.cooperative_debug_hook.is_some()
         {
             task.error = None;
+            self.release_task_frames(task);
             return TaskStep::Cancel;
         }
         if self.cooperative_debug_hook.is_some() && task.trace.started {
@@ -9757,6 +10732,7 @@ impl<'a> VM<'a> {
             });
             if debug_result.is_err() {
                 task.error = None;
+                self.release_task_frames(task);
                 return TaskStep::Cancel;
             }
         }
@@ -9768,10 +10744,12 @@ impl<'a> VM<'a> {
         if self.task_trace_enabled && task.trace.started {
             if let Err(trace_error) = self.task_trace_failure(task_id, task, &error.message) {
                 task.error = Some(trace_error);
+                self.release_task_frames(task);
                 return TaskStep::Fail;
             }
         }
         task.error = Some(error);
+        self.release_task_frames(task);
         step
     }
 
@@ -10410,6 +11388,9 @@ impl<'a> VM<'a> {
                     call_site,
                 )?;
                 self.write_register(frame, *dest, result)
+            }
+            Instruction::FrameAddr { dest, offset } => {
+                self.execute_machine_frame_addr(frame, *dest, *offset)
             }
             Instruction::IConst { dest, width, raw } => {
                 self.write_register(frame, *dest, Value::machine_int(raw & width.mask()))
@@ -11962,6 +12943,8 @@ impl<'a> VM<'a> {
             function: Rc::clone(&cached.name),
             function_index: Some(function_index),
             return_target,
+            machine_frame_base: None,
+            machine_frame_size: cached.body.machine_frame_size,
         }
     }
 
@@ -12231,6 +13214,27 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
+        let owns_machine_stack = self.machine_stack.is_none();
+        if owns_machine_stack {
+            self.machine_stack = Some(self.new_machine_stack()?);
+        }
+        let result = self.call_function_active(function, arguments, caller, call_site);
+        if owns_machine_stack {
+            if let Some(stack) = self.machine_stack.as_mut() {
+                stack.release_all(&mut self.memory);
+            }
+            self.machine_stack.take();
+        }
+        result
+    }
+
+    fn call_function_active(
+        &mut self,
+        function: &FunctionValue,
+        arguments: CallArguments,
+        caller: &str,
+        call_site: Option<&DebugLocation>,
+    ) -> Result<Value, RuntimeError> {
         let Some(cached) = self.prepared_function(function.function_index) else {
             let mut error = RuntimeError::new("function index out of range");
             error.location = call_site.cloned();
@@ -12261,6 +13265,7 @@ impl<'a> VM<'a> {
             function.upvalues.clone(),
             None,
         );
+        self.allocate_current_machine_frame(&mut frame)?;
 
         self.call_depth += 1;
         let result = if self.jit.is_enabled() {
@@ -12278,6 +13283,10 @@ impl<'a> VM<'a> {
             self.execute_body(&cached.body, &mut frame)
         };
         self.call_depth -= 1;
+        let result = match self.release_current_machine_frame(&frame) {
+            Ok(()) => result,
+            Err(error) => Err(error),
+        };
         match result {
             Ok(result) => Ok(result.unwrap_or(Value::Nil)),
             Err(mut error) => {
@@ -13490,6 +14499,29 @@ impl<'a> VM<'a> {
                 other.type_name()
             ))),
         }
+    }
+
+    fn execute_machine_frame_addr(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        offset: u64,
+    ) -> Result<(), RuntimeError> {
+        if offset > frame.machine_frame_size {
+            return Err(RuntimeError::invalid_address(format!(
+                "frame address offset {} exceeds machine frame size {}",
+                offset, frame.machine_frame_size
+            )));
+        }
+        let Some(base) = frame.machine_frame_base else {
+            return Err(RuntimeError::invalid_address(
+                "frame address requested without a machine frame",
+            ));
+        };
+        let address = base
+            .checked_add(offset)
+            .ok_or_else(|| RuntimeError::invalid_address("frame address arithmetic overflow"))?;
+        self.write_register(frame, dest, Value::address(address))
     }
 
     fn execute_machine_load(

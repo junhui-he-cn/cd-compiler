@@ -399,6 +399,7 @@ impl<'a> Parser<'a> {
             id: FuncId(0),
             name: "main".to_string(),
             arity: 0,
+            machine_frame_size: 0,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -521,6 +522,7 @@ impl<'a> Parser<'a> {
                 id: FuncId((index + 1) as u32),
                 name,
                 arity,
+                machine_frame_size: 0,
                 local_count: arity.max(max_local_slot.saturating_add(1)),
                 upvalues,
                 params,
@@ -1338,6 +1340,7 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
             &context,
             function.registers,
             function.arity,
+            function.machine_frame_size,
             function.local_count,
             function.upvalues.len(),
             &function.instructions,
@@ -1353,6 +1356,7 @@ fn validate_body(
     context: &str,
     registers: usize,
     arity: usize,
+    machine_frame_size: u64,
     local_count: usize,
     upvalue_count: usize,
     instructions: &[Instruction],
@@ -1420,6 +1424,7 @@ fn validate_body(
             context,
             instruction_index,
             registers,
+            machine_frame_size,
             local_count,
             upvalue_count,
             instruction,
@@ -1515,6 +1520,7 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LessEqualStr { dest, .. }
         | Instruction::IConst { dest, .. }
         | Instruction::Load { dest, .. }
+        | Instruction::FrameAddr { dest, .. }
         | Instruction::Trunc { dest, .. }
         | Instruction::ZExt { dest, .. }
         | Instruction::SExt { dest, .. }
@@ -2022,6 +2028,7 @@ fn validate_instruction(
     context: &str,
     instruction_index: usize,
     registers: usize,
+    machine_frame_size: u64,
     local_count: usize,
     upvalue_count: usize,
     instruction: &Instruction,
@@ -2481,6 +2488,18 @@ fn validate_instruction(
             register(*dest, "destination")?;
             register(*address, "load address")?;
         }
+        Instruction::FrameAddr { dest, offset } => {
+            register(*dest, "destination")?;
+            if *offset > machine_frame_size {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} frame_addr offset {} exceeds machine frame size {}",
+                        context, instruction_index, offset, machine_frame_size
+                    ),
+                ));
+            }
+        }
         Instruction::Store {
             address, source, ..
         } => {
@@ -2825,6 +2844,7 @@ fn machine_instruction_opcode(instruction: &Instruction) -> Option<&'static str>
         Instruction::ICmp { .. } => "icmp",
         Instruction::Load { .. } => "load",
         Instruction::Store { .. } => "store",
+        Instruction::FrameAddr { .. } => "frame_addr",
         _ => return None,
     })
 }
@@ -3780,6 +3800,9 @@ fn format_instruction(instruction: &Instruction) -> String {
             source,
             memory_type.as_str()
         ),
+        Instruction::FrameAddr { dest, offset } => {
+            format!("r{} = frame_addr {}", dest, offset)
+        }
         Instruction::Trunc {
             dest,
             value,
@@ -4269,6 +4292,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4310,6 +4334,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4388,6 +4413,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4473,6 +4499,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4702,6 +4729,7 @@ mod tests {
                 id: FuncId(0),
                 name: "main".to_string(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),

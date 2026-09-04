@@ -3,6 +3,7 @@
 //! The backing vector is an implementation detail. Callers may only access it
 //! through checked VM addresses; a VM address is never a host pointer.
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::ops::Range;
 
@@ -218,6 +219,9 @@ pub struct LinearMemory {
     backings: Vec<Vec<u8>>,
     regions: Vec<MemoryRegion>,
     next_address: VmAddress,
+    // Machine stacks reserve one backing region per task, but only live frame
+    // ranges are addressable. This keeps released frame addresses invalid.
+    machine_stack_frames: BTreeMap<VmAddress, Vec<Range<VmAddress>>>,
 }
 
 impl Default for LinearMemory {
@@ -232,6 +236,7 @@ impl LinearMemory {
             backings: Vec::new(),
             regions: Vec::new(),
             next_address: NULL_GUARD_END,
+            machine_stack_frames: BTreeMap::new(),
         }
     }
 
@@ -250,7 +255,109 @@ impl LinearMemory {
     }
 
     pub fn is_mapped(&self, address: VmAddress) -> bool {
-        self.region_for_address(address).is_some()
+        let Some(region) = self.region_for_address(address) else {
+            return false;
+        };
+        self.machine_stack_frames
+            .get(&region.base)
+            .map_or(true, |frames| frames.iter().any(|frame| frame.contains(&address)))
+    }
+
+    /// Reserve a task-owned stack backing region. The VM activates individual
+    /// frame ranges as calls enter and removes them as calls return.
+    pub(crate) fn allocate_machine_stack(
+        &mut self,
+        capacity: VmAddress,
+    ) -> Result<MemoryRegion, MemoryError> {
+        // Keep a unique address even for a deliberately zero-capacity test
+        // stack; the VM still enforces the logical zero-byte capacity.
+        let backing_size = capacity.max(1);
+        let region = self.allocate_region(MemoryRegionKind::Stack, backing_size, 8)?;
+        self.machine_stack_frames.insert(region.base, Vec::new());
+        Ok(region)
+    }
+
+    /// Activate one live frame range inside a machine stack reservation.
+    pub(crate) fn activate_stack_frame(
+        &mut self,
+        stack_base: VmAddress,
+        frame_base: VmAddress,
+        size: VmAddress,
+    ) -> Result<(), MemoryError> {
+        let region = self
+            .regions
+            .iter()
+            .find(|region| region.kind == MemoryRegionKind::Stack && region.base == stack_base)
+            .copied()
+            .ok_or(MemoryError::InvalidAddress {
+                address: frame_base,
+                size: usize::try_from(size).unwrap_or(usize::MAX),
+            })?;
+        let Some(frames) = self.machine_stack_frames.get_mut(&stack_base) else {
+            return Err(MemoryError::InvalidAddress {
+                address: frame_base,
+                size: usize::try_from(size).unwrap_or(usize::MAX),
+            });
+        };
+        let frame_end = frame_base.checked_add(size).ok_or(MemoryError::InvalidAddress {
+            address: frame_base,
+            size: usize::try_from(size).unwrap_or(usize::MAX),
+        })?;
+        if frame_base < region.base || frame_end > region.end {
+            return Err(MemoryError::InvalidAddress {
+                address: frame_base,
+                size: usize::try_from(size).unwrap_or(usize::MAX),
+            });
+        }
+        if size == 0 {
+            return Ok(());
+        }
+        if frames
+            .iter()
+            .any(|active| frame_base < active.end && active.start < frame_end)
+        {
+            return Err(MemoryError::RegionOverlap {
+                base: frame_base,
+                end: frame_end,
+            });
+        }
+        frames.push(frame_base..frame_end);
+        frames.sort_by_key(|frame| frame.start);
+        Ok(())
+    }
+
+    /// Release one live frame range. The backing bytes remain allocated, but
+    /// subsequent non-empty accesses cannot reach them.
+    pub(crate) fn release_stack_frame(
+        &mut self,
+        stack_base: VmAddress,
+        frame_base: VmAddress,
+        size: VmAddress,
+    ) -> Result<(), MemoryError> {
+        let Some(frames) = self.machine_stack_frames.get_mut(&stack_base) else {
+            return Err(MemoryError::InvalidAddress {
+                address: frame_base,
+                size: usize::try_from(size).unwrap_or(usize::MAX),
+            });
+        };
+        if size == 0 {
+            return Ok(());
+        }
+        let frame_end = frame_base.checked_add(size).ok_or(MemoryError::InvalidAddress {
+            address: frame_base,
+            size: usize::try_from(size).unwrap_or(usize::MAX),
+        })?;
+        let Some(index) = frames
+            .iter()
+            .position(|active| active.start == frame_base && active.end == frame_end)
+        else {
+            return Err(MemoryError::InvalidAddress {
+                address: frame_base,
+                size: usize::try_from(size).unwrap_or(usize::MAX),
+            });
+        };
+        frames.remove(index);
+        Ok(())
     }
 
     /// Allocate the next region using checked alignment and address arithmetic.
@@ -458,6 +565,22 @@ impl LinearMemory {
                 size,
                 region_end: region.end,
             });
+        }
+        if let Some(frames) = self.machine_stack_frames.get(&region.base) {
+            let Some(active_end) = frames
+                .iter()
+                .find(|frame| frame.contains(&address))
+                .map(|frame| frame.end)
+            else {
+                return Err(MemoryError::InvalidAddress { address, size });
+            };
+            if end > active_end {
+                return Err(MemoryError::MemoryOutOfBounds {
+                    address,
+                    size,
+                    region_end: active_end,
+                });
+            }
         }
         if write && !region.permissions.is_writable() {
             return Err(MemoryError::WriteToReadOnlyMemory {

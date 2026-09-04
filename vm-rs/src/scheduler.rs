@@ -157,6 +157,8 @@ pub(crate) struct ResumableFrame {
     pub(crate) function: Rc<str>,
     pub(crate) function_index: Option<usize>,
     pub(crate) return_target: Option<ReturnTarget>,
+    pub(crate) machine_frame_base: Option<u64>,
+    pub(crate) machine_frame_size: u64,
 }
 
 impl ResumableFrame {
@@ -166,6 +168,7 @@ impl ResumableFrame {
         locals: SharedLocalSlots,
         closure: SharedEnvironment,
     ) -> Self {
+        let machine_frame_size = body.machine_frame_size;
         Self {
             body: Some(body),
             ip: 0,
@@ -178,6 +181,8 @@ impl ResumableFrame {
             function: Rc::from("main"),
             function_index: None,
             return_target: None,
+            machine_frame_base: None,
+            machine_frame_size,
         }
     }
 
@@ -190,6 +195,7 @@ impl ResumableFrame {
         closure: SharedEnvironment,
         return_target: ReturnTarget,
     ) -> Self {
+        let machine_frame_size = body.machine_frame_size;
         Self {
             body: Some(body),
             ip: 0,
@@ -202,6 +208,8 @@ impl ResumableFrame {
             function: function.into(),
             function_index: Some(function_index),
             return_target: Some(return_target),
+            machine_frame_base: None,
+            machine_frame_size,
         }
     }
 }
@@ -814,6 +822,7 @@ mod tests {
                 id: FuncId(0),
                 name: String::new(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -837,6 +846,7 @@ mod tests {
                 id: FuncId(0),
                 name: String::new(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -894,6 +904,7 @@ mod tests {
                 id: FuncId(0),
                 name: String::new(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -922,6 +933,7 @@ mod tests {
                 id: FuncId(0),
                     name: String::new(),
                     arity: 0,
+                    machine_frame_size: 0,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -940,6 +952,8 @@ mod tests {
             function: Rc::from("missing"),
             function_index: Some(1),
             return_target: None,
+            machine_frame_base: None,
+            machine_frame_size: 0,
         };
         assert_eq!(
             stack.push(missing_target),
@@ -951,6 +965,7 @@ mod tests {
                 id: FuncId(0),
                 name: String::new(),
                 arity: 0,
+                machine_frame_size: 0,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
