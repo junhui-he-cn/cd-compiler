@@ -2,7 +2,7 @@
 
 use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, Function, Instruction, Program,
-    MachineIntPredicate, MachineIntWidth, TypeId, UpvalueSource, VariantId,
+    MachineIntPredicate, MachineIntWidth, MachineMemoryType, TypeId, UpvalueSource, VariantId,
 };
 #[cfg(test)]
 use crate::bytecode::FuncId;
@@ -801,6 +801,29 @@ fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
     }
 }
 
+fn decode_machine_memory_bits(
+    bytes: &[u8],
+    memory_type: MachineMemoryType,
+) -> Result<u64, RuntimeError> {
+    if bytes.len() != memory_type.size() {
+        return Err(RuntimeError::new(format!(
+            "load {} expected {} bytes, got {}",
+            memory_type.as_str(),
+            memory_type.size(),
+            bytes.len()
+        )));
+    }
+    let mut raw = 0u64;
+    for (index, byte) in bytes.iter().enumerate() {
+        raw |= u64::from(*byte) << (index * 8);
+    }
+    Ok(raw)
+}
+
+fn encode_machine_memory_bits(value: u64, size: usize) -> Vec<u8> {
+    value.to_le_bytes().iter().take(size).copied().collect()
+}
+
 fn signed_machine_int(raw: u64, width: MachineIntWidth) -> i128 {
     let raw = raw & width.mask();
     let sign_bit = 1u64 << (width.bits() - 1);
@@ -1293,6 +1316,50 @@ mod tests {
         }
     }
 
+    fn run_machine_body(
+        vm: &mut VM<'_>,
+        registers: Vec<Value>,
+    ) -> Result<Vec<Value>, RuntimeError> {
+        let body = vm.program.functions[0].clone();
+        let mut frame = Frame {
+            body: None,
+            ip: 0,
+            registers,
+            locals: vm.heap.new_local_slots(),
+            closure: vm.heap.new_environment(),
+            upvalues: Vec::new(),
+            variable_plan: None,
+            is_main: true,
+            function: Rc::from("main"),
+            function_index: None,
+            return_target: None,
+        };
+        let result = vm.execute_body(&body, &mut frame)?;
+        assert!(matches!(result, Some(Value::Nil)));
+        Ok(frame.registers)
+    }
+
+    fn machine_memory_error(
+        region_kind: crate::memory::MemoryRegionKind,
+        region_size: u64,
+        instruction: Instruction,
+        registers: Vec<Value>,
+    ) -> RuntimeError {
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                instruction,
+                Instruction::ReturnNil,
+            ],
+            registers.len(),
+        );
+        let mut vm = VM::new(&program);
+        vm.memory_mut()
+            .allocate_region(region_kind, region_size, 1)
+            .expect("machine memory test region should allocate");
+        run_machine_body(&mut vm, registers).expect_err("machine memory operation should fail")
+    }
+
     #[test]
     fn vm_owns_memory_shared_by_cooperative_sessions() {
         let program = empty_program();
@@ -1351,6 +1418,225 @@ mod tests {
             let runtime_error: RuntimeError = error.into();
             assert_eq!(runtime_error.kind, expected_kind);
         }
+    }
+
+    #[test]
+    fn typed_machine_memory_operations_preserve_bits_and_allow_unaligned_access() {
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Load {
+                    dest: 13,
+                    address: 0,
+                    memory_type: MachineMemoryType::I8,
+                },
+                Instruction::Load {
+                    dest: 14,
+                    address: 0,
+                    memory_type: MachineMemoryType::I16,
+                },
+                Instruction::Load {
+                    dest: 15,
+                    address: 0,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::Load {
+                    dest: 16,
+                    address: 0,
+                    memory_type: MachineMemoryType::I64,
+                },
+                Instruction::Load {
+                    dest: 17,
+                    address: 1,
+                    memory_type: MachineMemoryType::F32,
+                },
+                Instruction::Load {
+                    dest: 18,
+                    address: 2,
+                    memory_type: MachineMemoryType::F64,
+                },
+                Instruction::Load {
+                    dest: 19,
+                    address: 3,
+                    memory_type: MachineMemoryType::Addr,
+                },
+                Instruction::Store {
+                    address: 4,
+                    source: 10,
+                    memory_type: MachineMemoryType::I8,
+                },
+                Instruction::Store {
+                    address: 5,
+                    source: 10,
+                    memory_type: MachineMemoryType::I16,
+                },
+                Instruction::Store {
+                    address: 6,
+                    source: 10,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::Store {
+                    address: 7,
+                    source: 10,
+                    memory_type: MachineMemoryType::I64,
+                },
+                Instruction::Store {
+                    address: 8,
+                    source: 11,
+                    memory_type: MachineMemoryType::F32,
+                },
+                Instruction::Store {
+                    address: 9,
+                    source: 11,
+                    memory_type: MachineMemoryType::F64,
+                },
+                Instruction::Store {
+                    address: 20,
+                    source: 12,
+                    memory_type: MachineMemoryType::Addr,
+                },
+                Instruction::ReturnNil,
+            ],
+            21,
+        );
+        let mut vm = VM::new(&program);
+        let region = vm
+            .memory_mut()
+            .allocate_region(crate::memory::MemoryRegionKind::Data, 96, 1)
+            .expect("typed memory test region should allocate");
+        let integer_bits = 0x1122_3344_5566_7788u64;
+        let loaded_address = 0u64;
+        vm.memory_mut()
+            .write_bytes(region.base + 1, &integer_bits.to_le_bytes())
+            .expect("integer bytes should initialize");
+        vm.memory_mut()
+            .write_bytes(region.base + 16, &1.5f32.to_bits().to_le_bytes())
+            .expect("f32 bytes should initialize");
+        vm.memory_mut()
+            .write_bytes(region.base + 24, &(-2.25f64).to_bits().to_le_bytes())
+            .expect("f64 bytes should initialize");
+        vm.memory_mut()
+            .write_bytes(region.base + 40, &loaded_address.to_le_bytes())
+            .expect("address bytes should initialize");
+
+        let mut initial = vec![Value::Nil; 21];
+        for (register, offset) in [
+            (0, 1),
+            (1, 16),
+            (2, 24),
+            (3, 40),
+            (4, 48),
+            (5, 49),
+            (6, 51),
+            (7, 55),
+            (8, 63),
+            (9, 67),
+            (20, 75),
+        ] {
+            initial[register] = Value::address(region.base + offset);
+        }
+        initial[10] = Value::machine_int(integer_bits);
+        initial[11] = Value::machine_float(1.5);
+        initial[12] = Value::address(0x0123_4567_89ab_cdef);
+
+        let registers = run_machine_body(&mut vm, initial).expect("typed memory should execute");
+        assert!(matches!(&registers[13], Value::MachineInt(value) if *value == 0x88));
+        assert!(matches!(&registers[14], Value::MachineInt(value) if *value == 0x7788));
+        assert!(matches!(&registers[15], Value::MachineInt(value) if *value == 0x5566_7788));
+        assert!(matches!(&registers[16], Value::MachineInt(value) if *value == integer_bits));
+        assert!(matches!(&registers[17], Value::MachineFloat(value) if *value == 1.5));
+        assert!(matches!(&registers[18], Value::MachineFloat(value) if *value == -2.25));
+        assert!(matches!(&registers[19], Value::Address(value) if *value == loaded_address));
+
+        assert_eq!(vm.memory().read_bytes(region.base + 48, 1).unwrap(), &[0x88]);
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 49, 2).unwrap(),
+            &[0x88, 0x77]
+        );
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 51, 4).unwrap(),
+            &[0x88, 0x77, 0x66, 0x55]
+        );
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 55, 8).unwrap(),
+            &integer_bits.to_le_bytes()
+        );
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 63, 4).unwrap(),
+            &1.5f32.to_bits().to_le_bytes()
+        );
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 67, 8).unwrap(),
+            &1.5f64.to_le_bytes()
+        );
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 75, 8).unwrap(),
+            &0x0123_4567_89ab_cdefu64.to_le_bytes()
+        );
+    }
+
+    #[test]
+    fn typed_machine_memory_operations_map_address_and_domain_errors() {
+        let error = machine_memory_error(
+            crate::memory::MemoryRegionKind::Data,
+            4,
+            Instruction::Load {
+                dest: 1,
+                address: 0,
+                memory_type: MachineMemoryType::I16,
+            },
+            vec![Value::address(0x1003), Value::Nil],
+        );
+        assert_eq!(error.kind, RuntimeErrorKind::MemoryOutOfBounds);
+
+        let error = machine_memory_error(
+            crate::memory::MemoryRegionKind::Data,
+            4,
+            Instruction::Store {
+                address: 0,
+                source: 1,
+                memory_type: MachineMemoryType::I16,
+            },
+            vec![Value::address(0x1003), Value::machine_int(1)],
+        );
+        assert_eq!(error.kind, RuntimeErrorKind::MemoryOutOfBounds);
+
+        let error = machine_memory_error(
+            crate::memory::MemoryRegionKind::Data,
+            4,
+            Instruction::Load {
+                dest: 1,
+                address: 0,
+                memory_type: MachineMemoryType::I8,
+            },
+            vec![Value::address(0), Value::Nil],
+        );
+        assert_eq!(error.kind, RuntimeErrorKind::NullPointerAccess);
+
+        let error = machine_memory_error(
+            crate::memory::MemoryRegionKind::Rodata,
+            4,
+            Instruction::Store {
+                address: 0,
+                source: 1,
+                memory_type: MachineMemoryType::I8,
+            },
+            vec![Value::address(0x1000), Value::machine_int(1)],
+        );
+        assert_eq!(error.kind, RuntimeErrorKind::WriteToReadOnlyMemory);
+
+        let error = machine_memory_error(
+            crate::memory::MemoryRegionKind::Data,
+            4,
+            Instruction::Store {
+                address: 0,
+                source: 1,
+                memory_type: MachineMemoryType::F64,
+            },
+            vec![Value::address(0x1000), Value::number(1.0)],
+        );
+        assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+        assert_eq!(error.message, "store f64 expects machine_float, got number");
     }
 
     fn print_register(register: usize, destination: usize) -> Instruction {
@@ -10128,6 +10414,16 @@ impl<'a> VM<'a> {
             Instruction::IConst { dest, width, raw } => {
                 self.write_register(frame, *dest, Value::machine_int(raw & width.mask()))
             }
+            Instruction::Load {
+                dest,
+                address,
+                memory_type,
+            } => self.execute_machine_load(frame, *dest, *address, *memory_type),
+            Instruction::Store {
+                address,
+                source,
+                memory_type,
+            } => self.execute_machine_store(frame, *address, *source, *memory_type),
             Instruction::Trunc {
                 dest,
                 value,
@@ -13162,6 +13458,107 @@ impl<'a> VM<'a> {
                 other.type_name()
             ))),
         }
+    }
+
+    fn expect_machine_float(
+        &self,
+        frame: &Frame,
+        value: usize,
+        op_name: &str,
+    ) -> Result<f64, RuntimeError> {
+        match self.read_register_ref(frame, value)? {
+            Value::MachineFloat(value) => Ok(*value),
+            other => Err(RuntimeError::new(format!(
+                "{} expects machine_float, got {}",
+                op_name,
+                other.type_name()
+            ))),
+        }
+    }
+
+    fn expect_address(
+        &self,
+        frame: &Frame,
+        value: usize,
+        op_name: &str,
+    ) -> Result<u64, RuntimeError> {
+        match self.read_register_ref(frame, value)? {
+            Value::Address(value) => Ok(*value),
+            other => Err(RuntimeError::new(format!(
+                "{} expects address, got {}",
+                op_name,
+                other.type_name()
+            ))),
+        }
+    }
+
+    fn execute_machine_load(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        address: usize,
+        memory_type: MachineMemoryType,
+    ) -> Result<(), RuntimeError> {
+        let address = self.expect_address(frame, address, "load")?;
+        let bytes = self.memory.read_bytes(address, memory_type.size())?;
+        let raw = decode_machine_memory_bits(bytes, memory_type)?;
+        let value = match memory_type {
+            MachineMemoryType::I8
+            | MachineMemoryType::I16
+            | MachineMemoryType::I32
+            | MachineMemoryType::I64 => Value::machine_int(raw),
+            MachineMemoryType::F32 => {
+                let bits = u32::try_from(raw)
+                    .map_err(|_| RuntimeError::new("load f32 bits exceed 32 bits"))?;
+                Value::machine_float(f32::from_bits(bits) as f64)
+            }
+            MachineMemoryType::F64 => Value::machine_float(f64::from_bits(raw)),
+            MachineMemoryType::Addr => Value::address(raw),
+        };
+        self.write_register(frame, dest, value)
+    }
+
+    fn execute_machine_store(
+        &mut self,
+        frame: &mut Frame,
+        address: usize,
+        source: usize,
+        memory_type: MachineMemoryType,
+    ) -> Result<(), RuntimeError> {
+        let address = self.expect_address(frame, address, "store")?;
+        let bytes = match memory_type {
+            MachineMemoryType::I8
+            | MachineMemoryType::I16
+            | MachineMemoryType::I32
+            | MachineMemoryType::I64 => {
+                let source = self.read_register(frame, source)?;
+                let value = match source {
+                    Value::MachineInt(value) => value,
+                    other => {
+                        return Err(RuntimeError::new(format!(
+                            "store {} expects machine_int, got {}",
+                            memory_type.as_str(),
+                            other.type_name()
+                        )))
+                    }
+                };
+                encode_machine_memory_bits(value, memory_type.size())
+            }
+            MachineMemoryType::F32 => {
+                let value = self.expect_machine_float(frame, source, "store f32")?;
+                (value as f32).to_bits().to_le_bytes().to_vec()
+            }
+            MachineMemoryType::F64 => {
+                let value = self.expect_machine_float(frame, source, "store f64")?;
+                value.to_bits().to_le_bytes().to_vec()
+            }
+            MachineMemoryType::Addr => {
+                let value = self.expect_address(frame, source, "store addr")?;
+                value.to_le_bytes().to_vec()
+            }
+        };
+        self.memory.write_bytes(address, &bytes)?;
+        Ok(())
     }
 
     fn expect_two_machine_ints(

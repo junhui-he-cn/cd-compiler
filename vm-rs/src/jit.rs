@@ -1797,6 +1797,8 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::LessEqualNum { .. } => "le_num",
         Instruction::LessEqualStr { .. } => "le_str",
         Instruction::IConst { .. } => "iconst",
+        Instruction::Load { .. } => "load",
+        Instruction::Store { .. } => "store",
         Instruction::Trunc { .. } => "trunc",
         Instruction::ZExt { .. } => "zext",
         Instruction::SExt { .. } => "sext",
@@ -1825,7 +1827,7 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{Function, MachineIntWidth, NativeId, NativeImport};
+    use crate::bytecode::{Function, MachineIntWidth, MachineMemoryType, NativeId, NativeImport};
     use crate::runtime::Heap;
     use crate::scheduler::{CooperativeScheduler, ResumableFrame};
     use crate::value::Value as VmValue;
@@ -2204,6 +2206,37 @@ mod tests {
                 opcode: "iconst",
             })
         );
+
+        for (opcode, instruction) in [
+            (
+                "load",
+                Instruction::Load {
+                    dest: 0,
+                    address: 1,
+                    memory_type: MachineMemoryType::I32,
+                },
+            ),
+            (
+                "store",
+                Instruction::Store {
+                    address: 0,
+                    source: 1,
+                    memory_type: MachineMemoryType::F64,
+                },
+            ),
+        ] {
+            let machine = program(vec![function(
+                0,
+                vec![instruction, Instruction::Return { value: 0 }],
+            )]);
+            assert_eq!(
+                state.eligibility(&machine, Some(1), JitExecutionMode::Ordinary),
+                JitEligibility::Fallback(JitFallbackReason::UnsupportedInstruction {
+                    instruction: 0,
+                    opcode,
+                })
+            );
+        }
 
         for (opcode, conversion) in [
             (

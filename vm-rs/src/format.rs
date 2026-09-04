@@ -1514,6 +1514,7 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LessEqualNum { dest, .. }
         | Instruction::LessEqualStr { dest, .. }
         | Instruction::IConst { dest, .. }
+        | Instruction::Load { dest, .. }
         | Instruction::Trunc { dest, .. }
         | Instruction::ZExt { dest, .. }
         | Instruction::SExt { dest, .. }
@@ -1718,6 +1719,8 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         Instruction::Shl { value, amount, .. }
         | Instruction::LShr { value, amount, .. }
         | Instruction::AShr { value, amount, .. } => vec![*value, *amount],
+        Instruction::Load { address, .. } => vec![*address],
+        Instruction::Store { address, source, .. } => vec![*address, *source],
         _ => Vec::new(),
     }
 }
@@ -2474,6 +2477,16 @@ fn validate_instruction(
         Instruction::IConst { dest, .. } => {
             register(*dest, "destination")?;
         }
+        Instruction::Load { dest, address, .. } => {
+            register(*dest, "destination")?;
+            register(*address, "load address")?;
+        }
+        Instruction::Store {
+            address, source, ..
+        } => {
+            register(*address, "store address")?;
+            register(*source, "store source")?;
+        }
         Instruction::Trunc {
             dest,
             value,
@@ -2810,6 +2823,8 @@ fn machine_instruction_opcode(instruction: &Instruction) -> Option<&'static str>
         Instruction::LShr { .. } => "lshr",
         Instruction::AShr { .. } => "ashr",
         Instruction::ICmp { .. } => "icmp",
+        Instruction::Load { .. } => "load",
+        Instruction::Store { .. } => "store",
         _ => return None,
     })
 }
@@ -3745,6 +3760,26 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::IConst { dest, width, raw } => {
             format!("r{} = iconst {}, 0x{:016x}", dest, width.as_str(), raw)
         }
+        Instruction::Load {
+            dest,
+            address,
+            memory_type,
+        } => format!(
+            "r{} = load r{}, {}",
+            dest,
+            address,
+            memory_type.as_str()
+        ),
+        Instruction::Store {
+            address,
+            source,
+            memory_type,
+        } => format!(
+            "store r{}, r{}, {}",
+            address,
+            source,
+            memory_type.as_str()
+        ),
         Instruction::Trunc {
             dest,
             value,
@@ -4174,7 +4209,7 @@ fn quote_string(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::MachineIntWidth;
+    use crate::bytecode::{MachineIntWidth, MachineMemoryType};
 
     #[test]
     fn round_trips_minimal_program() {
@@ -4260,6 +4295,169 @@ mod tests {
             }
         );
         assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
+    }
+
+    #[test]
+    fn formats_and_rejects_typed_memory_opcodes_at_the_0_2_boundary() {
+        let mut program = Program {
+            constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
+            names: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 2,
+                instructions: vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::Load {
+                        dest: 0,
+                        address: 1,
+                        memory_type: MachineMemoryType::I32,
+                    },
+                    Instruction::Store {
+                        address: 1,
+                        source: 0,
+                        memory_type: MachineMemoryType::I32,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 4],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+        assert_eq!(
+            format_instruction(&program.functions[0].instructions[1]),
+            "r0 = load r1, i32"
+        );
+        assert_eq!(
+            format_instruction(&program.functions[0].instructions[2]),
+            "store r1, r0, i32"
+        );
+
+        for (instruction, opcode) in [
+            (
+                Instruction::Load {
+                    dest: 0,
+                    address: 1,
+                    memory_type: MachineMemoryType::Addr,
+                },
+                "load",
+            ),
+            (
+                Instruction::Store {
+                    address: 0,
+                    source: 1,
+                    memory_type: MachineMemoryType::F64,
+                },
+                "store",
+            ),
+        ] {
+            program.functions[0].instructions = vec![instruction];
+            program.functions[0].locations = vec![None];
+            let error = format_program_checked(&program)
+                .expect_err("typed memory opcode must remain outside cdbc 0.2");
+            assert_eq!(
+                error,
+                FormatError::UnsupportedMachineInstruction {
+                    function: 0,
+                    instruction: 0,
+                    opcode,
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn verifies_typed_memory_register_shapes() {
+        let mut program = Program {
+            constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
+            names: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 2,
+                instructions: vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::IConst {
+                        dest: 0,
+                        width: MachineIntWidth::W64,
+                        raw: 0,
+                    },
+                    Instruction::Load {
+                        dest: 1,
+                        address: 0,
+                        memory_type: MachineMemoryType::I16,
+                    },
+                    Instruction::Store {
+                        address: 0,
+                        source: 1,
+                        memory_type: MachineMemoryType::F32,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 5],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+        verify_program(&program).expect("typed memory register operands should verify");
+
+        for (instruction, expected) in [
+            (
+                Instruction::Load {
+                    dest: 2,
+                    address: 0,
+                    memory_type: MachineMemoryType::I8,
+                },
+                "destination register r2 out of range",
+            ),
+            (
+                Instruction::Load {
+                    dest: 1,
+                    address: 2,
+                    memory_type: MachineMemoryType::I8,
+                },
+                "load address register r2 out of range",
+            ),
+            (
+                Instruction::Store {
+                    address: 0,
+                    source: 2,
+                    memory_type: MachineMemoryType::I8,
+                },
+                "store source register r2 out of range",
+            ),
+        ] {
+            program.functions[0].instructions = vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::IConst {
+                    dest: 0,
+                    width: MachineIntWidth::W64,
+                    raw: 0,
+                },
+                instruction,
+                Instruction::ReturnNil,
+            ];
+            program.functions[0].locations = vec![None; 4];
+            let error = verify_program(&program).expect_err("invalid memory register must fail");
+            assert!(error.message.contains(expected), "{}", error.message);
+        }
     }
 
     #[test]

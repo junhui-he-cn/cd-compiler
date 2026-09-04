@@ -174,6 +174,68 @@ impl MachineIntWidth {
     }
 }
 
+/// Scalar domain and width selected by a typed machine memory operation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MachineMemoryType {
+    I8,
+    I16,
+    I32,
+    I64,
+    F32,
+    F64,
+    Addr,
+}
+
+impl MachineMemoryType {
+    /// Alias matching the spelling used by the machine ABI document.
+    #[allow(non_upper_case_globals)]
+    pub const Address: Self = Self::Addr;
+    /// Alias matching the textual `ADDR` type name.
+    pub const ADDR: Self = Self::Addr;
+
+    pub const fn size(self) -> usize {
+        match self {
+            Self::I8 => 1,
+            Self::I16 => 2,
+            Self::I32 | Self::F32 => 4,
+            Self::I64 | Self::F64 | Self::Addr => 8,
+        }
+    }
+
+    pub const fn alignment(self) -> u64 {
+        match self {
+            Self::I8 => 1,
+            Self::I16 => 2,
+            Self::I32 | Self::F32 => 4,
+            Self::I64 | Self::F64 | Self::Addr => 8,
+        }
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::I8 => "i8",
+            Self::I16 => "i16",
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            Self::F32 => "f32",
+            Self::F64 => "f64",
+            Self::Addr => "addr",
+        }
+    }
+
+    pub const fn is_integer(self) -> bool {
+        matches!(self, Self::I8 | Self::I16 | Self::I32 | Self::I64)
+    }
+
+    pub const fn is_float(self) -> bool {
+        matches!(self, Self::F32 | Self::F64)
+    }
+
+    pub const fn is_address(self) -> bool {
+        matches!(self, Self::Addr)
+    }
+}
+
 /// Predicate used by the machine integer comparison instruction.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MachineIntPredicate {
@@ -564,6 +626,16 @@ pub enum Instruction {
         dest: usize,
         width: MachineIntWidth,
         raw: u64,
+    },
+    Load {
+        dest: usize,
+        address: usize,
+        memory_type: MachineMemoryType,
+    },
+    Store {
+        address: usize,
+        source: usize,
+        memory_type: MachineMemoryType,
     },
     Trunc {
         dest: usize,

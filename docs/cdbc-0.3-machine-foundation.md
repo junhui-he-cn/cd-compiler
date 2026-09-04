@@ -391,7 +391,10 @@ with one checked backing vector per mapped region so sparse explicit VM
 addresses do not materialize unmapped gaps. One `LinearMemory` instance is
 shared by ordinary execution and a cooperative VM session. The public memory
 API performs all address and range checks before exposing or changing backing
-bytes; typed `LOAD`/`STORE` remains a later milestone.
+bytes. The VM03-05 implementation adds interpreter-first typed `LOAD`/`STORE`
+instructions over that API; their integer, float, address, endian, alignment,
+and permission semantics are defined in section 9 below. cdbc 0.2 text
+serialization still rejects these machine instructions until VM03-11.
 
 The address space is little-endian and has this logical order:
 

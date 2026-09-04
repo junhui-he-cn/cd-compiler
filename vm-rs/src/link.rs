@@ -572,7 +572,9 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 #[cfg(test)]
 mod tests {
     use super::{link_modules, link_modules_with_report, map_instruction, ModuleContext};
-    use crate::bytecode::{BlockId, FuncId, Function, Instruction, MachineIntWidth, Program};
+    use crate::bytecode::{
+        BlockId, FuncId, Function, Instruction, MachineIntWidth, MachineMemoryType, Program,
+    };
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
 
     fn empty_program() -> Program {
@@ -792,6 +794,59 @@ mod tests {
                 |block| Ok(block),
             )
             .expect("machine conversion should remap");
+            assert_eq!(mapped, expected);
+        }
+    }
+
+    #[test]
+    fn remaps_machine_memory_registers_with_the_function_base() {
+        let context = ModuleContext {
+            constant_base: 0,
+            name_base: 0,
+            function_base: 0,
+            type_remap: Vec::new(),
+            native_remap: Vec::new(),
+            global_remap: Vec::new(),
+            module_remap: Vec::new(),
+            init: FuncId(0),
+            source_base: 0,
+        };
+        let cases = [
+            (
+                Instruction::Load {
+                    dest: 1,
+                    address: 2,
+                    memory_type: MachineMemoryType::I32,
+                },
+                Instruction::Load {
+                    dest: 11,
+                    address: 12,
+                    memory_type: MachineMemoryType::I32,
+                },
+            ),
+            (
+                Instruction::Store {
+                    address: 3,
+                    source: 4,
+                    memory_type: MachineMemoryType::F64,
+                },
+                Instruction::Store {
+                    address: 13,
+                    source: 14,
+                    memory_type: MachineMemoryType::F64,
+                },
+            ),
+        ];
+
+        for (instruction, expected) in cases {
+            let mapped = map_instruction(
+                &instruction,
+                &context,
+                10,
+                |block| Ok(block),
+                |block| Ok(block),
+            )
+            .expect("machine memory registers should remap");
             assert_eq!(mapped, expected);
         }
     }
@@ -1312,6 +1367,24 @@ fn map_instruction(
             dest: register(*dest)?,
             width: *width,
             raw: *raw,
+        },
+        Instruction::Load {
+            dest,
+            address,
+            memory_type,
+        } => Instruction::Load {
+            dest: register(*dest)?,
+            address: register(*address)?,
+            memory_type: *memory_type,
+        },
+        Instruction::Store {
+            address,
+            source,
+            memory_type,
+        } => Instruction::Store {
+            address: register(*address)?,
+            source: register(*source)?,
+            memory_type: *memory_type,
         },
         Instruction::Trunc {
             dest,
