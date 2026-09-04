@@ -17,6 +17,7 @@ use std::rc::Rc;
 fn print_program() -> Program {
     Program {
         constants: vec![Constant::Number("7".to_string())],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -59,6 +60,7 @@ fn print_program() -> Program {
 fn cooperative_program() -> Program {
     Program {
         constants: vec![Constant::Number("7".to_string()), Constant::Number("8".to_string())],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -121,6 +123,7 @@ fn cooperative_output_program() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("2".to_string()),
         ],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -209,6 +212,7 @@ fn profile_program() -> Program {
     };
     Program {
         constants: vec![Constant::Number("7".to_string())],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![
@@ -284,6 +288,7 @@ fn profile_failure_program() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("0".to_string()),
         ],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -334,6 +339,7 @@ fn runtime_diagnostic_program() -> Program {
     };
     Program {
         constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
@@ -753,6 +759,7 @@ fn library_api_exposes_versions_and_typed_artifact_errors() {
     let invalid_program = Program {
         constants: Vec::new(),
         names: Vec::new(),
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),

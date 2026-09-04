@@ -1,8 +1,9 @@
 use crate::bytecode::{
-    BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, LocalId, MachineIntWidth, ModuleInit, NativeId, NativeImport, Program, TypeId,
-    TypeLayout, UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
+    BlockId, Constant, DataSegment, DebugLocation, DebugRange, DebugSource, FuncId, Function,
+    GlobalId, Instruction, LocalId, MachineIntWidth, ModuleInit, NativeId, NativeImport, Program,
+    TypeId, TypeLayout, UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
 };
+use crate::memory::{MemoryRegionKind, NULL_GUARD_END};
 use crate::vm::native_arity_bounds;
 use std::collections::BTreeSet;
 use std::fmt;
@@ -35,6 +36,7 @@ pub enum FormatError {
         instruction: usize,
         opcode: &'static str,
     },
+    UnsupportedMachineDataSegment { segment: usize },
 }
 
 impl fmt::Display for FormatError {
@@ -56,6 +58,11 @@ impl fmt::Display for FormatError {
                     opcode, context, instruction
                 )
             }
+            Self::UnsupportedMachineDataSegment { segment } => write!(
+                f,
+                "cdbc 0.2 formatter cannot emit machine data segment d{}; cdbc 0.3 serialization is deferred to VM03-11",
+                segment
+            ),
         }
     }
 }
@@ -1006,6 +1013,7 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
         constants,
         names,
         globals,
+        data_segments: Vec::new(),
         types,
         native_imports,
         modules,
@@ -1204,7 +1212,100 @@ fn verify_module_artifact_at_line(
     validate_module_envelope(artifact, line)
 }
 
+fn validate_data_segments(segments: &[DataSegment], line: usize) -> Result<(), ParseError> {
+    for (index, segment) in segments.iter().enumerate() {
+        if segment.alignment == 0 || !segment.alignment.is_power_of_two() {
+            return Err(validation_error(
+                line,
+                format!(
+                    "data segment d{} alignment {} is not a positive power of two",
+                    index, segment.alignment
+                ),
+            ));
+        }
+        match segment.kind {
+            MemoryRegionKind::Rodata | MemoryRegionKind::Data => {
+                let Some(initial) = segment.initial.as_ref() else {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "data segment d{} in {} must carry an initialization payload",
+                            index, segment.kind
+                        ),
+                    ));
+                };
+                let initial_size = u64::try_from(initial.len()).map_err(|_| {
+                    validation_error(
+                        line,
+                        format!("data segment d{} initialization is too large", index),
+                    )
+                })?;
+                if initial_size != segment.size {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "data segment d{} declares size {}, but initialization has {} bytes",
+                            index, segment.size, initial_size
+                        ),
+                    ));
+                }
+            }
+            MemoryRegionKind::Bss => {
+                if segment.initial.is_some() {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "bss data segment d{} must not carry an initialization payload",
+                            index
+                        ),
+                    ));
+                }
+            }
+            MemoryRegionKind::Heap | MemoryRegionKind::Stack => {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "data segment d{} has unsupported kind {}",
+                        index, segment.kind
+                    ),
+                ));
+            }
+        }
+    }
+
+    // Static addresses are deterministic regardless of descriptor order:
+    // the ABI reserves RODATA, DATA, and BSS in that order.
+    let mut cursor = NULL_GUARD_END;
+    for kind in [
+        MemoryRegionKind::Rodata,
+        MemoryRegionKind::Data,
+        MemoryRegionKind::Bss,
+    ] {
+        for (index, segment) in segments.iter().enumerate() {
+            if segment.kind != kind {
+                continue;
+            }
+            let mask = segment.alignment - 1;
+            let padding = (segment.alignment - (cursor & mask)) & mask;
+            let base = cursor.checked_add(padding).ok_or_else(|| {
+                validation_error(
+                    line,
+                    format!("data segment d{} address placement overflows", index),
+                )
+            })?;
+            cursor = base.checked_add(segment.size).ok_or_else(|| {
+                validation_error(
+                    line,
+                    format!("data segment d{} address placement overflows", index),
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
 fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
+    validate_data_segments(&program.data_segments, line)?;
     for (index, name) in program.globals.iter().enumerate() {
         if *name >= program.names.len() {
             return Err(validation_error(
@@ -2807,6 +2908,9 @@ pub fn format_artifact_checked(artifact: &Artifact) -> Result<String, FormatErro
 }
 
 fn reject_unsupported_machine_instructions(program: &Program) -> Result<(), FormatError> {
+    if !program.data_segments.is_empty() {
+        return Err(FormatError::UnsupportedMachineDataSegment { segment: 0 });
+    }
     for (function, body) in program.functions.iter().enumerate() {
         for (instruction, operation) in body.instructions.iter().enumerate() {
             if let Some(opcode) = machine_instruction_opcode(operation) {
@@ -4232,7 +4336,37 @@ fn quote_string(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{MachineIntWidth, MachineMemoryType};
+    use crate::bytecode::{DataSegment, MachineIntWidth, MachineMemoryType};
+    use crate::memory::MemoryRegionKind;
+
+    fn program_with_data_segments(data_segments: Vec<DataSegment>) -> Program {
+        Program {
+            constants: Vec::new(),
+            names: Vec::new(),
+            globals: Vec::new(),
+            data_segments,
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                machine_frame_size: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 0,
+                instructions: vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 2],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        }
+    }
 
     #[test]
     fn round_trips_minimal_program() {
@@ -4283,6 +4417,7 @@ mod tests {
     fn checked_formatter_rejects_machine_opcodes_before_0_3_serialization() {
         let program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4322,9 +4457,83 @@ mod tests {
     }
 
     #[test]
+    fn verifies_machine_data_segment_descriptors_and_static_placement() {
+        let program = program_with_data_segments(vec![
+            DataSegment {
+                kind: MemoryRegionKind::Data,
+                alignment: 8,
+                size: 4,
+                initial: Some(vec![1, 2, 3, 4]),
+            },
+            DataSegment {
+                kind: MemoryRegionKind::Bss,
+                alignment: 16,
+                size: 8,
+                initial: None,
+            },
+            DataSegment {
+                kind: MemoryRegionKind::Rodata,
+                alignment: 4,
+                size: 4,
+                initial: Some(b"hi\0\0".to_vec()),
+            },
+        ]);
+        verify_program(&program).expect("valid data segments should verify");
+
+        let invalid = program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Bss,
+            alignment: 8,
+            size: 4,
+            initial: Some(vec![0; 4]),
+        }]);
+        let error = verify_program(&invalid).expect_err("BSS payload should be rejected");
+        assert!(error.message.contains("must not carry an initialization payload"));
+
+        let invalid = program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 8,
+            size: 5,
+            initial: Some(vec![0; 4]),
+        }]);
+        let error = verify_program(&invalid).expect_err("data size mismatch should be rejected");
+        assert!(error
+            .message
+            .contains("declares size 5, but initialization has 4 bytes"));
+
+        let invalid = program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 3,
+            size: 4,
+            initial: Some(vec![0; 4]),
+        }]);
+        let error = verify_program(&invalid).expect_err("invalid segment alignment should fail");
+        assert!(error
+            .message
+            .contains("alignment 3 is not a positive power of two"));
+    }
+
+    #[test]
+    fn checked_formatter_rejects_machine_data_segments_before_0_3_serialization() {
+        let program = program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Rodata,
+            alignment: 1,
+            size: 3,
+            initial: Some(b"abc".to_vec()),
+        }]);
+        let error = format_program_checked(&program)
+            .expect_err("0.2 formatter must reject machine data segments");
+        assert_eq!(
+            error,
+            FormatError::UnsupportedMachineDataSegment { segment: 0 }
+        );
+        assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
+    }
+
+    #[test]
     fn formats_and_rejects_typed_memory_opcodes_at_the_0_2_boundary() {
         let mut program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4404,6 +4613,7 @@ mod tests {
     fn verifies_typed_memory_register_shapes() {
         let mut program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4490,6 +4700,7 @@ mod tests {
     fn verifies_machine_integer_conversion_shapes() {
         let mut program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4721,6 +4932,7 @@ mod tests {
         let artifact = Artifact::Program(Program {
             constants: vec![Constant::Nil],
             names: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),

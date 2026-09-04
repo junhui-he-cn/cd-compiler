@@ -6,6 +6,8 @@
 //! `functions[0]` and `function fN` sections to `functions[N + 1]`;
 //! `Program::entry` names the unified entry function.
 
+use crate::memory::MemoryRegionKind;
+
 macro_rules! id_type {
     ($(#[$doc:meta])* $name:ident) => {
         $(#[$doc])*
@@ -64,12 +66,26 @@ pub struct Program {
     pub constants: Vec<Constant>,
     pub names: Vec<String>,
     pub globals: Vec<usize>,
+    /// Static machine storage loaded before execution. Dynamic globals remain
+    /// represented by `globals` and are intentionally kept separate.
+    pub data_segments: Vec<DataSegment>,
     pub types: Vec<TypeLayout>,
     pub native_imports: Vec<NativeImport>,
     pub modules: Vec<ModuleInit>,
     pub functions: Vec<Function>,
     pub entry: FuncId,
     pub debug_sources: Vec<DebugSource>,
+}
+
+/// One static machine-memory segment. `Rodata` and `Data` carry an
+/// initialization payload whose length must equal `size`; `Bss` is always
+/// zero-initialized and carries no payload.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DataSegment {
+    pub kind: MemoryRegionKind,
+    pub alignment: u64,
+    pub size: u64,
+    pub initial: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

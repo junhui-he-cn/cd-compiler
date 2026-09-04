@@ -1,7 +1,7 @@
 use crate::bytecode::{
-    BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout, UpvalueDesc,
-    UpvalueSource,
+    BlockId, Constant, DataSegment, DebugLocation, DebugRange, DebugSource, FuncId, Function,
+    GlobalId, Instruction, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout,
+    UpvalueDesc, UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::HashMap;
@@ -138,6 +138,7 @@ struct Linker {
     input_dependency_count: usize,
     expansion_order: Vec<String>,
     constants: Vec<Constant>,
+    data_segments: Vec<DataSegment>,
     names: Vec<String>,
     functions: Vec<Function>,
     debug_sources: Vec<DebugSource>,
@@ -243,6 +244,7 @@ impl Linker {
             input_dependency_count,
             expansion_order: Vec::new(),
             constants: Vec::new(),
+            data_segments: Vec::new(),
             names: Vec::new(),
             functions: Vec::new(),
             debug_sources: Vec::new(),
@@ -262,6 +264,8 @@ impl Linker {
         let source_base = self.debug_sources.len();
         self.constants
             .extend(module.program.constants.iter().cloned());
+        self.data_segments
+            .extend(module.program.data_segments.iter().cloned());
         self.names.extend(module.program.names.iter().cloned());
         self.debug_sources
             .extend(module.program.debug_sources.iter().cloned());
@@ -531,6 +535,7 @@ impl Linker {
         }
         let program = Program {
             constants: self.constants,
+            data_segments: self.data_segments,
             globals: linked_globals,
             types: self.linked_types,
             native_imports: self.linked_native_imports,
@@ -575,13 +580,16 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 mod tests {
     use super::{link_modules, link_modules_with_report, map_instruction, ModuleContext};
     use crate::bytecode::{
-        BlockId, FuncId, Function, Instruction, MachineIntWidth, MachineMemoryType, Program,
+        BlockId, DataSegment, FuncId, Function, Instruction, MachineIntWidth, MachineMemoryType,
+        Program,
     };
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
+    use crate::memory::MemoryRegionKind;
 
     fn empty_program() -> Program {
         Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -683,6 +691,30 @@ mod tests {
         assert_eq!(result.report.linked_constant_count, 0);
         assert_eq!(result.report.linked_name_count, 0);
         assert_eq!(result.report.linked_debug_source_count, 0);
+    }
+
+    #[test]
+    fn links_machine_data_segments_in_module_expansion_order() {
+        let mut library = module("library", false, None, Vec::new());
+        library.program.data_segments.push(DataSegment {
+            kind: MemoryRegionKind::Rodata,
+            alignment: 4,
+            size: 3,
+            initial: Some(b"lib".to_vec()),
+        });
+        let mut entry = module("entry", true, Some(0), vec![dependency("library")]);
+        entry.program.data_segments.push(DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 8,
+            size: 4,
+            initial: Some(vec![1, 2, 3, 4]),
+        });
+
+        let linked = link_modules(vec![entry, library]).expect("segments should link");
+        assert_eq!(linked.data_segments.len(), 2);
+        assert_eq!(linked.data_segments[0].kind, MemoryRegionKind::Rodata);
+        assert_eq!(linked.data_segments[1].kind, MemoryRegionKind::Data);
+        assert_eq!(linked.data_segments[0].initial, Some(b"lib".to_vec()));
     }
 
     #[test]

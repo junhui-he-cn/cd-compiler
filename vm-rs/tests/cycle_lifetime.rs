@@ -9,6 +9,7 @@ use std::rc::Rc;
 fn self_array_program() -> Program {
     Program {
         constants: Vec::new(),
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![
@@ -58,6 +59,7 @@ fn self_array_program() -> Program {
 fn callback_cycle_program() -> Program {
     Program {
         constants: vec![Constant::Number("1".to_string())],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![
@@ -134,6 +136,7 @@ fn callback_cycle_program() -> Program {
 fn nested_cycle_program() -> Program {
     Program {
         constants: Vec::new(),
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -220,6 +223,7 @@ fn nested_cycle_program() -> Program {
 fn cycle_until_pause_program() -> Program {
     Program {
         constants: Vec::new(),
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {

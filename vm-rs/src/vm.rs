@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, Function, Instruction, Program,
-    MachineIntPredicate, MachineIntWidth, MachineMemoryType, TypeId, UpvalueSource, VariantId,
+    Constant, DataSegment, DebugLocation, DebugRange, DebugSource, Function, Instruction,
+    MachineIntPredicate, MachineIntWidth, MachineMemoryType, Program, TypeId, UpvalueSource,
+    VariantId,
 };
 #[cfg(test)]
 use crate::bytecode::FuncId;
@@ -11,7 +12,9 @@ use crate::jit::{
     JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
 };
 use crate::format::ParseError;
-use crate::memory::{LinearMemory, MemoryError, MemoryErrorKind, MemoryRegion, VmAddress};
+use crate::memory::{
+    LinearMemory, MemoryError, MemoryErrorKind, MemoryRegion, MemoryRegionKind, VmAddress,
+};
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{
@@ -804,6 +807,80 @@ fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
     }
 }
 
+fn initialize_machine_segments(
+    memory: &mut LinearMemory,
+    segments: &[DataSegment],
+) -> Result<(), RuntimeError> {
+    for (index, segment) in segments.iter().enumerate() {
+        if segment.alignment == 0 || !segment.alignment.is_power_of_two() {
+            return Err(RuntimeError::new(format!(
+                "data segment d{} alignment {} is not a positive power of two",
+                index, segment.alignment
+            )));
+        }
+        match segment.kind {
+            MemoryRegionKind::Rodata | MemoryRegionKind::Data => {
+                let Some(initial) = segment.initial.as_deref() else {
+                    return Err(RuntimeError::new(format!(
+                        "data segment d{} in {} has no initialization payload",
+                        index, segment.kind
+                    )));
+                };
+                let initial_size = u64::try_from(initial.len()).map_err(|_| {
+                    RuntimeError::new(format!("data segment d{} initialization is too large", index))
+                })?;
+                if initial_size != segment.size {
+                    return Err(RuntimeError::new(format!(
+                        "data segment d{} declares size {}, but initialization has {} bytes",
+                        index, segment.size, initial_size
+                    )));
+                }
+            }
+            MemoryRegionKind::Bss => {
+                if segment.initial.is_some() {
+                    return Err(RuntimeError::new(format!(
+                        "bss data segment d{} has an initialization payload",
+                        index
+                    )));
+                }
+            }
+            MemoryRegionKind::Heap | MemoryRegionKind::Stack => {
+                return Err(RuntimeError::new(format!(
+                    "data segment d{} has unsupported kind {}",
+                    index, segment.kind
+                )));
+            }
+        }
+    }
+
+    // The static layout is fixed by kind, while descriptor order remains
+    // stable within each segment class.
+    for kind in [
+        MemoryRegionKind::Rodata,
+        MemoryRegionKind::Data,
+        MemoryRegionKind::Bss,
+    ] {
+        for segment in segments.iter().filter(|segment| segment.kind == kind) {
+            match kind {
+                MemoryRegionKind::Rodata | MemoryRegionKind::Data => memory
+                    .allocate_region_with_bytes(
+                        kind,
+                        segment.alignment,
+                        segment.initial.as_deref().expect("validated segment payload"),
+                    )
+                    .map_err(RuntimeError::from)?,
+                MemoryRegionKind::Bss => memory
+                    .allocate_region(kind, segment.size, segment.alignment)
+                    .map_err(RuntimeError::from)?,
+                MemoryRegionKind::Heap | MemoryRegionKind::Stack => {
+                    unreachable!("unsupported segment kinds were rejected above")
+                }
+            };
+        }
+    }
+    Ok(())
+}
+
 fn decode_machine_memory_bits(
     bytes: &[u8],
     memory_type: MachineMemoryType,
@@ -1280,6 +1357,7 @@ mod tests {
     fn empty_program() -> Program {
         Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -1306,6 +1384,7 @@ mod tests {
         let instruction_count = instructions.len();
         Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -1341,6 +1420,12 @@ mod tests {
         program
     }
 
+    fn machine_program_with_data_segments(segments: Vec<DataSegment>) -> Program {
+        let mut program = empty_program();
+        program.data_segments = segments;
+        program
+    }
+
     fn machine_function(
         id: u32,
         name: &str,
@@ -1369,6 +1454,7 @@ mod tests {
     fn machine_program_with_functions(functions: Vec<Function>) -> Program {
         Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -1439,6 +1525,80 @@ mod tests {
         let base = address(0);
         assert_eq!(address(1), base + 8);
         assert_eq!(address(2), base + 16);
+    }
+
+    #[test]
+    fn machine_data_segments_load_in_static_order_with_permissions_and_zero_fill() {
+        let program = machine_program_with_data_segments(vec![
+            DataSegment {
+                kind: MemoryRegionKind::Data,
+                alignment: 8,
+                size: 4,
+                initial: Some(vec![1, 2, 3, 4]),
+            },
+            DataSegment {
+                kind: MemoryRegionKind::Bss,
+                alignment: 16,
+                size: 8,
+                initial: None,
+            },
+            DataSegment {
+                kind: MemoryRegionKind::Rodata,
+                alignment: 4,
+                size: 6,
+                initial: Some(b"hello\0".to_vec()),
+            },
+        ]);
+        let mut vm = VM::new(&program);
+        assert_eq!(
+            vm.memory()
+                .regions()
+                .iter()
+                .map(|region| region.kind)
+                .collect::<Vec<_>>(),
+            vec![
+                MemoryRegionKind::Rodata,
+                MemoryRegionKind::Data,
+                MemoryRegionKind::Bss
+            ]
+        );
+        let regions = vm.memory().regions();
+        assert_eq!(regions[0].base, 0x1000);
+        assert_eq!(regions[0].end, 0x1006);
+        assert_eq!(regions[1].base, 0x1008);
+        assert_eq!(regions[2].base, 0x1010);
+        let rodata_base = regions[0].base;
+        assert_eq!(vm.memory().read_bytes(rodata_base, 6).unwrap(), b"hello\0");
+        assert_eq!(vm.memory().read_bytes(regions[1].base, 4).unwrap(), &[1, 2, 3, 4]);
+        assert_eq!(vm.memory().read_bytes(regions[2].base, 8).unwrap(), &[0; 8]);
+        assert_eq!(
+            vm.memory_mut()
+                .write_bytes(rodata_base, &[0])
+                .unwrap_err()
+                .kind(),
+            MemoryErrorKind::WriteToReadOnlyMemory
+        );
+    }
+
+    #[test]
+    fn invalid_machine_data_segments_fail_before_execution() {
+        let program = machine_program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 8,
+            size: 4,
+            initial: Some(vec![1, 2, 3]),
+        }]);
+        let mut vm = VM::new(&program);
+        let error = vm
+            .run_inner()
+            .expect_err("invalid data payload should not reach execution");
+        assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+        assert!(error.message.contains("initialization has 3 bytes"));
+        assert!(vm
+            .memory()
+            .regions()
+            .iter()
+            .all(|region| region.kind != MemoryRegionKind::Stack));
     }
 
     #[test]
@@ -2289,6 +2449,7 @@ mod tests {
                 Constant::String("a".to_string()),
                 Constant::String("b".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -2393,6 +2554,7 @@ mod tests {
                 Constant::String("ab".to_string()),
                 Constant::String("cd".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3169,6 +3331,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("2".to_string()),
                 Constant::String("hello".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3261,6 +3424,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("2".to_string()),
                 Constant::Number("3".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![
@@ -3340,6 +3504,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn direct_calls_skip_function_value_construction_and_charge() {
         let program = Program {
             constants: vec![Constant::Number("7".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3411,6 +3576,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("3".to_string()),
                 Constant::Number("30".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![
@@ -3506,6 +3672,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn cooperative_print_program() -> Program {
         Program {
             constants: vec![Constant::Number("7".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3542,6 +3709,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn cooperative_call_program() -> Program {
         Program {
             constants: vec![Constant::Number("42".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3598,6 +3766,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn ordinary_jit_call_program(function: Function, constants: Vec<Constant>) -> Program {
         Program {
             constants,
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3656,6 +3825,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn cooperative_loop_program() -> Program {
         Program {
             constants: vec![Constant::Number("1".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -3685,6 +3855,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn cooperative_native_callback_program() -> Program {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![
@@ -3753,6 +3924,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn cooperative_nested_native_callback_program() -> Program {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3831,6 +4003,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn cooperative_cycle_program() -> Program {
         Program {
             constants: vec![Constant::Nil, Constant::Number("0".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -3875,6 +4048,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("1".to_string()),
                 Constant::Number("0".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -3973,6 +4147,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("3".to_string()),
                 Constant::Number("4".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -4059,6 +4234,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("3".to_string()),
                 Constant::Number("4".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -5226,6 +5402,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         };
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5287,6 +5464,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number(iterations.to_string()),
                 Constant::Number("1".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5342,6 +5520,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn cycle_until_pause_program() -> Program {
         Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -5414,6 +5593,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("1".to_string()),
                 Constant::Number(depth.to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5524,6 +5704,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             names: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5856,6 +6037,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_map_invokes_callback_and_returns_fresh_array() {
         let program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5917,6 +6099,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_flat_map_flattens_one_level_and_returns_fresh_array() {
         let program = Program {
             constants: vec![Constant::Number("10".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6027,6 +6210,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_filter_invokes_predicate_and_returns_matching_fresh_array() {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6094,6 +6278,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_filter_validates_operands_and_boolean_predicate_results() {
         let program = Program {
             constants: vec![Constant::Nil],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6197,6 +6382,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_any_and_all_short_circuit_with_boolean_results() {
         let program = Program {
             constants: vec![Constant::Number("2".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6308,6 +6494,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_any_and_all_validate_operands_and_predicate_results() {
         let program = Program {
             constants: vec![Constant::Nil],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6411,6 +6598,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_reduce_threads_accumulator_and_returns_initial_for_empty_arrays() {
         let program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6483,6 +6671,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_reduce_validates_operands_and_callback_arity() {
         let program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6620,6 +6809,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::String("b".to_string()),
                 Constant::Number("2".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -7103,6 +7293,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_failure_uses_native_call_location() {
         let program = Program {
             constants: vec![Constant::Nil],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -7226,6 +7417,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn instruction_budget_is_deterministic_and_has_an_explicit_unlimited_mode() {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7262,6 +7454,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             &Program {
                 constants: vec![Constant::Number("1".to_string())],
                 names: Vec::new(),
+                data_segments: Vec::new(),
                 globals: Vec::new(),
                 types: Vec::new(),
                 native_imports: Vec::new(),
@@ -7314,6 +7507,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         };
         let program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7354,6 +7548,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn native_callback_iteration_consumes_instruction_budget() {
         let program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7410,6 +7605,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn runtime_element_budget_rejects_growth_before_allocation() {
         let program = Program {
             constants: vec![Constant::Nil],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7448,6 +7644,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn output_budget_counts_utf8_bytes_and_hides_partial_run_output() {
         let program = Program {
             constants: vec![Constant::String("é".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -7762,6 +7959,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("0".to_string()),
                 Constant::Number("1".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -7968,6 +8166,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn jit_entry_executes_a_whitelisted_function_with_frame_registers() {
         let program = Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -8057,6 +8256,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         ];
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -8133,6 +8333,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     fn jit_entry_transports_checkpoint_and_runtime_errors_like_the_interpreter() {
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -8216,6 +8417,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::String("left".to_string()),
                 Constant::String("right".to_string()),
             ],
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -9065,6 +9267,7 @@ pub struct VM<'a> {
     instruction_checkpoint: InstructionCheckpoint,
     heap: Heap,
     memory: LinearMemory,
+    initialization_error: Option<RuntimeError>,
     machine_stack: Option<MachineStack>,
     global_cells: Vec<Option<Cell>>,
     global_names: Vec<String>,
@@ -9429,6 +9632,7 @@ impl<'a> CooperativeRun<'a> {
 
     /// Spawn a fresh task entry into the session's FIFO queue.
     pub fn spawn(&mut self, spec: TaskSpec) -> Result<TaskId, RuntimeError> {
+        self.vm.check_machine_memory_initialization()?;
         let task = self.make_task(spec)?;
         self.scheduler
             .spawn(task)
@@ -9442,6 +9646,7 @@ impl<'a> CooperativeRun<'a> {
     /// Task failures are retained in `task_outcome` and trigger fail-fast
     /// cancellation of all other non-terminal tasks.
     pub fn step(&mut self) -> Result<CooperativeStep, RuntimeError> {
+        self.vm.check_machine_memory_initialization()?;
         let debug_state = self.debug_state_for_next_dispatch();
         let dispatch = self
             .scheduler
@@ -9793,7 +9998,8 @@ impl<'a> VM<'a> {
             },
         };
         let heap = Heap::new();
-        let memory = LinearMemory::new();
+        let mut memory = LinearMemory::new();
+        let initialization_error = initialize_machine_segments(&mut memory, &program.data_segments).err();
         let mut global_count = 0usize;
         for function in &program.functions {
             for instruction in &function.instructions {
@@ -9849,6 +10055,7 @@ impl<'a> VM<'a> {
             instruction_checkpoint,
             heap,
             memory,
+            initialization_error,
             machine_stack: None,
             global_cells: vec![None; global_count],
             global_names,
@@ -9911,6 +10118,12 @@ impl<'a> VM<'a> {
     /// Mutably access machine memory before or between execution boundaries.
     pub fn memory_mut(&mut self) -> &mut LinearMemory {
         &mut self.memory
+    }
+
+    fn check_machine_memory_initialization(&self) -> Result<(), RuntimeError> {
+        self.initialization_error
+            .clone()
+            .map_or(Ok(()), Err)
     }
 
     fn machine_stack_capacity(&self) -> usize {
@@ -10158,6 +10371,7 @@ impl<'a> VM<'a> {
     }
 
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
+        self.check_machine_memory_initialization()?;
         self.check_cancellation()?;
         let entry = self.program.entry.0 as usize;
         self.machine_stack = Some(self.new_machine_stack()?);
@@ -10214,6 +10428,7 @@ impl<'a> VM<'a> {
     /// profiling are public opt-in sessions; debugging remains a later V5B
     /// slice.
     fn run_cooperative(mut self, quantum: usize) -> Result<String, RuntimeError> {
+        self.check_machine_memory_initialization()?;
         self.check_cancellation()?;
         let mut scheduler = CooperativeScheduler::new(quantum)
             .map_err(|error| RuntimeError::new(error.to_string()))?;

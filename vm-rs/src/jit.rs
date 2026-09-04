@@ -1871,6 +1871,7 @@ mod tests {
         all.extend(functions);
         Program {
             constants: Vec::new(),
+            data_segments: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),

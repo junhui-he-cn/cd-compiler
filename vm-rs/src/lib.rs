@@ -18,7 +18,7 @@ mod scheduler;
 pub mod value;
 pub mod vm;
 
-pub use bytecode::Program;
+pub use bytecode::{DataSegment, Program};
 pub use format::{
     format_artifact, format_artifact_checked, format_program, format_program_checked,
     parse_artifact, parse_artifact_checked, parse_program, verify_artifact, verify_artifact_checked,

@@ -14,9 +14,13 @@ and address domains, including little-endian unaligned access and the existing
 memory trap mappings. VM03-06 now attaches checked machine frame metadata to
 the existing call stack, allocates upward-growing 8-byte-aligned frames, adds
 `FRAME_ADDR`, unwinds frames on return and traps, and gives each cooperative
-task an independent machine stack. Floating-point and mixed integer/float
-conversions from VM03-03 remain pending. Machine instructions remain
-interpreter-first and are not yet part of the cdbc 0.2 text artifact writer.
+task an independent machine stack. VM03-07 now adds in-memory RODATA, DATA,
+and BSS descriptors, deterministic static placement, initialization/zero-fill,
+and segment permission validation before execution; linked module products
+carry their segment descriptors in expansion order. Floating-point and mixed
+integer/float conversions from VM03-03 remain pending. Machine execution
+remains interpreter-first; neither machine instructions nor segment descriptors
+are part of the cdbc 0.2 text artifact writer.
 The compiler, language, and compiler tools have a separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 

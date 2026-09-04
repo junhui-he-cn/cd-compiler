@@ -54,6 +54,7 @@ fn arithmetic_workload() -> Program {
             Constant::Number("0".to_string()),
             Constant::Number("1".to_string()),
         ],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -143,6 +144,7 @@ fn callback_workload() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("2".to_string()),
         ],
+        data_segments: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![
