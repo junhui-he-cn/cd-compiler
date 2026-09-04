@@ -26,6 +26,40 @@ impl fmt::Display for ParseError {
     }
 }
 
+/// Formatting failure for an in-memory program that is outside the current
+/// cdbc 0.2 writer contract.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FormatError {
+    UnsupportedMachineInstruction {
+        function: usize,
+        instruction: usize,
+        opcode: &'static str,
+    },
+}
+
+impl fmt::Display for FormatError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnsupportedMachineInstruction {
+                function,
+                instruction,
+                opcode,
+            } => {
+                let context = if *function == 0 {
+                    "main".to_string()
+                } else {
+                    format!("function f{}", function - 1)
+                };
+                write!(
+                    f,
+                    "cdbc 0.2 formatter cannot emit machine instruction `{}` at {} instruction {}; cdbc 0.3 serialization is deferred to VM03-11",
+                    opcode, context, instruction
+                )
+            }
+        }
+    }
+}
+
 /// Machine-readable class for an artifact loading or validation failure.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ArtifactErrorKind {
@@ -1478,7 +1512,23 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LessStr { dest, .. }
         | Instruction::LessEqual { dest, .. }
         | Instruction::LessEqualNum { dest, .. }
-        | Instruction::LessEqualStr { dest, .. } => Some(*dest),
+        | Instruction::LessEqualStr { dest, .. }
+        | Instruction::IConst { dest, .. }
+        | Instruction::IAdd { dest, .. }
+        | Instruction::ISub { dest, .. }
+        | Instruction::IMul { dest, .. }
+        | Instruction::SDiv { dest, .. }
+        | Instruction::UDiv { dest, .. }
+        | Instruction::SRem { dest, .. }
+        | Instruction::URem { dest, .. }
+        | Instruction::And { dest, .. }
+        | Instruction::Or { dest, .. }
+        | Instruction::Xor { dest, .. }
+        | Instruction::IntNot { dest, .. }
+        | Instruction::Shl { dest, .. }
+        | Instruction::LShr { dest, .. }
+        | Instruction::AShr { dest, .. }
+        | Instruction::ICmp { dest, .. } => Some(*dest),
         _ => None,
     }
 }
@@ -1624,7 +1674,44 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         }
         | Instruction::LessEqualStr {
             left, right, ..
+        }
+        | Instruction::IAdd {
+            left, right, ..
+        }
+        | Instruction::ISub {
+            left, right, ..
+        }
+        | Instruction::IMul {
+            left, right, ..
+        }
+        | Instruction::SDiv {
+            left, right, ..
+        }
+        | Instruction::UDiv {
+            left, right, ..
+        }
+        | Instruction::SRem {
+            left, right, ..
+        }
+        | Instruction::URem {
+            left, right, ..
+        }
+        | Instruction::And {
+            left, right, ..
+        }
+        | Instruction::Or {
+            left, right, ..
+        }
+        | Instruction::Xor {
+            left, right, ..
+        }
+        | Instruction::ICmp {
+            left, right, ..
         } => vec![*left, *right],
+        Instruction::IntNot { value, .. } => vec![*value],
+        Instruction::Shl { value, amount, .. }
+        | Instruction::LShr { value, amount, .. }
+        | Instruction::AShr { value, amount, .. } => vec![*value, *amount],
         _ => Vec::new(),
     }
 }
@@ -2378,6 +2465,35 @@ fn validate_instruction(
             name(*message, "assertion message")?;
         }
         Instruction::Return { value } => register(*value, "value")?,
+        Instruction::IConst { dest, .. } => {
+            register(*dest, "destination")?;
+        }
+        Instruction::IntNot { dest, value, .. } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+        }
+        Instruction::Shl {
+            dest,
+            value,
+            amount,
+            ..
+        }
+        | Instruction::LShr {
+            dest,
+            value,
+            amount,
+            ..
+        }
+        | Instruction::AShr {
+            dest,
+            value,
+            amount,
+            ..
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+            register(*amount, "shift amount")?;
+        }
         Instruction::Add { dest, left, right }
         | Instruction::AddNum { dest, left, right }
         | Instruction::ConcatStr { dest, left, right }
@@ -2400,7 +2516,40 @@ fn validate_instruction(
         | Instruction::LessStr { dest, left, right }
         | Instruction::LessEqual { dest, left, right }
         | Instruction::LessEqualNum { dest, left, right }
-        | Instruction::LessEqualStr { dest, left, right } => {
+        | Instruction::LessEqualStr { dest, left, right }
+        | Instruction::IAdd {
+            dest, left, right, ..
+        }
+        | Instruction::ISub {
+            dest, left, right, ..
+        }
+        | Instruction::IMul {
+            dest, left, right, ..
+        }
+        | Instruction::SDiv {
+            dest, left, right, ..
+        }
+        | Instruction::UDiv {
+            dest, left, right, ..
+        }
+        | Instruction::SRem {
+            dest, left, right, ..
+        }
+        | Instruction::URem {
+            dest, left, right, ..
+        }
+        | Instruction::And {
+            dest, left, right, ..
+        }
+        | Instruction::Or {
+            dest, left, right, ..
+        }
+        | Instruction::Xor {
+            dest, left, right, ..
+        }
+        | Instruction::ICmp {
+            dest, left, right, ..
+        } => {
             register(*dest, "destination")?;
             register(*left, "left operand")?;
             register(*right, "right operand")?;
@@ -2447,17 +2596,31 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 }
 
 pub fn format_program(program: &Program) -> String {
+    format_program_checked(program)
+        .expect("cdbc 0.2 formatter received an unsupported machine instruction")
+}
+
+/// Format a program only when it is representable by the cdbc 0.2 writer.
+pub fn format_program_checked(program: &Program) -> Result<String, FormatError> {
+    reject_unsupported_machine_instructions(program)?;
     let mut out = String::with_capacity(format_program_capacity_hint(program));
     out.push_str(ARTIFACT_HEADER);
     out.push_str("\n\n");
     format_program_sections(&mut out, program);
-    out
+    Ok(out)
 }
 
 pub fn format_artifact(artifact: &Artifact) -> String {
+    format_artifact_checked(artifact)
+        .expect("cdbc 0.2 formatter received an unsupported machine instruction")
+}
+
+/// Format an artifact only when it is representable by the cdbc 0.2 writer.
+pub fn format_artifact_checked(artifact: &Artifact) -> Result<String, FormatError> {
     match artifact {
-        Artifact::Program(program) => format_program(program),
+        Artifact::Program(program) => format_program_checked(program),
         Artifact::Module(module) => {
+            reject_unsupported_machine_instructions(&module.program)?;
             let mut out = String::with_capacity(
                 format_program_capacity_hint(&module.program)
                     .saturating_add(module.identity.len())
@@ -2510,9 +2673,46 @@ pub fn format_artifact(artifact: &Artifact) -> String {
             }
             out.push('\n');
             format_program_sections(&mut out, &module.program);
-            out
+            Ok(out)
         }
     }
+}
+
+fn reject_unsupported_machine_instructions(program: &Program) -> Result<(), FormatError> {
+    for (function, body) in program.functions.iter().enumerate() {
+        for (instruction, operation) in body.instructions.iter().enumerate() {
+            if let Some(opcode) = machine_instruction_opcode(operation) {
+                return Err(FormatError::UnsupportedMachineInstruction {
+                    function,
+                    instruction,
+                    opcode,
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+fn machine_instruction_opcode(instruction: &Instruction) -> Option<&'static str> {
+    Some(match instruction {
+        Instruction::IConst { .. } => "iconst",
+        Instruction::IAdd { .. } => "iadd",
+        Instruction::ISub { .. } => "isub",
+        Instruction::IMul { .. } => "imul",
+        Instruction::SDiv { .. } => "sdiv",
+        Instruction::UDiv { .. } => "udiv",
+        Instruction::SRem { .. } => "srem",
+        Instruction::URem { .. } => "urem",
+        Instruction::And { .. } => "and",
+        Instruction::Or { .. } => "or",
+        Instruction::Xor { .. } => "xor",
+        Instruction::IntNot { .. } => "not_int",
+        Instruction::Shl { .. } => "shl",
+        Instruction::LShr { .. } => "lshr",
+        Instruction::AShr { .. } => "ashr",
+        Instruction::ICmp { .. } => "icmp",
+        _ => return None,
+    })
 }
 
 fn format_program_capacity_hint(program: &Program) -> usize {
@@ -3443,6 +3643,104 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::LessEqualStr { dest, left, right } => {
             format!("r{} = le_str r{}, r{}", dest, left, right)
         }
+        Instruction::IConst { dest, width, raw } => {
+            format!("r{} = iconst {}, 0x{:016x}", dest, width.as_str(), raw)
+        }
+        Instruction::IAdd {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = iadd r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::ISub {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = isub r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::IMul {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = imul r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::SDiv {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = sdiv r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::UDiv {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = udiv r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::SRem {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = srem r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::URem {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = urem r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::And {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = and r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::Or {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = or r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::Xor {
+            dest,
+            left,
+            right,
+            width,
+        } => format!("r{} = xor r{}, r{}, {}", dest, left, right, width.as_str()),
+        Instruction::IntNot { dest, value, width } => {
+            format!("r{} = not_int r{}, {}", dest, value, width.as_str())
+        }
+        Instruction::Shl {
+            dest,
+            value,
+            amount,
+            width,
+        } => format!("r{} = shl r{}, r{}, {}", dest, value, amount, width.as_str()),
+        Instruction::LShr {
+            dest,
+            value,
+            amount,
+            width,
+        } => format!("r{} = lshr r{}, r{}, {}", dest, value, amount, width.as_str()),
+        Instruction::AShr {
+            dest,
+            value,
+            amount,
+            width,
+        } => format!("r{} = ashr r{}, r{}, {}", dest, value, amount, width.as_str()),
+        Instruction::ICmp {
+            dest,
+            left,
+            right,
+            width,
+            predicate,
+        } => format!(
+            "r{} = icmp r{}, r{}, {}, {}",
+            dest,
+            left,
+            right,
+            width.as_str(),
+            predicate.as_str()
+        ),
         Instruction::BlockStart { id } => format!("block b{}:\n", id.0),
         Instruction::Br { target } => format!("br b{}", target.0),
         Instruction::BrIf {
@@ -3741,6 +4039,7 @@ fn quote_string(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bytecode::MachineIntWidth;
 
     #[test]
     fn round_trips_minimal_program() {
@@ -3778,6 +4077,54 @@ mod tests {
         let source = "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=2:\nblock b0:\n  r0 = mystery r1\n  return_nil\n";
         let error = parse_program(source).expect_err("unknown opcode should fail");
         assert!(error.message.contains("unknown opcode `mystery`"));
+    }
+
+    #[test]
+    fn rejects_machine_opcodes_in_the_0_2_reader() {
+        let source = "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = iconst 8, 0x0000000000000001\n  return r0\n";
+        let error = parse_program(source).expect_err("0.2 reader must reject machine opcodes");
+        assert!(error.message.contains("unknown opcode `iconst`"));
+    }
+
+    #[test]
+    fn checked_formatter_rejects_machine_opcodes_before_0_3_serialization() {
+        let program = Program {
+            constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
+            names: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 1,
+                instructions: vec![Instruction::IConst {
+                    dest: 0,
+                    width: MachineIntWidth::W8,
+                    raw: 1,
+                }],
+                locations: vec![None],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+
+        let error = format_program_checked(&program)
+            .expect_err("0.2 formatter must reject machine opcodes");
+        assert_eq!(
+            error,
+            FormatError::UnsupportedMachineInstruction {
+                function: 0,
+                instruction: 0,
+                opcode: "iconst",
+            }
+        );
+        assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
     }
 
     #[test]

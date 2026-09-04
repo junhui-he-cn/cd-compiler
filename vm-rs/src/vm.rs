@@ -2,7 +2,7 @@
 
 use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, Function, Instruction, Program,
-    TypeId, UpvalueSource, VariantId,
+    MachineIntPredicate, MachineIntWidth, TypeId, UpvalueSource, VariantId,
 };
 #[cfg(test)]
 use crate::bytecode::FuncId;
@@ -792,6 +792,24 @@ fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
     }
 }
 
+fn signed_machine_int(raw: u64, width: MachineIntWidth) -> i128 {
+    let raw = raw & width.mask();
+    let sign_bit = 1u64 << (width.bits() - 1);
+    if raw & sign_bit == 0 {
+        raw as i128
+    } else {
+        raw as i128 - (1i128 << width.bits())
+    }
+}
+
+fn machine_shift_name(kind: MachineShiftKind) -> &'static str {
+    match kind {
+        MachineShiftKind::Left => "shl",
+        MachineShiftKind::LogicalRight => "lshr",
+        MachineShiftKind::ArithmeticRight => "ashr",
+    }
+}
+
 fn prepare_function(function: &Function) -> PreparedFunction {
     let mut variable_plan = VariablePlan::default();
     for param in &function.params {
@@ -1238,6 +1256,42 @@ mod tests {
         }
     }
 
+    fn machine_program(instructions: Vec<Instruction>, registers: usize) -> Program {
+        let instruction_count = instructions.len();
+        Program {
+            constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
+            modules: Vec::new(),
+            names: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers,
+                instructions,
+                locations: vec![None; instruction_count],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn print_register(register: usize, destination: usize) -> Instruction {
+        Instruction::CallNative {
+            dest: destination,
+            native: NativeId(0),
+            arguments: vec![register],
+        }
+    }
+
     #[test]
     fn ordered_comparisons_preserve_primitive_results() {
         let program = Program {
@@ -1403,6 +1457,550 @@ mod tests {
             VM::new(&program).run().expect("typed opcodes should run"),
             "8\n4\n12\n3\n-6\nabcd\ntrue\ntrue\ntrue\ntrue\n"
         );
+    }
+
+    #[test]
+    fn machine_integer_ops_wrap_mask_shift_and_compare() {
+        let mut instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::IConst {
+                dest: 0,
+                width: MachineIntWidth::W8,
+                raw: 0x1ff,
+            },
+            Instruction::IConst {
+                dest: 1,
+                width: MachineIntWidth::W8,
+                raw: 1,
+            },
+            Instruction::IAdd {
+                dest: 2,
+                left: 0,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::ISub {
+                dest: 3,
+                left: 2,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::IMul {
+                dest: 4,
+                left: 0,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::IntNot {
+                dest: 5,
+                value: 0,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::IConst {
+                dest: 6,
+                width: MachineIntWidth::W8,
+                raw: 0x80,
+            },
+            Instruction::Shl {
+                dest: 7,
+                value: 6,
+                amount: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::LShr {
+                dest: 8,
+                value: 6,
+                amount: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::AShr {
+                dest: 9,
+                value: 6,
+                amount: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::And {
+                dest: 10,
+                left: 6,
+                right: 0,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::Or {
+                dest: 11,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::Xor {
+                dest: 12,
+                left: 6,
+                right: 0,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::SDiv {
+                dest: 13,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::SRem {
+                dest: 14,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::UDiv {
+                dest: 15,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::URem {
+                dest: 16,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+            },
+            Instruction::ICmp {
+                dest: 17,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+                predicate: MachineIntPredicate::Slt,
+            },
+            Instruction::ICmp {
+                dest: 18,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+                predicate: MachineIntPredicate::Ugt,
+            },
+            Instruction::ICmp {
+                dest: 19,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+                predicate: MachineIntPredicate::Sge,
+            },
+            Instruction::ICmp {
+                dest: 20,
+                left: 6,
+                right: 1,
+                width: MachineIntWidth::W8,
+                predicate: MachineIntPredicate::Ule,
+            },
+        ];
+        for register in 0..=20 {
+            instructions.push(print_register(register, 21));
+        }
+        instructions.push(Instruction::ReturnNil);
+        let program = machine_program(instructions, 22);
+
+        let output = VM::with_config_verified(&program, RunConfig::unlimited())
+            .expect("machine program should pass structural verification")
+            .run()
+            .expect("machine integer operations should run");
+        assert_eq!(
+            output,
+            "machine_int(255, 0x00000000000000ff)\n\
+machine_int(1, 0x0000000000000001)\n\
+machine_int(0, 0x0000000000000000)\n\
+machine_int(255, 0x00000000000000ff)\n\
+machine_int(255, 0x00000000000000ff)\n\
+machine_int(0, 0x0000000000000000)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(0, 0x0000000000000000)\n\
+machine_int(64, 0x0000000000000040)\n\
+machine_int(192, 0x00000000000000c0)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(129, 0x0000000000000081)\n\
+machine_int(127, 0x000000000000007f)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(0, 0x0000000000000000)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(0, 0x0000000000000000)\n\
+true\ntrue\nfalse\nfalse\n"
+        );
+    }
+
+    #[test]
+    fn machine_integer_wide_ops_and_all_compare_predicates() {
+        let cases = [
+            (MachineIntWidth::W8, 0x80, 0x40, 0xc0, 0xff, 0xfe),
+            (MachineIntWidth::W16, 0x8000, 0x4000, 0xc000, 0xffff, 0xfffe),
+            (
+                MachineIntWidth::W32,
+                0x8000_0000,
+                0x4000_0000,
+                0xc000_0000,
+                0xffff_ffff,
+                0xffff_fffe,
+            ),
+            (
+                MachineIntWidth::W64,
+                0x8000_0000_0000_0000,
+                0x4000_0000_0000_0000,
+                0xc000_0000_0000_0000,
+                u64::MAX,
+                u64::MAX - 1,
+            ),
+        ];
+        let mut instructions = vec![Instruction::BlockStart { id: BlockId(0) }];
+        let mut expected = String::new();
+        for (case_index, (width, minimum, logical_shift, arithmetic_shift, maximum, product)) in
+            cases.iter().copied().enumerate()
+        {
+            let base = case_index * 30;
+            instructions.extend([
+                Instruction::IConst {
+                    dest: base,
+                    width,
+                    raw: u64::MAX,
+                },
+                Instruction::IConst {
+                    dest: base + 1,
+                    width,
+                    raw: 1,
+                },
+                Instruction::IConst {
+                    dest: base + 2,
+                    width,
+                    raw: 0,
+                },
+                Instruction::IConst {
+                    dest: base + 3,
+                    width,
+                    raw: 2,
+                },
+                Instruction::IConst {
+                    dest: base + 4,
+                    width,
+                    raw: minimum,
+                },
+                Instruction::IAdd {
+                    dest: base + 5,
+                    left: base,
+                    right: base + 1,
+                    width,
+                },
+                Instruction::ISub {
+                    dest: base + 6,
+                    left: base + 2,
+                    right: base + 1,
+                    width,
+                },
+                Instruction::IMul {
+                    dest: base + 7,
+                    left: base,
+                    right: base + 3,
+                    width,
+                },
+                Instruction::And {
+                    dest: base + 8,
+                    left: base,
+                    right: base + 3,
+                    width,
+                },
+                Instruction::Or {
+                    dest: base + 9,
+                    left: base + 2,
+                    right: base,
+                    width,
+                },
+                Instruction::Xor {
+                    dest: base + 10,
+                    left: base,
+                    right: base,
+                    width,
+                },
+                Instruction::IntNot {
+                    dest: base + 11,
+                    value: base + 2,
+                    width,
+                },
+                Instruction::Shl {
+                    dest: base + 12,
+                    value: base + 4,
+                    amount: base + 1,
+                    width,
+                },
+                Instruction::LShr {
+                    dest: base + 13,
+                    value: base + 4,
+                    amount: base + 1,
+                    width,
+                },
+                Instruction::AShr {
+                    dest: base + 14,
+                    value: base + 4,
+                    amount: base + 1,
+                    width,
+                },
+                Instruction::SDiv {
+                    dest: base + 15,
+                    left: base + 4,
+                    right: base + 1,
+                    width,
+                },
+                Instruction::SRem {
+                    dest: base + 16,
+                    left: base + 4,
+                    right: base + 1,
+                    width,
+                },
+                Instruction::UDiv {
+                    dest: base + 17,
+                    left: base + 4,
+                    right: base + 1,
+                    width,
+                },
+                Instruction::URem {
+                    dest: base + 18,
+                    left: base + 4,
+                    right: base + 1,
+                    width,
+                },
+            ]);
+            let predicates = [
+                MachineIntPredicate::Eq,
+                MachineIntPredicate::Ne,
+                MachineIntPredicate::Slt,
+                MachineIntPredicate::Sle,
+                MachineIntPredicate::Sgt,
+                MachineIntPredicate::Sge,
+                MachineIntPredicate::Ult,
+                MachineIntPredicate::Ule,
+                MachineIntPredicate::Ugt,
+                MachineIntPredicate::Uge,
+            ];
+            for (predicate_index, predicate) in predicates.into_iter().enumerate() {
+                instructions.push(Instruction::ICmp {
+                    dest: base + 19 + predicate_index,
+                    left: base + 4,
+                    right: base + 1,
+                    width,
+                    predicate,
+                });
+            }
+            for register in (base + 5)..=(base + 18) {
+                instructions.push(print_register(register, base + 29));
+            }
+            for register in (base + 19)..=(base + 28) {
+                instructions.push(print_register(register, base + 29));
+            }
+
+            for value in [
+                0, maximum, product, 2, maximum, 0, maximum, 0, logical_shift,
+                arithmetic_shift, minimum, 0, minimum, 0,
+            ] {
+                expected.push_str(&format!(
+                    "machine_int({}, 0x{:016x})\n",
+                    value, value
+                ));
+            }
+            for value in [false, true, true, true, false, false, false, false, true, true] {
+                expected.push_str(&format!("{}\n", value));
+            }
+        }
+        instructions.push(Instruction::ReturnNil);
+        let program = machine_program(instructions, cases.len() * 30);
+        assert_eq!(
+            VM::with_config_verified(&program, RunConfig::unlimited())
+                .expect("wide machine program should verify")
+                .run()
+                .expect("wide machine operations should run"),
+            expected
+        );
+    }
+
+    #[test]
+    fn machine_integer_errors_are_checked_without_host_overflow() {
+        let cases = [
+            (
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::IConst {
+                        dest: 0,
+                        width: MachineIntWidth::W8,
+                        raw: 1,
+                    },
+                    Instruction::IConst {
+                        dest: 1,
+                        width: MachineIntWidth::W8,
+                        raw: 0,
+                    },
+                    Instruction::SDiv {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                        width: MachineIntWidth::W8,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                3,
+                "integer division by zero",
+            ),
+            (
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::IConst {
+                        dest: 0,
+                        width: MachineIntWidth::W8,
+                        raw: 0x80,
+                    },
+                    Instruction::IConst {
+                        dest: 1,
+                        width: MachineIntWidth::W8,
+                        raw: 0xff,
+                    },
+                    Instruction::SDiv {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                        width: MachineIntWidth::W8,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                3,
+                "integer division overflow",
+            ),
+            (
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::IConst {
+                        dest: 0,
+                        width: MachineIntWidth::W8,
+                        raw: 0x80,
+                    },
+                    Instruction::IConst {
+                        dest: 1,
+                        width: MachineIntWidth::W8,
+                        raw: 0xff,
+                    },
+                    Instruction::SRem {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                        width: MachineIntWidth::W8,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                3,
+                "integer division overflow",
+            ),
+            (
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::IConst {
+                        dest: 0,
+                        width: MachineIntWidth::W8,
+                        raw: 1,
+                    },
+                    Instruction::IConst {
+                        dest: 1,
+                        width: MachineIntWidth::W8,
+                        raw: 8,
+                    },
+                    Instruction::Shl {
+                        dest: 2,
+                        value: 0,
+                        amount: 1,
+                        width: MachineIntWidth::W8,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                3,
+                "invalid shift amount",
+            ),
+        ];
+
+        for (instructions, registers, message) in cases {
+            let program = machine_program(instructions, registers);
+            let error = VM::with_config_verified(&program, RunConfig::unlimited())
+                .expect("trap cases should pass structural verification")
+                .run()
+                .expect_err("machine trap should be reported as a VM error");
+            assert_eq!(error.message, message);
+        }
+
+        for width in [
+            MachineIntWidth::W8,
+            MachineIntWidth::W16,
+            MachineIntWidth::W32,
+            MachineIntWidth::W64,
+        ] {
+            let minimum = 1u64 << (width.bits() - 1);
+            let program = machine_program(
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::IConst {
+                        dest: 0,
+                        width,
+                        raw: minimum,
+                    },
+                    Instruction::IConst {
+                        dest: 1,
+                        width,
+                        raw: width.mask(),
+                    },
+                    Instruction::SRem {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                        width,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                3,
+            );
+            let error = VM::with_config_verified(&program, RunConfig::unlimited())
+                .expect("wide remainder trap should pass structural verification")
+                .run()
+                .expect_err("signed minimum remainder by negative one must trap");
+            assert_eq!(error.message, "integer division overflow");
+        }
+
+        let mut wrong_domain = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Constant {
+                    dest: 0,
+                    constant: 0,
+                },
+                Instruction::IConst {
+                    dest: 1,
+                    width: MachineIntWidth::W8,
+                    raw: 1,
+                },
+                Instruction::IAdd {
+                    dest: 2,
+                    left: 0,
+                    right: 1,
+                    width: MachineIntWidth::W8,
+                },
+                Instruction::ReturnNil,
+            ],
+            3,
+        );
+        wrong_domain.constants.push(Constant::Number("1".to_string()));
+        let error = VM::with_config_verified(&wrong_domain, RunConfig::unlimited())
+            .expect("wrong-domain operands are a runtime condition")
+            .run()
+            .expect_err("machine arithmetic must reject dynamic values");
+        assert_eq!(error.message, "iadd expects machine_int operands");
+    }
+
+    #[test]
+    fn machine_integer_widths_have_explicit_masks() {
+        assert_eq!(MachineIntWidth::W8.bits(), 8);
+        assert_eq!(MachineIntWidth::W16.bits(), 16);
+        assert_eq!(MachineIntWidth::W32.bits(), 32);
+        assert_eq!(MachineIntWidth::W64.bits(), 64);
+        assert_eq!(MachineIntWidth::W8.mask(), 0xff);
+        assert_eq!(MachineIntWidth::W16.mask(), 0xffff);
+        assert_eq!(MachineIntWidth::W32.mask(), 0xffff_ffff);
+        assert_eq!(MachineIntWidth::W64.mask(), u64::MAX);
+        assert_eq!(MachineIntWidth::I32, MachineIntWidth::W32);
     }
 
     #[test]
@@ -6808,6 +7406,13 @@ enum Comparison {
     LessEqual,
 }
 
+#[derive(Clone, Copy)]
+enum MachineShiftKind {
+    Left,
+    LogicalRight,
+    ArithmeticRight,
+}
+
 impl Comparison {
     fn as_str(self) -> &'static str {
         match self {
@@ -9243,6 +9848,181 @@ impl<'a> VM<'a> {
                 )?;
                 self.write_register(frame, *dest, result)
             }
+            Instruction::IConst { dest, width, raw } => {
+                self.write_register(frame, *dest, Value::machine_int(raw & width.mask()))
+            }
+            Instruction::IAdd {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "iadd",
+                u64::wrapping_add,
+            ),
+            Instruction::ISub {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "isub",
+                u64::wrapping_sub,
+            ),
+            Instruction::IMul {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "imul",
+                u64::wrapping_mul,
+            ),
+            Instruction::SDiv {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_division(
+                frame, *dest, *left, *right, *width, true, false,
+            ),
+            Instruction::UDiv {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_division(
+                frame, *dest, *left, *right, *width, false, false,
+            ),
+            Instruction::SRem {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_division(
+                frame, *dest, *left, *right, *width, true, true,
+            ),
+            Instruction::URem {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_division(
+                frame, *dest, *left, *right, *width, false, true,
+            ),
+            Instruction::And {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "and",
+                |left, right| left & right,
+            ),
+            Instruction::Or {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "or",
+                |left, right| left | right,
+            ),
+            Instruction::Xor {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "xor",
+                |left, right| left ^ right,
+            ),
+            Instruction::IntNot { dest, value, width } => {
+                let value = self.expect_machine_int(frame, *value, "not_int")?;
+                self.write_register(
+                    frame,
+                    *dest,
+                    Value::machine_int((!value) & width.mask()),
+                )
+            }
+            Instruction::Shl {
+                dest,
+                value,
+                amount,
+                width,
+            } => self.execute_machine_int_shift(
+                frame,
+                *dest,
+                *value,
+                *amount,
+                *width,
+                MachineShiftKind::Left,
+            ),
+            Instruction::LShr {
+                dest,
+                value,
+                amount,
+                width,
+            } => self.execute_machine_int_shift(
+                frame,
+                *dest,
+                *value,
+                *amount,
+                *width,
+                MachineShiftKind::LogicalRight,
+            ),
+            Instruction::AShr {
+                dest,
+                value,
+                amount,
+                width,
+            } => self.execute_machine_int_shift(
+                frame,
+                *dest,
+                *value,
+                *amount,
+                *width,
+                MachineShiftKind::ArithmeticRight,
+            ),
+            Instruction::ICmp {
+                dest,
+                left,
+                right,
+                width,
+                predicate,
+            } => self.execute_machine_int_compare(
+                frame, *dest, *left, *right, *width, *predicate,
+            ),
             Instruction::Negate { dest, value } => {
                 let input = self.expect_number(frame, *value, "negate")?;
                 self.write_register(frame, *dest, Value::number(-input))
@@ -12004,6 +12784,154 @@ impl<'a> VM<'a> {
                 .ok_or_else(|| RuntimeError::new("register index out of range"))?;
             Ok(std::mem::replace(slot, Value::Nil))
         }
+    }
+
+    fn expect_machine_int(
+        &self,
+        frame: &Frame,
+        value: usize,
+        op_name: &str,
+    ) -> Result<u64, RuntimeError> {
+        match self.read_register_ref(frame, value)? {
+            Value::MachineInt(value) => Ok(*value),
+            other => Err(RuntimeError::new(format!(
+                "{} expects machine_int, got {}",
+                op_name,
+                other.type_name()
+            ))),
+        }
+    }
+
+    fn expect_two_machine_ints(
+        &self,
+        frame: &Frame,
+        left: usize,
+        right: usize,
+        op_name: &str,
+    ) -> Result<(u64, u64), RuntimeError> {
+        match (
+            self.read_register_ref(frame, left)?,
+            self.read_register_ref(frame, right)?,
+        ) {
+            (Value::MachineInt(left), Value::MachineInt(right)) => Ok((*left, *right)),
+            _ => Err(RuntimeError::new(format!(
+                "{} expects machine_int operands",
+                op_name
+            ))),
+        }
+    }
+
+    fn execute_machine_int_binary(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+        op_name: &str,
+        operation: fn(u64, u64) -> u64,
+    ) -> Result<(), RuntimeError> {
+        let (left, right) = self.expect_two_machine_ints(frame, left, right, op_name)?;
+        let result = operation(left & width.mask(), right & width.mask()) & width.mask();
+        self.write_register(frame, dest, Value::machine_int(result))
+    }
+
+    fn execute_machine_int_division(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+        signed: bool,
+        remainder: bool,
+    ) -> Result<(), RuntimeError> {
+        let (left, right) = self.expect_two_machine_ints(
+            frame,
+            left,
+            right,
+            if signed {
+                if remainder { "srem" } else { "sdiv" }
+            } else if remainder {
+                "urem"
+            } else {
+                "udiv"
+            },
+        )?;
+        let right = right & width.mask();
+        if right == 0 {
+            return Err(RuntimeError::new("integer division by zero"));
+        }
+
+        let result = if signed {
+            let left = signed_machine_int(left, width);
+            let right = signed_machine_int(right, width);
+            let minimum = -(1i128 << (width.bits() - 1));
+            if left == minimum && right == -1 {
+                return Err(RuntimeError::new("integer division overflow"));
+            }
+            if remainder { left % right } else { left / right }
+        } else {
+            let left = left & width.mask();
+            (if remainder { left % right } else { left / right }) as i128
+        };
+        self.write_register(
+            frame,
+            dest,
+            Value::machine_int((result as u64) & width.mask()),
+        )
+    }
+
+    fn execute_machine_int_shift(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        value: usize,
+        amount: usize,
+        width: MachineIntWidth,
+        kind: MachineShiftKind,
+    ) -> Result<(), RuntimeError> {
+        let value = self.expect_machine_int(frame, value, machine_shift_name(kind))?;
+        let amount = self.expect_machine_int(frame, amount, machine_shift_name(kind))?;
+        if amount >= u64::from(width.bits()) {
+            return Err(RuntimeError::new("invalid shift amount"));
+        }
+        let value = value & width.mask();
+        let result = match kind {
+            MachineShiftKind::Left => value.wrapping_shl(amount as u32),
+            MachineShiftKind::LogicalRight => value >> amount,
+            MachineShiftKind::ArithmeticRight => {
+                (signed_machine_int(value, width) >> amount) as u64
+            }
+        } & width.mask();
+        self.write_register(frame, dest, Value::machine_int(result))
+    }
+
+    fn execute_machine_int_compare(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+        predicate: MachineIntPredicate,
+    ) -> Result<(), RuntimeError> {
+        let (left, right) = self.expect_two_machine_ints(frame, left, right, "icmp")?;
+        let left = left & width.mask();
+        let right = right & width.mask();
+        let result = match predicate {
+            MachineIntPredicate::Eq => left == right,
+            MachineIntPredicate::Ne => left != right,
+            MachineIntPredicate::Slt => signed_machine_int(left, width) < signed_machine_int(right, width),
+            MachineIntPredicate::Sle => signed_machine_int(left, width) <= signed_machine_int(right, width),
+            MachineIntPredicate::Sgt => signed_machine_int(left, width) > signed_machine_int(right, width),
+            MachineIntPredicate::Sge => signed_machine_int(left, width) >= signed_machine_int(right, width),
+            MachineIntPredicate::Ult => left < right,
+            MachineIntPredicate::Ule => left <= right,
+            MachineIntPredicate::Ugt => left > right,
+            MachineIntPredicate::Uge => left >= right,
+        };
+        self.write_register(frame, dest, Value::boolean(result))
     }
 
     fn expect_number(

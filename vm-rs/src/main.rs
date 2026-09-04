@@ -76,7 +76,9 @@ fn read_program(path: impl AsRef<Path>, config: &RunConfig) -> Result<Program, S
 
 fn dump(path: &str, config: &RunConfig) -> Result<(), String> {
     let artifact = read_artifact(path, config)?;
-    print!("{}", format::format_artifact(&artifact));
+    let output = format::format_artifact_checked(&artifact)
+        .map_err(|error| format!("error: {}", error))?;
+    print!("{}", output);
     Ok(())
 }
 
@@ -764,7 +766,8 @@ fn link(directory: &str, output_path: &str, config: &RunConfig) -> Result<(), St
         program_instruction_count(&program),
         config.max_module_instructions,
     )?;
-    let output = format::format_program(&program);
+    let output = format::format_program_checked(&program)
+        .map_err(|error| format!("error: {}", error))?;
     if let Some(limit) = config.max_artifact_bytes {
         if output.as_bytes().len() > limit {
             return Err(resource_limit_error("artifact bytes", limit));

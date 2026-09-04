@@ -3,10 +3,12 @@
 Current-state record for the Rust VM in `vm-rs/`. All previously planned VM
 slices are void as of 2026-08-15: completed work lives in decision records and
 Git history. The active cdbc 0.3 Machine Foundation iteration is governed by
-[`plan-0.3.md`](plan-0.3.md); VM03-00 is now specified in
-[`cdbc-0.3-machine-foundation.md`](cdbc-0.3-machine-foundation.md), and its
-implementation has not started yet. The compiler, language, and compiler tools
-have a separate current-state record in
+[`plan-0.3.md`](plan-0.3.md); VM03-00 is specified in
+[`cdbc-0.3-machine-foundation.md`](cdbc-0.3-machine-foundation.md), and
+VM03-01/VM03-02 now provide the in-memory machine value and integer execution
+foundation. Machine instructions remain interpreter-first and are not yet part
+of the cdbc 0.2 text artifact writer. The compiler, language, and compiler
+tools have a separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 
 ## VM product boundary
@@ -38,7 +40,7 @@ compatibility constraints.
 | --- | --- |
 | Artifact safety | Shared `cdbc 0.2` parser/formatter/verifier, malformed corpus, resource limits, cancellation |
 | Execution | Register VM for the complete emitted instruction set and native surface |
-| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting |
+| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting, and in-memory cdbc 0.3 machine scalar values |
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds |

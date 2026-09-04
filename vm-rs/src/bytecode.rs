@@ -127,6 +127,85 @@ pub enum Constant {
     String(String),
 }
 
+/// Width selected by a machine integer instruction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MachineIntWidth {
+    W8,
+    W16,
+    W32,
+    W64,
+}
+
+impl MachineIntWidth {
+    #[allow(non_upper_case_globals)]
+    pub const I8: Self = Self::W8;
+    #[allow(non_upper_case_globals)]
+    pub const I16: Self = Self::W16;
+    #[allow(non_upper_case_globals)]
+    pub const I32: Self = Self::W32;
+    #[allow(non_upper_case_globals)]
+    pub const I64: Self = Self::W64;
+
+    pub const fn bits(self) -> u32 {
+        match self {
+            Self::W8 => 8,
+            Self::W16 => 16,
+            Self::W32 => 32,
+            Self::W64 => 64,
+        }
+    }
+
+    pub const fn mask(self) -> u64 {
+        match self {
+            Self::W8 => 0xff,
+            Self::W16 => 0xffff,
+            Self::W32 => 0xffff_ffff,
+            Self::W64 => u64::MAX,
+        }
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::W8 => "8",
+            Self::W16 => "16",
+            Self::W32 => "32",
+            Self::W64 => "64",
+        }
+    }
+}
+
+/// Predicate used by the machine integer comparison instruction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MachineIntPredicate {
+    Eq,
+    Ne,
+    Slt,
+    Sle,
+    Sgt,
+    Sge,
+    Ult,
+    Ule,
+    Ugt,
+    Uge,
+}
+
+impl MachineIntPredicate {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Eq => "eq",
+            Self::Ne => "ne",
+            Self::Slt => "slt",
+            Self::Sle => "sle",
+            Self::Sgt => "sgt",
+            Self::Sge => "sge",
+            Self::Ult => "ult",
+            Self::Ule => "ule",
+            Self::Ugt => "ugt",
+            Self::Uge => "uge",
+        }
+    }
+}
+
 /// Where a function's upvalue comes from. Populated by the closure-conversion
 /// phase from explicit `upvalue` descriptors in the artifact.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -480,6 +559,101 @@ pub enum Instruction {
         dest: usize,
         left: usize,
         right: usize,
+    },
+    IConst {
+        dest: usize,
+        width: MachineIntWidth,
+        raw: u64,
+    },
+    IAdd {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    ISub {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    IMul {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    SDiv {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    UDiv {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    SRem {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    URem {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    And {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    Or {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    Xor {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+    },
+    IntNot {
+        dest: usize,
+        value: usize,
+        width: MachineIntWidth,
+    },
+    Shl {
+        dest: usize,
+        value: usize,
+        amount: usize,
+        width: MachineIntWidth,
+    },
+    LShr {
+        dest: usize,
+        value: usize,
+        amount: usize,
+        width: MachineIntWidth,
+    },
+    AShr {
+        dest: usize,
+        value: usize,
+        amount: usize,
+        width: MachineIntWidth,
+    },
+    ICmp {
+        dest: usize,
+        left: usize,
+        right: usize,
+        width: MachineIntWidth,
+        predicate: MachineIntPredicate,
     },
     BlockStart {
         id: BlockId,

@@ -1796,6 +1796,22 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::LessEqual { .. } => "less_equal",
         Instruction::LessEqualNum { .. } => "le_num",
         Instruction::LessEqualStr { .. } => "le_str",
+        Instruction::IConst { .. } => "iconst",
+        Instruction::IAdd { .. } => "iadd",
+        Instruction::ISub { .. } => "isub",
+        Instruction::IMul { .. } => "imul",
+        Instruction::SDiv { .. } => "sdiv",
+        Instruction::UDiv { .. } => "udiv",
+        Instruction::SRem { .. } => "srem",
+        Instruction::URem { .. } => "urem",
+        Instruction::And { .. } => "and",
+        Instruction::Or { .. } => "or",
+        Instruction::Xor { .. } => "xor",
+        Instruction::IntNot { .. } => "not_int",
+        Instruction::Shl { .. } => "shl",
+        Instruction::LShr { .. } => "lshr",
+        Instruction::AShr { .. } => "ashr",
+        Instruction::ICmp { .. } => "icmp",
         Instruction::BlockStart { .. } => "block",
         Instruction::Br { .. } => "br",
         Instruction::BrIf { .. } => "br_if",
@@ -1806,7 +1822,7 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{Function, NativeId, NativeImport};
+    use crate::bytecode::{Function, MachineIntWidth, NativeId, NativeImport};
     use crate::runtime::Heap;
     use crate::scheduler::{CooperativeScheduler, ResumableFrame};
     use crate::value::Value as VmValue;
@@ -2164,6 +2180,25 @@ mod tests {
             JitEligibility::Fallback(JitFallbackReason::UnsupportedInstruction {
                 instruction: 0,
                 opcode: "array",
+            })
+        );
+
+        let machine = program(vec![function(
+            0,
+            vec![
+                Instruction::IConst {
+                    dest: 0,
+                    width: MachineIntWidth::W32,
+                    raw: 1,
+                },
+                Instruction::Return { value: 0 },
+            ],
+        )]);
+        assert_eq!(
+            state.eligibility(&machine, Some(1), JitExecutionMode::Ordinary),
+            JitEligibility::Fallback(JitFallbackReason::UnsupportedInstruction {
+                instruction: 0,
+                opcode: "iconst",
             })
         );
     }
