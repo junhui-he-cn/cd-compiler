@@ -385,6 +385,14 @@ semantics MUST be identical to a contiguous byte array. Dynamic arrays, maps,
 strings, structs, variants, and iterators remain managed by the existing
 dynamic object system; they MUST NOT be used as storage for machine C objects.
 
+The VM03-04 implementation exposes this storage as a VM-owned
+`memory::LinearMemory`. Its region metadata is separate from the backing bytes,
+with one checked backing vector per mapped region so sparse explicit VM
+addresses do not materialize unmapped gaps. One `LinearMemory` instance is
+shared by ordinary execution and a cooperative VM session. The public memory
+API performs all address and range checks before exposing or changing backing
+bytes; typed `LOAD`/`STORE` remains a later milestone.
+
 The address space is little-endian and has this logical order:
 
 ~~~text

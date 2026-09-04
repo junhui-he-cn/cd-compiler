@@ -11,6 +11,7 @@ use crate::jit::{
     JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
 };
 use crate::format::ParseError;
+use crate::memory::{LinearMemory, MemoryError, MemoryErrorKind};
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{
@@ -235,6 +236,10 @@ pub enum RuntimeErrorKind {
     Resource(ResourceKind),
     Cancelled,
     DebuggerQuit,
+    MemoryOutOfBounds,
+    NullPointerAccess,
+    WriteToReadOnlyMemory,
+    InvalidAddress,
 }
 
 impl RuntimeErrorKind {
@@ -244,6 +249,10 @@ impl RuntimeErrorKind {
             Self::Resource(_) => "resource",
             Self::Cancelled => "cancelled",
             Self::DebuggerQuit => "debugger_quit",
+            Self::MemoryOutOfBounds => "memory_out_of_bounds",
+            Self::NullPointerAccess => "null_pointer_access",
+            Self::WriteToReadOnlyMemory => "write_to_read_only_memory",
+            Self::InvalidAddress => "invalid_address",
         }
     }
 }
@@ -1281,6 +1290,66 @@ mod tests {
             }],
             entry: FuncId(0),
             debug_sources: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn vm_owns_memory_shared_by_cooperative_sessions() {
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        let region = vm
+            .memory_mut()
+            .allocate_region(crate::memory::MemoryRegionKind::Data, 4, 4)
+            .expect("VM memory allocation should succeed");
+        vm.memory_mut()
+            .write_bytes(region.base, &[1, 2, 3, 4])
+            .expect("VM memory write should succeed");
+
+        let mut cooperative = vm
+            .start_cooperative(1)
+            .expect("cooperative session should start");
+        assert_eq!(cooperative.memory().regions(), &[region]);
+        assert_eq!(cooperative.memory().read_bytes(region.base, 4).unwrap(), &[1, 2, 3, 4]);
+        cooperative
+            .memory_mut()
+            .write_bytes(region.base + 1, &[9])
+            .expect("cooperative memory write should succeed");
+        assert_eq!(
+            cooperative.memory().read_bytes(region.base, 4).unwrap(),
+            &[1, 9, 3, 4]
+        );
+    }
+
+    #[test]
+    fn memory_errors_map_to_typed_runtime_kinds() {
+        let mut memory = LinearMemory::new();
+        let data = memory
+            .allocate_region(crate::memory::MemoryRegionKind::Data, 1, 1)
+            .expect("data allocation");
+        let rodata = memory
+            .allocate_region_with_bytes(crate::memory::MemoryRegionKind::Rodata, 1, &[7])
+            .expect("rodata allocation");
+        let errors = [
+            (
+                memory.read_bytes(0, 1).unwrap_err(),
+                RuntimeErrorKind::NullPointerAccess,
+            ),
+            (
+                memory.read_bytes(data.base + 2, 1).unwrap_err(),
+                RuntimeErrorKind::InvalidAddress,
+            ),
+            (
+                memory.read_bytes(data.base, 2).unwrap_err(),
+                RuntimeErrorKind::MemoryOutOfBounds,
+            ),
+            (
+                memory.write_bytes(rodata.base, &[0]).unwrap_err(),
+                RuntimeErrorKind::WriteToReadOnlyMemory,
+            ),
+        ];
+        for (error, expected_kind) in errors {
+            let runtime_error: RuntimeError = error.into();
+            assert_eq!(runtime_error.kind, expected_kind);
         }
     }
 
@@ -7389,6 +7458,23 @@ impl RuntimeError {
     }
 }
 
+impl From<MemoryError> for RuntimeError {
+    fn from(error: MemoryError) -> Self {
+        let kind = match error.kind() {
+            MemoryErrorKind::MemoryOutOfBounds => RuntimeErrorKind::MemoryOutOfBounds,
+            MemoryErrorKind::NullPointerAccess => RuntimeErrorKind::NullPointerAccess,
+            MemoryErrorKind::WriteToReadOnlyMemory => RuntimeErrorKind::WriteToReadOnlyMemory,
+            MemoryErrorKind::InvalidAddress => RuntimeErrorKind::InvalidAddress,
+            MemoryErrorKind::InvalidAlignment
+            | MemoryErrorKind::RegionOverlap
+            | MemoryErrorKind::AllocationFailure => RuntimeErrorKind::Runtime,
+        };
+        let mut runtime_error = RuntimeError::new(error.to_string());
+        runtime_error.kind = kind;
+        runtime_error
+    }
+}
+
 impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output = String::new();
@@ -7849,6 +7935,7 @@ pub struct VM<'a> {
     verified: bool,
     instruction_checkpoint: InstructionCheckpoint,
     heap: Heap,
+    memory: LinearMemory,
     global_cells: Vec<Option<Cell>>,
     global_names: Vec<String>,
     decoded_constants: Vec<Value>,
@@ -8200,6 +8287,16 @@ pub struct CooperativeRun<'a> {
 }
 
 impl<'a> CooperativeRun<'a> {
+    /// Access the VM-owned machine memory shared by all tasks in this session.
+    pub fn memory(&self) -> &LinearMemory {
+        &self.vm.memory
+    }
+
+    /// Mutably access machine memory between scheduler dispatches.
+    pub fn memory_mut(&mut self) -> &mut LinearMemory {
+        &mut self.vm.memory
+    }
+
     /// Spawn a fresh task entry into the session's FIFO queue.
     pub fn spawn(&mut self, spec: TaskSpec) -> Result<TaskId, RuntimeError> {
         let task = self.make_task(spec)?;
@@ -8558,6 +8655,7 @@ impl<'a> VM<'a> {
             },
         };
         let heap = Heap::new();
+        let memory = LinearMemory::new();
         let mut global_count = 0usize;
         for function in &program.functions {
             for instruction in &function.instructions {
@@ -8612,6 +8710,7 @@ impl<'a> VM<'a> {
             verified,
             instruction_checkpoint,
             heap,
+            memory,
             global_cells: vec![None; global_count],
             global_names,
             block_maps,
@@ -8663,6 +8762,16 @@ impl<'a> VM<'a> {
     #[cfg(test)]
     fn heap_stats(&self) -> HeapStats {
         self.heap.stats()
+    }
+
+    /// Access the VM-owned machine memory.
+    pub fn memory(&self) -> &LinearMemory {
+        &self.memory
+    }
+
+    /// Mutably access machine memory before or between execution boundaries.
+    pub fn memory_mut(&mut self) -> &mut LinearMemory {
+        &mut self.memory
     }
 
     pub fn run(mut self) -> Result<String, RuntimeError> {

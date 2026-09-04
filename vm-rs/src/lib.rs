@@ -12,6 +12,7 @@ pub mod bytecode;
 pub mod format;
 mod jit;
 pub mod link;
+pub mod memory;
 pub mod runtime;
 mod scheduler;
 pub mod value;
@@ -30,6 +31,10 @@ pub use format::{
 pub use link::{
     link_modules, link_modules_checked, link_modules_with_report, link_modules_with_report_checked,
     LinkError, LinkErrorKind, LinkReport, LinkResult,
+};
+pub use memory::{
+    LinearMemory, MemoryError, MemoryErrorKind, MemoryPermissions, MemoryRegion,
+    MemoryRegionKind, VmAddress, NULL_ADDRESS, NULL_GUARD_END,
 };
 pub use vm::{
     CancellationToken, CooperativeDebugHook, CooperativeDebugPause, CooperativeDebugState,

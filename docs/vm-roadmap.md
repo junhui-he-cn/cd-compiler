@@ -6,11 +6,14 @@ Git history. The active cdbc 0.3 Machine Foundation iteration is governed by
 [`plan-0.3.md`](plan-0.3.md); VM03-00 is specified in
 [`cdbc-0.3-machine-foundation.md`](cdbc-0.3-machine-foundation.md), and
 VM03-01/VM03-02 plus the integer-conversion portion of VM03-03 now provide the
-in-memory machine value and integer execution foundation. Floating-point and
-mixed integer/float conversions from VM03-03 remain pending. Machine
-instructions remain interpreter-first and are not yet part of the cdbc 0.2 text
-artifact writer. The compiler, language, and compiler tools have a separate
-current-state record in
+in-memory machine value and integer execution foundation. VM03-04 now adds the
+VM-owned deterministic `LinearMemory` region allocator, VM address/range
+checking, region permissions, and the memory error categories. Floating-point
+and mixed integer/float conversions from VM03-03 remain pending. Typed
+`LOAD`/`STORE` and memory opcodes remain pending, machine instructions remain
+interpreter-first, and machine instructions are not yet part of the cdbc 0.2
+text artifact writer. The compiler, language, and compiler tools have a
+separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 
 ## VM product boundary
