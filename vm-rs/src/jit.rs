@@ -1797,6 +1797,9 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::LessEqualNum { .. } => "le_num",
         Instruction::LessEqualStr { .. } => "le_str",
         Instruction::IConst { .. } => "iconst",
+        Instruction::Trunc { .. } => "trunc",
+        Instruction::ZExt { .. } => "zext",
+        Instruction::SExt { .. } => "sext",
         Instruction::IAdd { .. } => "iadd",
         Instruction::ISub { .. } => "isub",
         Instruction::IMul { .. } => "imul",
@@ -2201,6 +2204,48 @@ mod tests {
                 opcode: "iconst",
             })
         );
+
+        for (opcode, conversion) in [
+            (
+                "trunc",
+                Instruction::Trunc {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W64,
+                    to_width: MachineIntWidth::W32,
+                },
+            ),
+            (
+                "zext",
+                Instruction::ZExt {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W8,
+                    to_width: MachineIntWidth::W16,
+                },
+            ),
+            (
+                "sext",
+                Instruction::SExt {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W16,
+                    to_width: MachineIntWidth::W64,
+                },
+            ),
+        ] {
+            let machine = program(vec![function(
+                0,
+                vec![conversion, Instruction::Return { value: 1 }],
+            )]);
+            assert_eq!(
+                state.eligibility(&machine, Some(1), JitExecutionMode::Ordinary),
+                JitEligibility::Fallback(JitFallbackReason::UnsupportedInstruction {
+                    instruction: 0,
+                    opcode,
+                })
+            );
+        }
     }
 
     #[test]

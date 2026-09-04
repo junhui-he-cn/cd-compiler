@@ -1,7 +1,7 @@
 use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, LocalId, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout,
-    UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
+    Instruction, LocalId, MachineIntWidth, ModuleInit, NativeId, NativeImport, Program, TypeId,
+    TypeLayout, UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
 };
 use crate::vm::native_arity_bounds;
 use std::collections::BTreeSet;
@@ -1514,6 +1514,9 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LessEqualNum { dest, .. }
         | Instruction::LessEqualStr { dest, .. }
         | Instruction::IConst { dest, .. }
+        | Instruction::Trunc { dest, .. }
+        | Instruction::ZExt { dest, .. }
+        | Instruction::SExt { dest, .. }
         | Instruction::IAdd { dest, .. }
         | Instruction::ISub { dest, .. }
         | Instruction::IMul { dest, .. }
@@ -1709,6 +1712,9 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
             left, right, ..
         } => vec![*left, *right],
         Instruction::IntNot { value, .. } => vec![*value],
+        Instruction::Trunc { value, .. }
+        | Instruction::ZExt { value, .. }
+        | Instruction::SExt { value, .. } => vec![*value],
         Instruction::Shl { value, amount, .. }
         | Instruction::LShr { value, amount, .. }
         | Instruction::AShr { value, amount, .. } => vec![*value, *amount],
@@ -2468,6 +2474,60 @@ fn validate_instruction(
         Instruction::IConst { dest, .. } => {
             register(*dest, "destination")?;
         }
+        Instruction::Trunc {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+            validate_machine_int_conversion_widths(
+                line,
+                context,
+                instruction_index,
+                "trunc",
+                *from_width,
+                *to_width,
+                false,
+            )?;
+        }
+        Instruction::ZExt {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+            validate_machine_int_conversion_widths(
+                line,
+                context,
+                instruction_index,
+                "zext",
+                *from_width,
+                *to_width,
+                true,
+            )?;
+        }
+        Instruction::SExt {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+            validate_machine_int_conversion_widths(
+                line,
+                context,
+                instruction_index,
+                "sext",
+                *from_width,
+                *to_width,
+                true,
+            )?;
+        }
         Instruction::IntNot { dest, value, .. } => {
             register(*dest, "destination")?;
             register(*value, "value")?;
@@ -2584,6 +2644,42 @@ fn validate_instruction(
     Ok(())
 }
 
+fn validate_machine_int_conversion_widths(
+    line: usize,
+    context: &str,
+    instruction_index: usize,
+    opcode: &str,
+    from_width: MachineIntWidth,
+    to_width: MachineIntWidth,
+    widening: bool,
+) -> Result<(), ParseError> {
+    let valid = if widening {
+        to_width.bits() > from_width.bits()
+    } else {
+        to_width.bits() < from_width.bits()
+    };
+    if valid {
+        return Ok(());
+    }
+    let relation = if widening {
+        "to_width > from_width"
+    } else {
+        "to_width < from_width"
+    };
+    Err(validation_error(
+        line,
+        format!(
+            "{} instruction {} {} requires {}, found {} -> {}",
+            context,
+            instruction_index,
+            opcode,
+            relation,
+            from_width.as_str(),
+            to_width.as_str()
+        ),
+    ))
+}
+
 #[allow(dead_code)]
 pub fn parse_program(source: &str) -> Result<Program, ParseError> {
     match parse_artifact(source)? {
@@ -2696,6 +2792,9 @@ fn reject_unsupported_machine_instructions(program: &Program) -> Result<(), Form
 fn machine_instruction_opcode(instruction: &Instruction) -> Option<&'static str> {
     Some(match instruction {
         Instruction::IConst { .. } => "iconst",
+        Instruction::Trunc { .. } => "trunc",
+        Instruction::ZExt { .. } => "zext",
+        Instruction::SExt { .. } => "sext",
         Instruction::IAdd { .. } => "iadd",
         Instruction::ISub { .. } => "isub",
         Instruction::IMul { .. } => "imul",
@@ -3646,6 +3745,42 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::IConst { dest, width, raw } => {
             format!("r{} = iconst {}, 0x{:016x}", dest, width.as_str(), raw)
         }
+        Instruction::Trunc {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => format!(
+            "r{} = trunc r{}, {}, {}",
+            dest,
+            value,
+            from_width.as_str(),
+            to_width.as_str()
+        ),
+        Instruction::ZExt {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => format!(
+            "r{} = zext r{}, {}, {}",
+            dest,
+            value,
+            from_width.as_str(),
+            to_width.as_str()
+        ),
+        Instruction::SExt {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => format!(
+            "r{} = sext r{}, {}, {}",
+            dest,
+            value,
+            from_width.as_str(),
+            to_width.as_str()
+        ),
         Instruction::IAdd {
             dest,
             left,
@@ -4125,6 +4260,134 @@ mod tests {
             }
         );
         assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
+    }
+
+    #[test]
+    fn verifies_machine_integer_conversion_shapes() {
+        let mut program = Program {
+            constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
+            names: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 2,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+
+        let legal = [
+            Instruction::Trunc {
+                dest: 1,
+                value: 0,
+                from_width: MachineIntWidth::W64,
+                to_width: MachineIntWidth::W32,
+            },
+            Instruction::ZExt {
+                dest: 1,
+                value: 0,
+                from_width: MachineIntWidth::W8,
+                to_width: MachineIntWidth::W16,
+            },
+            Instruction::SExt {
+                dest: 1,
+                value: 0,
+                from_width: MachineIntWidth::W32,
+                to_width: MachineIntWidth::W64,
+            },
+        ];
+        for conversion in legal {
+            program.functions[0].instructions = vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::IConst {
+                    dest: 0,
+                    width: MachineIntWidth::W64,
+                    raw: 1,
+                },
+                conversion,
+                Instruction::ReturnNil,
+            ];
+            program.functions[0].locations = vec![None; 4];
+            verify_program(&program).expect("legal machine conversion should verify");
+        }
+
+        let illegal = [
+            (
+                Instruction::Trunc {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W8,
+                    to_width: MachineIntWidth::W16,
+                },
+                "trunc requires to_width < from_width",
+            ),
+            (
+                Instruction::ZExt {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W16,
+                    to_width: MachineIntWidth::W8,
+                },
+                "zext requires to_width > from_width",
+            ),
+            (
+                Instruction::SExt {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W32,
+                    to_width: MachineIntWidth::W32,
+                },
+                "sext requires to_width > from_width",
+            ),
+        ];
+        for (conversion, expected) in illegal {
+            program.functions[0].instructions = vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::IConst {
+                    dest: 0,
+                    width: MachineIntWidth::W64,
+                    raw: 1,
+                },
+                conversion,
+                Instruction::ReturnNil,
+            ];
+            program.functions[0].locations = vec![None; 4];
+            let error = verify_program(&program).expect_err("illegal conversion should fail");
+            assert!(error.message.contains(expected), "{}", error.message);
+        }
+
+        program.functions[0].instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::IConst {
+                dest: 0,
+                width: MachineIntWidth::W64,
+                raw: 1,
+            },
+            Instruction::Trunc {
+                dest: 1,
+                value: 2,
+                from_width: MachineIntWidth::W64,
+                to_width: MachineIntWidth::W8,
+            },
+            Instruction::ReturnNil,
+        ];
+        program.functions[0].locations = vec![None; 4];
+        let error = verify_program(&program).expect_err("out-of-range conversion input fails");
+        assert!(
+            error.message.contains("value register r2 out of range"),
+            "{}",
+            error.message
+        );
     }
 
     #[test]

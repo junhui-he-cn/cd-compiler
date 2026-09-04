@@ -571,8 +571,8 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{link_modules, link_modules_with_report};
-    use crate::bytecode::{BlockId, FuncId, Function, Instruction, Program};
+    use super::{link_modules, link_modules_with_report, map_instruction, ModuleContext};
+    use crate::bytecode::{BlockId, FuncId, Function, Instruction, MachineIntWidth, Program};
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
 
     fn empty_program() -> Program {
@@ -711,6 +711,89 @@ mod tests {
             3,
             "entry main should open a block, init one module, and return"
         );
+    }
+
+    #[test]
+    fn remaps_machine_conversion_registers_with_the_function_base() {
+        let context = ModuleContext {
+            constant_base: 0,
+            name_base: 0,
+            function_base: 0,
+            type_remap: Vec::new(),
+            native_remap: Vec::new(),
+            global_remap: Vec::new(),
+            module_remap: Vec::new(),
+            init: FuncId(0),
+            source_base: 0,
+        };
+        let conversions = [
+            Instruction::Trunc {
+                dest: 1,
+                value: 2,
+                from_width: MachineIntWidth::W64,
+                to_width: MachineIntWidth::W32,
+            },
+            Instruction::ZExt {
+                dest: 3,
+                value: 4,
+                from_width: MachineIntWidth::W8,
+                to_width: MachineIntWidth::W16,
+            },
+            Instruction::SExt {
+                dest: 5,
+                value: 6,
+                from_width: MachineIntWidth::W16,
+                to_width: MachineIntWidth::W64,
+            },
+        ];
+
+        for conversion in conversions {
+            let expected = match &conversion {
+                Instruction::Trunc {
+                    dest,
+                    value,
+                    from_width,
+                    to_width,
+                } => Instruction::Trunc {
+                    dest: *dest + 10,
+                    value: *value + 10,
+                    from_width: *from_width,
+                    to_width: *to_width,
+                },
+                Instruction::ZExt {
+                    dest,
+                    value,
+                    from_width,
+                    to_width,
+                } => Instruction::ZExt {
+                    dest: *dest + 10,
+                    value: *value + 10,
+                    from_width: *from_width,
+                    to_width: *to_width,
+                },
+                Instruction::SExt {
+                    dest,
+                    value,
+                    from_width,
+                    to_width,
+                } => Instruction::SExt {
+                    dest: *dest + 10,
+                    value: *value + 10,
+                    from_width: *from_width,
+                    to_width: *to_width,
+                },
+                _ => unreachable!(),
+            };
+            let mapped = map_instruction(
+                &conversion,
+                &context,
+                10,
+                |block| Ok(block),
+                |block| Ok(block),
+            )
+            .expect("machine conversion should remap");
+            assert_eq!(mapped, expected);
+        }
     }
 }
 
@@ -1229,6 +1312,39 @@ fn map_instruction(
             dest: register(*dest)?,
             width: *width,
             raw: *raw,
+        },
+        Instruction::Trunc {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => Instruction::Trunc {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            from_width: *from_width,
+            to_width: *to_width,
+        },
+        Instruction::ZExt {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => Instruction::ZExt {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            from_width: *from_width,
+            to_width: *to_width,
+        },
+        Instruction::SExt {
+            dest,
+            value,
+            from_width,
+            to_width,
+        } => Instruction::SExt {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            from_width: *from_width,
+            to_width: *to_width,
         },
         Instruction::IAdd {
             dest,

@@ -1814,6 +1814,93 @@ true\ntrue\nfalse\nfalse\n"
     }
 
     #[test]
+    fn machine_integer_conversions_preserve_low_bits_and_sign() {
+        let mut instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::IConst {
+                dest: 0,
+                width: MachineIntWidth::W64,
+                raw: 0x1234_5678_9abc_0080,
+            },
+            Instruction::Trunc {
+                dest: 1,
+                value: 0,
+                from_width: MachineIntWidth::W64,
+                to_width: MachineIntWidth::W32,
+            },
+            Instruction::Trunc {
+                dest: 2,
+                value: 1,
+                from_width: MachineIntWidth::W32,
+                to_width: MachineIntWidth::W16,
+            },
+            Instruction::Trunc {
+                dest: 3,
+                value: 2,
+                from_width: MachineIntWidth::W16,
+                to_width: MachineIntWidth::W8,
+            },
+            Instruction::ZExt {
+                dest: 4,
+                value: 3,
+                from_width: MachineIntWidth::W8,
+                to_width: MachineIntWidth::W16,
+            },
+            Instruction::ZExt {
+                dest: 5,
+                value: 4,
+                from_width: MachineIntWidth::W16,
+                to_width: MachineIntWidth::W32,
+            },
+            Instruction::ZExt {
+                dest: 6,
+                value: 5,
+                from_width: MachineIntWidth::W32,
+                to_width: MachineIntWidth::W64,
+            },
+            Instruction::SExt {
+                dest: 7,
+                value: 3,
+                from_width: MachineIntWidth::W8,
+                to_width: MachineIntWidth::W16,
+            },
+            Instruction::SExt {
+                dest: 8,
+                value: 7,
+                from_width: MachineIntWidth::W16,
+                to_width: MachineIntWidth::W32,
+            },
+            Instruction::SExt {
+                dest: 9,
+                value: 8,
+                from_width: MachineIntWidth::W32,
+                to_width: MachineIntWidth::W64,
+            },
+        ];
+        for register in 1..=9 {
+            instructions.push(print_register(register, 10));
+        }
+        instructions.push(Instruction::ReturnNil);
+        let program = machine_program(instructions, 11);
+        let output = VM::with_config_verified(&program, RunConfig::unlimited())
+            .expect("machine conversions should verify")
+            .run()
+            .expect("machine conversions should run");
+        assert_eq!(
+            output,
+            "machine_int(2596012160, 0x000000009abc0080)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(128, 0x0000000000000080)\n\
+machine_int(65408, 0x000000000000ff80)\n\
+machine_int(4294967168, 0x00000000ffffff80)\n\
+machine_int(18446744073709551488, 0xffffffffffffff80)\n"
+        );
+    }
+
+    #[test]
     fn machine_integer_errors_are_checked_without_host_overflow() {
         let cases = [
             (
@@ -1960,6 +2047,61 @@ true\ntrue\nfalse\nfalse\n"
             assert_eq!(error.message, "integer division overflow");
         }
 
+        let invalid_conversions = [
+            (
+                Instruction::Trunc {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W8,
+                    to_width: MachineIntWidth::W16,
+                },
+                "to_width < from_width",
+            ),
+            (
+                Instruction::ZExt {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W16,
+                    to_width: MachineIntWidth::W8,
+                },
+                "to_width > from_width",
+            ),
+            (
+                Instruction::SExt {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W32,
+                    to_width: MachineIntWidth::W32,
+                },
+                "to_width > from_width",
+            ),
+        ];
+        for (conversion, expected) in invalid_conversions {
+            let program = machine_program(
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::IConst {
+                        dest: 0,
+                        width: MachineIntWidth::W64,
+                        raw: 1,
+                    },
+                    conversion,
+                    Instruction::ReturnNil,
+                ],
+                2,
+            );
+            let error = match VM::with_config_verified(&program, RunConfig::unlimited()) {
+                Ok(_) => panic!("invalid conversion direction must fail verification"),
+                Err(error) => error,
+            };
+            assert!(error.message.contains(expected), "{}", error.message);
+
+            let error = VM::new(&program)
+                .run()
+                .expect_err("unverified conversion must still reject its direction");
+            assert!(error.message.contains(expected), "{}", error.message);
+        }
+
         let mut wrong_domain = machine_program(
             vec![
                 Instruction::BlockStart { id: BlockId(0) },
@@ -1988,6 +2130,32 @@ true\ntrue\nfalse\nfalse\n"
             .run()
             .expect_err("machine arithmetic must reject dynamic values");
         assert_eq!(error.message, "iadd expects machine_int operands");
+
+        let mut wrong_domain = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Constant {
+                    dest: 0,
+                    constant: 0,
+                },
+                Instruction::Trunc {
+                    dest: 1,
+                    value: 0,
+                    from_width: MachineIntWidth::W64,
+                    to_width: MachineIntWidth::W8,
+                },
+                Instruction::ReturnNil,
+            ],
+            2,
+        );
+        wrong_domain
+            .constants
+            .push(Constant::Number("1".to_string()));
+        let error = VM::with_config_verified(&wrong_domain, RunConfig::unlimited())
+            .expect("wrong-domain conversion is valid bytecode")
+            .run()
+            .expect_err("conversion must reject dynamic values");
+        assert_eq!(error.message, "trunc expects machine_int, got number");
     }
 
     #[test]
@@ -9851,6 +10019,51 @@ impl<'a> VM<'a> {
             Instruction::IConst { dest, width, raw } => {
                 self.write_register(frame, *dest, Value::machine_int(raw & width.mask()))
             }
+            Instruction::Trunc {
+                dest,
+                value,
+                from_width,
+                to_width,
+            } => self.execute_machine_int_conversion(
+                frame,
+                *dest,
+                *value,
+                *from_width,
+                *to_width,
+                "trunc",
+                false,
+                false,
+            ),
+            Instruction::ZExt {
+                dest,
+                value,
+                from_width,
+                to_width,
+            } => self.execute_machine_int_conversion(
+                frame,
+                *dest,
+                *value,
+                *from_width,
+                *to_width,
+                "zext",
+                true,
+                false,
+            ),
+            Instruction::SExt {
+                dest,
+                value,
+                from_width,
+                to_width,
+            } => self.execute_machine_int_conversion(
+                frame,
+                *dest,
+                *value,
+                *from_width,
+                *to_width,
+                "sext",
+                true,
+                true,
+            ),
             Instruction::IAdd {
                 dest,
                 left,
@@ -12784,6 +12997,46 @@ impl<'a> VM<'a> {
                 .ok_or_else(|| RuntimeError::new("register index out of range"))?;
             Ok(std::mem::replace(slot, Value::Nil))
         }
+    }
+
+    fn execute_machine_int_conversion(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        value: usize,
+        from_width: MachineIntWidth,
+        to_width: MachineIntWidth,
+        op_name: &str,
+        widening: bool,
+        sign_extend: bool,
+    ) -> Result<(), RuntimeError> {
+        let valid = if widening {
+            to_width.bits() > from_width.bits()
+        } else {
+            to_width.bits() < from_width.bits()
+        };
+        if !valid {
+            let relation = if widening {
+                "to_width > from_width"
+            } else {
+                "to_width < from_width"
+            };
+            return Err(RuntimeError::new(format!(
+                "{} requires {}, found {} -> {}",
+                op_name,
+                relation,
+                from_width.as_str(),
+                to_width.as_str()
+            )));
+        }
+
+        let input = self.expect_machine_int(frame, value, op_name)? & from_width.mask();
+        let result = if sign_extend {
+            signed_machine_int(input, from_width) as u64
+        } else {
+            input
+        } & to_width.mask();
+        self.write_register(frame, dest, Value::machine_int(result))
     }
 
     fn expect_machine_int(

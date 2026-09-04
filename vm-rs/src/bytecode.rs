@@ -565,6 +565,24 @@ pub enum Instruction {
         width: MachineIntWidth,
         raw: u64,
     },
+    Trunc {
+        dest: usize,
+        value: usize,
+        from_width: MachineIntWidth,
+        to_width: MachineIntWidth,
+    },
+    ZExt {
+        dest: usize,
+        value: usize,
+        from_width: MachineIntWidth,
+        to_width: MachineIntWidth,
+    },
+    SExt {
+        dest: usize,
+        value: usize,
+        from_width: MachineIntWidth,
+        to_width: MachineIntWidth,
+    },
     IAdd {
         dest: usize,
         left: usize,
