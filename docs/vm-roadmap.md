@@ -28,11 +28,13 @@ rejection, linker metadata preservation, and interpreter fallback when JIT is
 enabled. VM03-10 now adds VM-level function and data symbols, `ABS64` data
 patches, `FUNC_INDEX` direct-call relocations, module-linker index rebasing,
 duplicate/undefined-symbol rejection, and loader ordering that allocates
-segments and resolves all symbols before applying patches. Floating-point and
-mixed integer/float conversions from VM03-03 remain pending. Machine execution
-remains interpreter-first; machine instructions, segment descriptors, machine
-ABI metadata, symbols, and relocations are not part of the cdbc 0.2 text
-artifact writer.
+segments and resolves all symbols before applying patches. VM03-11 now adds a
+strict Rust-side `cdbc 0.3` reader and explicit machine-artifact writer, with
+round-trip support for machine opcodes, segment payloads, ABI metadata,
+symbols, and relocations; the existing C++ emitter and default formatter stay
+on `cdbc 0.2` until the compiler-side artifact cutover is separately chosen.
+Floating-point and mixed integer/float conversions from VM03-03 remain
+pending. Machine execution remains interpreter-first.
 The compiler, language, and compiler tools have a separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 

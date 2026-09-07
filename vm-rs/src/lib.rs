@@ -23,12 +23,14 @@ pub use bytecode::{
 };
 pub use format::{
     format_artifact, format_artifact_checked, format_program, format_program_checked,
+    format_artifact_v03, format_artifact_v03_checked, format_program_v03,
+    format_program_v03_checked,
     parse_artifact, parse_artifact_checked, parse_program, verify_artifact, verify_artifact_checked,
     verify_module_artifact,
     verify_module_artifact_checked, verify_program, verify_program_checked, Artifact,
     ArtifactError, ArtifactErrorKind, FormatError, ModuleArtifact, ModuleDependency,
     ModuleDependencyKind, ParseError, ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION,
-    ARTIFACT_HEADER,
+    ARTIFACT_HEADER, MACHINE_ARTIFACT_FORMAT_VERSION, MACHINE_ARTIFACT_HEADER,
 };
 pub use link::{
     link_modules, link_modules_checked, link_modules_with_report, link_modules_with_report_checked,

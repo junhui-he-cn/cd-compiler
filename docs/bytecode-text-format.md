@@ -30,10 +30,53 @@ Every file starts with a format identifier and version:
 cdbc 0.2
 ```
 
-The VM accepts only `cdbc 0.2`; legacy `cdbc 0.1` headers are rejected as
-unsupported versions before body parsing. Emitted artifacts are `cdbc 0.2`.
-Future format changes must either remain backward-compatible with `0.2` or use a
-new version number.
+The Rust VM accepts `cdbc 0.2` and `cdbc 0.3`; legacy `cdbc 0.1` headers and
+unknown versions are rejected before body parsing. The existing C++ compiler
+emitter and the default Rust formatter continue to emit `cdbc 0.2`. The
+machine-aware Rust APIs `format_program_v03` and `format_artifact_v03` emit
+`cdbc 0.3`. A 0.3 reader preserves every 0.2 field and adds the machine fields
+described below; a 0.2 writer never silently drops them.
+
+`cdbc 0.3` is an explicit machine-artifact boundary. It does not change the
+dynamic `number`/`bool`/`string` constant encodings, and it never serializes a
+host pointer. Address values in machine instructions and relocations are VM
+addresses resolved by the loader.
+
+### Machine sections
+
+The optional machine sections occur after `globals:` and before `types:`:
+
+```text
+data_segments:
+  d0 = rodata alignment=1 size=4 initial=hex:00616263
+  d1 = bss alignment=8 size=8 initial=zero
+
+symbols:
+  s0 = "message" data d0 offset=1
+  s1 = "worker" function f0
+
+relocations:
+  r0 = ABS64 symbol="message" addend=0 target=data d1 offset=0
+  r1 = FUNC_INDEX symbol="worker" addend=0 target=call main instruction=2
+```
+
+`data_segments` uses little-endian byte payloads encoded as lowercase hex.
+`zero` is the required spelling for an uninitialized segment (normally BSS).
+Function references use `main` for the entry function and `fN` for the
+non-entry function table. `ABS64` patches an eight-byte data location with a
+resolved VM address plus its signed addend. `FUNC_INDEX` patches a
+`call_direct` function operand and requires an addend of zero.
+
+Machine function metadata is carried in the function headers:
+
+```text
+main registers=3 frame_size=16 machine_params=[] machine_return=machine_int:
+function f0 name="worker" arity=1 registers=2 frame_size=32 machine_params=[address] machine_return=machine_int:
+```
+
+The scalar domains are `machine_int`, `machine_float`, and `address`. The
+0.3 register ABI allows at most eight machine parameters; the verifier checks
+the parameter count against `arity` and rejects malformed metadata.
 
 ## Artifact kinds
 
@@ -201,8 +244,9 @@ implicit fallthrough is forbidden. The linker splices module init bodies at the
 block boundary recorded by the `at=N` dependency offset and renumbers block IDs
 across the merged main.
 
-The optional `types:` section (between `globals:` and `main`) records runtime
-type layouts: struct field names/counts and enum variant names/payload counts.
+The optional machine sections described above and the optional `types:` section
+occur between `globals:` and `main`. The `types:` section records runtime type
+layouts: struct field names/counts and enum variant names/payload counts.
 Names are display/debug metadata only; identity and access use numeric
 `TypeId`/`VariantId` and field slots via `make_struct`/`struct_get`/
 `struct_set` and `make_variant`/`is_variant`/`variant_get`.
