@@ -534,6 +534,26 @@ impl LinearMemory {
         Ok(())
     }
 
+    /// Patch loader-owned bytes before a read-only region becomes observable
+    /// to machine instructions. Runtime writes must continue to use
+    /// `write_bytes`, which enforces region permissions.
+    pub(crate) fn patch_bytes(&mut self, address: VmAddress, bytes: &[u8]) -> Result<(), MemoryError> {
+        let size = bytes.len();
+        if size == 0 {
+            return Ok(());
+        }
+        let (region_index, range) = self.checked_range(address, size, false)?;
+        let Some(destination) = self
+            .backings
+            .get_mut(region_index)
+            .and_then(|backing| backing.get_mut(range))
+        else {
+            return Err(MemoryError::InvalidAddress { address, size });
+        };
+        destination.copy_from_slice(bytes);
+        Ok(())
+    }
+
     pub fn fill_bytes(
         &mut self,
         address: VmAddress,

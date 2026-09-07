@@ -55,6 +55,8 @@ fn arithmetic_workload() -> Program {
             Constant::Number("1".to_string()),
         ],
         data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -68,6 +70,8 @@ fn arithmetic_workload() -> Program {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -82,6 +86,8 @@ fn arithmetic_workload() -> Program {
             name: "arithmetic_worker".to_string(),
             arity: 1,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             registers: 7,
             params: vec!["limit".to_string()],
             instructions: vec![
@@ -145,6 +151,8 @@ fn callback_workload() -> Program {
             Constant::Number("2".to_string()),
         ],
         data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![
@@ -164,6 +172,8 @@ fn callback_workload() -> Program {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -178,6 +188,8 @@ fn callback_workload() -> Program {
                 name: "callback_worker".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 6,
                 params: Vec::new(),
                 instructions: vec![
@@ -218,6 +230,8 @@ fn callback_workload() -> Program {
                 name: "identity_callback".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![

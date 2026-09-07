@@ -349,6 +349,9 @@ pub(crate) enum JitFallbackReason {
         function_index: usize,
         arity: usize,
     },
+    MachineAbi {
+        function_index: usize,
+    },
     CraneliftIr {
         message: String,
     },
@@ -729,6 +732,9 @@ impl JitState {
         }
         if !self.config.whitelist.contains(&function_index) {
             return JitEligibility::Fallback(JitFallbackReason::NotWhitelisted(function_index));
+        }
+        if function.has_machine_abi() {
+            return JitEligibility::Fallback(JitFallbackReason::MachineAbi { function_index });
         }
         if function.arity > JIT_MAX_ENTRY_ARGUMENTS {
             return JitEligibility::Fallback(JitFallbackReason::EntryArity {
@@ -1837,7 +1843,9 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{Function, MachineIntWidth, MachineMemoryType, NativeId, NativeImport};
+    use crate::bytecode::{
+        Function, MachineIntWidth, MachineMemoryType, MachineScalarType, NativeId, NativeImport,
+    };
     use crate::runtime::Heap;
     use crate::scheduler::{CooperativeScheduler, ResumableFrame};
     use crate::value::Value as VmValue;
@@ -1849,6 +1857,8 @@ mod tests {
             name: format!("function{index}"),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             registers: 4,
@@ -1864,6 +1874,8 @@ mod tests {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -1875,6 +1887,8 @@ mod tests {
         Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -1920,6 +1934,8 @@ mod tests {
             name: String::new(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -2116,6 +2132,19 @@ mod tests {
         assert_eq!(
             state.eligibility(&program, None, JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::MainBody)
+        );
+    }
+
+    #[test]
+    fn machine_abi_functions_are_explicit_jit_fallbacks() {
+        let mut machine_abi = function(0, vec![Instruction::ReturnNil]);
+        machine_abi.machine_return = Some(MachineScalarType::MachineInt);
+        let program = program(vec![machine_abi]);
+        let state = JitState::enabled_for_tests([1], 64);
+
+        assert_eq!(
+            state.eligibility(&program, Some(1), JitExecutionMode::Ordinary),
+            JitEligibility::Fallback(JitFallbackReason::MachineAbi { function_index: 1 })
         );
     }
 

@@ -1,7 +1,7 @@
 use crate::bytecode::{
     BlockId, Constant, DataSegment, DebugLocation, DebugRange, DebugSource, FuncId, Function,
-    GlobalId, Instruction, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout,
-    UpvalueDesc, UpvalueSource,
+    GlobalId, Instruction, ModuleInit, NativeId, NativeImport, Program, Relocation,
+    RelocationTarget, Symbol, SymbolTarget, TypeId, TypeLayout, UpvalueDesc, UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::HashMap;
@@ -119,6 +119,7 @@ pub struct LinkResult {
 #[derive(Clone, Debug)]
 struct ModuleContext {
     constant_base: usize,
+    data_segment_base: usize,
     name_base: usize,
     function_base: usize,
     type_remap: Vec<u32>,
@@ -139,6 +140,8 @@ struct Linker {
     expansion_order: Vec<String>,
     constants: Vec<Constant>,
     data_segments: Vec<DataSegment>,
+    linked_symbols: Vec<Symbol>,
+    linked_relocations: Vec<Relocation>,
     names: Vec<String>,
     functions: Vec<Function>,
     debug_sources: Vec<DebugSource>,
@@ -245,6 +248,8 @@ impl Linker {
             expansion_order: Vec::new(),
             constants: Vec::new(),
             data_segments: Vec::new(),
+            linked_symbols: Vec::new(),
+            linked_relocations: Vec::new(),
             names: Vec::new(),
             functions: Vec::new(),
             debug_sources: Vec::new(),
@@ -260,6 +265,7 @@ impl Linker {
 
     fn allocate_context(&mut self, module: &ModuleArtifact) -> Result<ModuleContext, LinkError> {
         let constant_base = self.constants.len();
+        let data_segment_base = self.data_segments.len();
         let name_base = self.names.len();
         let source_base = self.debug_sources.len();
         self.constants
@@ -362,6 +368,7 @@ impl Linker {
         );
         let context = ModuleContext {
             constant_base,
+            data_segment_base,
             name_base,
             function_base,
             type_remap,
@@ -404,6 +411,8 @@ impl Linker {
                 name: function.name.clone(),
                 arity: function.arity,
                 machine_frame_size: function.machine_frame_size,
+                machine_params: function.machine_params.clone(),
+                machine_return: function.machine_return,
                 local_count: function.local_count,
                 upvalues: function
                     .upvalues
@@ -442,6 +451,42 @@ impl Linker {
                     .collect(),
             });
         }
+        for symbol in &module.program.symbols {
+            let target = match &symbol.target {
+                SymbolTarget::Function(function) => {
+                    SymbolTarget::Function(remap_function_id(function, &context, identity)?)
+                }
+                SymbolTarget::Data { segment, offset } => SymbolTarget::Data {
+                    segment: remap_data_segment(*segment, &context, identity)?,
+                    offset: *offset,
+                },
+            };
+            self.linked_symbols.push(Symbol {
+                name: symbol.name.clone(),
+                target,
+            });
+        }
+        for relocation in &module.program.relocations {
+            let target = match &relocation.target {
+                RelocationTarget::Data { segment, offset } => RelocationTarget::Data {
+                    segment: remap_data_segment(*segment, &context, identity)?,
+                    offset: *offset,
+                },
+                RelocationTarget::CallDirect {
+                    function,
+                    instruction,
+                } => RelocationTarget::CallDirect {
+                    function: remap_function_id(function, &context, identity)?,
+                    instruction: *instruction,
+                },
+            };
+            self.linked_relocations.push(Relocation {
+                kind: relocation.kind,
+                symbol: relocation.symbol.clone(),
+                addend: relocation.addend,
+                target,
+            });
+        }
         Ok(())
     }
 
@@ -454,6 +499,8 @@ impl Linker {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -536,6 +583,8 @@ impl Linker {
         let program = Program {
             constants: self.constants,
             data_segments: self.data_segments,
+            symbols: self.linked_symbols,
+            relocations: self.linked_relocations,
             globals: linked_globals,
             types: self.linked_types,
             native_imports: self.linked_native_imports,
@@ -581,15 +630,19 @@ mod tests {
     use super::{link_modules, link_modules_with_report, map_instruction, ModuleContext};
     use crate::bytecode::{
         BlockId, DataSegment, FuncId, Function, Instruction, MachineIntWidth, MachineMemoryType,
-        Program,
+        MachineScalarType, Program, Relocation, RelocationKind, RelocationTarget, Symbol,
+        SymbolTarget,
     };
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
     use crate::memory::MemoryRegionKind;
+    use crate::vm::VM;
 
     fn empty_program() -> Program {
         Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -600,6 +653,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -718,6 +773,149 @@ mod tests {
     }
 
     #[test]
+    fn links_machine_symbols_and_relocations_with_module_bases() {
+        let mut library = module("library", false, None, Vec::new());
+        library.program.data_segments.push(DataSegment {
+            kind: MemoryRegionKind::Rodata,
+            alignment: 8,
+            size: 8,
+            initial: Some(vec![0; 8]),
+        });
+        library.program.symbols.push(Symbol {
+            name: "library_data".to_string(),
+            target: SymbolTarget::Data {
+                segment: 0,
+                offset: 0,
+            },
+        });
+        library.program.symbols.push(Symbol {
+            name: "library_init".to_string(),
+            target: SymbolTarget::Function(FuncId(0)),
+        });
+
+        let mut entry = module("entry", true, Some(0), vec![dependency("library")]);
+        entry.program.data_segments.push(DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 8,
+            size: 8,
+            initial: Some(vec![0; 8]),
+        });
+        entry.program.functions[0].registers = 1;
+        entry.program.functions[0].instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::CallDirect {
+                dest: 0,
+                function: FuncId(0),
+                arguments: Vec::new(),
+            },
+            Instruction::Return { value: 0 },
+        ];
+        entry.program.functions[0].locations = vec![None; 3];
+        entry.program.relocations.push(Relocation {
+            kind: RelocationKind::Abs64,
+            symbol: "library_data".to_string(),
+            addend: 0,
+            target: RelocationTarget::Data {
+                segment: 0,
+                offset: 0,
+            },
+        });
+        entry.program.relocations.push(Relocation {
+            kind: RelocationKind::FuncIndex,
+            symbol: "library_init".to_string(),
+            addend: 0,
+            target: RelocationTarget::CallDirect {
+                function: FuncId(0),
+                instruction: 1,
+            },
+        });
+
+        let linked = link_modules(vec![entry, library]).expect("machine linkage should remap");
+        assert_eq!(
+            linked.symbols,
+            vec![
+                Symbol {
+                    name: "library_data".to_string(),
+                    target: SymbolTarget::Data {
+                        segment: 0,
+                        offset: 0,
+                    },
+                },
+                Symbol {
+                    name: "library_init".to_string(),
+                    target: SymbolTarget::Function(FuncId(1)),
+                },
+            ]
+        );
+        assert_eq!(
+            linked.relocations,
+            vec![
+                Relocation {
+                    kind: RelocationKind::Abs64,
+                    symbol: "library_data".to_string(),
+                    addend: 0,
+                    target: RelocationTarget::Data {
+                        segment: 1,
+                        offset: 0,
+                    },
+                },
+                Relocation {
+                    kind: RelocationKind::FuncIndex,
+                    symbol: "library_init".to_string(),
+                    addend: 0,
+                    target: RelocationTarget::CallDirect {
+                        function: FuncId(2),
+                        instruction: 1,
+                    },
+                },
+            ]
+        );
+        VM::new(&linked)
+            .run()
+            .expect("linked symbols and relocations should load and execute");
+    }
+
+    #[test]
+    fn rejects_duplicate_machine_symbols_across_modules() {
+        let mut first = module("first", true, Some(0), vec![dependency("second")]);
+        first.program.symbols.push(Symbol {
+            name: "duplicate".to_string(),
+            target: SymbolTarget::Function(FuncId(0)),
+        });
+        let mut second = module("second", false, None, Vec::new());
+        second.program.symbols.push(Symbol {
+            name: "duplicate".to_string(),
+            target: SymbolTarget::Function(FuncId(0)),
+        });
+
+        let error = link_modules(vec![first, second]).expect_err("duplicate symbols must reject");
+        assert!(error.contains("duplicates name `duplicate`"), "{error}");
+    }
+
+    #[test]
+    fn links_machine_abi_metadata_without_rewriting_scalar_domains() {
+        let mut entry = module("entry", true, Some(0), Vec::new());
+        let function = &mut entry.program.functions[0];
+        function.arity = 2;
+        function.params = vec!["value".to_string(), "pointer".to_string()];
+        function.machine_params = vec![
+            MachineScalarType::MachineInt,
+            MachineScalarType::Address,
+        ];
+        function.machine_return = Some(MachineScalarType::MachineFloat);
+
+        let linked = link_modules(vec![entry]).expect("machine ABI metadata should link");
+        let function = &linked.functions[1];
+        assert_eq!(
+            function.machine_params,
+            vec![MachineScalarType::MachineInt, MachineScalarType::Address]
+        );
+        assert_eq!(function.machine_return, Some(MachineScalarType::MachineFloat));
+        assert_eq!(function.arity, 2);
+        assert_eq!(function.params, vec!["value", "pointer"]);
+    }
+
+    #[test]
     fn links_module_dependency_cycles_without_stream_splicing() {
         let entry = ModuleArtifact {
             identity: "entry".to_string(),
@@ -754,6 +952,7 @@ mod tests {
     fn remaps_machine_conversion_registers_with_the_function_base() {
         let context = ModuleContext {
             constant_base: 0,
+            data_segment_base: 0,
             name_base: 0,
             function_base: 0,
             type_remap: Vec::new(),
@@ -837,6 +1036,7 @@ mod tests {
     fn remaps_machine_memory_registers_with_the_function_base() {
         let context = ModuleContext {
             constant_base: 0,
+            data_segment_base: 0,
             name_base: 0,
             function_base: 0,
             type_remap: Vec::new(),
@@ -1712,6 +1912,40 @@ fn remap_location(location: &Option<DebugLocation>, source_base: usize) -> Optio
             end: range.end,
         }),
     })
+}
+
+fn remap_function_id(
+    function: &FuncId,
+    context: &ModuleContext,
+    module_identity: &str,
+) -> Result<FuncId, LinkError> {
+    let local = usize::try_from(function.0).map_err(|_| {
+        LinkError::module(
+            LinkErrorKind::Overflow,
+            module_identity,
+            format!("function f{} index cannot be represented", function.0),
+        )
+    })?;
+    let with_base = checked_add(local, context.function_base, "linked function index")?;
+    let linked = checked_add(with_base, 1, "linked function index")?;
+    let linked = u32::try_from(linked).map_err(|_| {
+        LinkError::module(
+            LinkErrorKind::Overflow,
+            module_identity,
+            "linked function index exceeds the function id width",
+        )
+    })?;
+    Ok(FuncId(linked))
+}
+
+fn remap_data_segment(
+    segment: usize,
+    context: &ModuleContext,
+    module_identity: &str,
+) -> Result<usize, LinkError> {
+    checked_add(segment, context.data_segment_base, "linked data segment index").map_err(
+        |error| LinkError::module(LinkErrorKind::Overflow, module_identity, error.message),
+    )
 }
 
 fn checked_add(left: usize, right: usize, description: &str) -> Result<usize, LinkError> {

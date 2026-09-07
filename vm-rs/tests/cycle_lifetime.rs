@@ -10,6 +10,8 @@ fn self_array_program() -> Program {
     Program {
         constants: Vec::new(),
         data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![
@@ -29,6 +31,8 @@ fn self_array_program() -> Program {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -60,6 +64,8 @@ fn callback_cycle_program() -> Program {
     Program {
         constants: vec![Constant::Number("1".to_string())],
         data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![
@@ -79,6 +85,8 @@ fn callback_cycle_program() -> Program {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -112,6 +120,8 @@ fn callback_cycle_program() -> Program {
             name: "make_cycle".to_string(),
             arity: 1,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             registers: 2,
             params: vec!["item".to_string()],
             instructions: vec![
@@ -137,6 +147,8 @@ fn nested_cycle_program() -> Program {
     Program {
         constants: Vec::new(),
         data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -150,6 +162,8 @@ fn nested_cycle_program() -> Program {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -175,6 +189,8 @@ fn nested_cycle_program() -> Program {
                 name: "inner".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 2,
                 params: Vec::new(),
                 instructions: vec![
@@ -198,6 +214,8 @@ fn nested_cycle_program() -> Program {
                 name: "outer".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 2,
                 params: Vec::new(),
                 instructions: vec![
@@ -224,6 +242,8 @@ fn cycle_until_pause_program() -> Program {
     Program {
         constants: Vec::new(),
         data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: vec![compiler_design_vm::bytecode::NativeImport {
@@ -237,6 +257,8 @@ fn cycle_until_pause_program() -> Program {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),

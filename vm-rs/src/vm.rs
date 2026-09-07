@@ -1,12 +1,11 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{
-    Constant, DataSegment, DebugLocation, DebugRange, DebugSource, Function, Instruction,
-    MachineIntPredicate, MachineIntWidth, MachineMemoryType, Program, TypeId, UpvalueSource,
-    VariantId,
+    Constant, DataSegment, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction,
+    MachineIntPredicate, MachineIntWidth, MachineMemoryType, MachineScalarType, Program,
+    RelocationKind, RelocationTarget, SymbolTarget, TypeId, UpvalueSource, VariantId,
+    MACHINE_ABI_MAX_PARAMS,
 };
-#[cfg(test)]
-use crate::bytecode::FuncId;
 use crate::jit::{
     JitCallContext, JitFrameMaterialization, JitExecutionMode, JitHelperAbi, JitSafepoint,
     JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
@@ -812,7 +811,7 @@ fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
 fn initialize_machine_segments(
     memory: &mut LinearMemory,
     segments: &[DataSegment],
-) -> Result<(), RuntimeError> {
+) -> Result<Vec<MemoryRegion>, RuntimeError> {
     for (index, segment) in segments.iter().enumerate() {
         if segment.alignment == 0 || !segment.alignment.is_power_of_two() {
             return Err(RuntimeError::new(format!(
@@ -856,14 +855,20 @@ fn initialize_machine_segments(
     }
 
     // The static layout is fixed by kind, while descriptor order remains
-    // stable within each segment class.
+    // stable within each segment class. Keep the resulting regions indexed by
+    // descriptor so symbols do not depend on allocation order.
+    let mut regions = vec![None; segments.len()];
     for kind in [
         MemoryRegionKind::Rodata,
         MemoryRegionKind::Data,
         MemoryRegionKind::Bss,
     ] {
-        for segment in segments.iter().filter(|segment| segment.kind == kind) {
-            match kind {
+        for (index, segment) in segments
+            .iter()
+            .enumerate()
+            .filter(|(_, segment)| segment.kind == kind)
+        {
+            let region = match kind {
                 MemoryRegionKind::Rodata | MemoryRegionKind::Data => memory
                     .allocate_region_with_bytes(
                         kind,
@@ -878,9 +883,215 @@ fn initialize_machine_segments(
                     unreachable!("unsupported segment kinds were rejected above")
                 }
             };
+            regions[index] = Some(region);
         }
     }
-    Ok(())
+    Ok(regions
+        .into_iter()
+        .map(|region| region.expect("validated static segment kind"))
+        .collect())
+}
+
+fn add_machine_address_addend(address: VmAddress, addend: i64) -> Option<VmAddress> {
+    let resolved = if addend >= 0 {
+        address.checked_add(addend as u64)?
+    } else {
+        address.checked_sub(addend.unsigned_abs())?
+    };
+    (resolved >= crate::memory::NULL_GUARD_END).then_some(resolved)
+}
+
+fn resolve_machine_relocations(
+    memory: &mut LinearMemory,
+    program: &Program,
+    regions: &[MemoryRegion],
+) -> Result<BTreeMap<(usize, usize), FuncId>, RuntimeError> {
+    let mut symbols = BTreeMap::new();
+    for (index, symbol) in program.symbols.iter().enumerate() {
+        if symbol.name.is_empty() {
+            return Err(RuntimeError::new(format!(
+                "machine symbol s{} has an empty name",
+                index
+            )));
+        }
+        if symbols.contains_key(&symbol.name) {
+            return Err(RuntimeError::new(format!(
+                "duplicate machine symbol `{}`",
+                symbol.name
+            )));
+        }
+        let resolved = match &symbol.target {
+            SymbolTarget::Function(function) => {
+                if program.functions.get(function.0 as usize).is_none() {
+                    return Err(RuntimeError::new(format!(
+                        "machine symbol `{}` references function f{} out of range",
+                        symbol.name, function.0
+                    )));
+                }
+                ResolvedMachineSymbol::Function(*function)
+            }
+            SymbolTarget::Data { segment, offset } => {
+                let Some(descriptor) = program.data_segments.get(*segment) else {
+                    return Err(RuntimeError::new(format!(
+                        "machine symbol `{}` references data segment d{} out of range",
+                        symbol.name, segment
+                    )));
+                };
+                let Some(region) = regions.get(*segment) else {
+                    return Err(RuntimeError::new(format!(
+                        "machine symbol `{}` has no allocated data segment d{}",
+                        symbol.name, segment
+                    )));
+                };
+                let Some(address) = region.base.checked_add(*offset) else {
+                    return Err(RuntimeError::new(format!(
+                        "machine symbol `{}` address overflows",
+                        symbol.name
+                    )));
+                };
+                if *offset >= descriptor.size || !region.contains(address) {
+                    return Err(RuntimeError::new(format!(
+                        "machine symbol `{}` offset {} is outside data segment d{}",
+                        symbol.name, offset, segment
+                    )));
+                }
+                ResolvedMachineSymbol::Address(address)
+            }
+        };
+        symbols.insert(symbol.name.clone(), resolved);
+    }
+
+    let mut patches = Vec::new();
+    let mut direct_calls = BTreeMap::new();
+    let mut patched_data = BTreeMap::new();
+    for (index, relocation) in program.relocations.iter().enumerate() {
+        let Some(symbol) = symbols.get(&relocation.symbol) else {
+            return Err(RuntimeError::new(format!(
+                "machine relocation r{} references undefined symbol `{}`",
+                index, relocation.symbol
+            )));
+        };
+        match (&relocation.kind, &relocation.target, symbol) {
+            (
+                RelocationKind::Abs64,
+                RelocationTarget::Data { segment, offset },
+                ResolvedMachineSymbol::Address(symbol_address),
+            ) => {
+                let Some(descriptor) = program.data_segments.get(*segment) else {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} targets data segment d{} out of range",
+                        index, segment
+                    )));
+                };
+                let Some(region) = regions.get(*segment) else {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} has no allocated target segment d{}",
+                        index, segment
+                    )));
+                };
+                let Some(end) = offset.checked_add(8) else {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} target offset overflows",
+                        index
+                    )));
+                };
+                if end > descriptor.size || end > region.size() {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} target range is outside data segment d{}",
+                        index, segment
+                    )));
+                }
+                let target_address = region.base.checked_add(*offset).ok_or_else(|| {
+                    RuntimeError::new(format!(
+                        "machine relocation r{} target address overflows",
+                        index
+                    ))
+                })?;
+                if patched_data.insert((*segment, *offset), ()).is_some() {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} duplicates a data target",
+                        index
+                    )));
+                }
+                let resolved = add_machine_address_addend(*symbol_address, relocation.addend)
+                    .ok_or_else(|| {
+                        RuntimeError::new(format!(
+                            "machine relocation r{} symbol address overflows",
+                            index
+                        ))
+                    })?;
+                patches.push((target_address, resolved.to_le_bytes()));
+            }
+            (RelocationKind::Abs64, RelocationTarget::Data { .. }, _) => {
+                return Err(RuntimeError::new(format!(
+                    "machine relocation r{} ABS64 requires a data symbol",
+                    index
+                )));
+            }
+            (RelocationKind::Abs64, RelocationTarget::CallDirect { .. }, _) => {
+                return Err(RuntimeError::new(format!(
+                    "machine relocation r{} ABS64 requires a data target",
+                    index
+                )));
+            }
+            (
+                RelocationKind::FuncIndex,
+                RelocationTarget::CallDirect {
+                    function,
+                    instruction,
+                },
+                ResolvedMachineSymbol::Function(target),
+            ) => {
+                if relocation.addend != 0 {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} FUNC_INDEX does not accept an addend",
+                        index
+                    )));
+                }
+                let Some(body) = program.functions.get(function.0 as usize) else {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} call body f{} is out of range",
+                        index, function.0
+                    )));
+                };
+                if !matches!(body.instructions.get(*instruction), Some(Instruction::CallDirect { .. })) {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} target is not a call_direct operand",
+                        index
+                    )));
+                }
+                if direct_calls.insert((function.0 as usize, *instruction), *target).is_some() {
+                    return Err(RuntimeError::new(format!(
+                        "machine relocation r{} duplicates a call target",
+                        index
+                    )));
+                }
+            }
+            (RelocationKind::FuncIndex, RelocationTarget::CallDirect { .. }, _) => {
+                return Err(RuntimeError::new(format!(
+                    "machine relocation r{} FUNC_INDEX requires a function symbol",
+                    index
+                )));
+            }
+            (RelocationKind::FuncIndex, RelocationTarget::Data { .. }, _) => {
+                return Err(RuntimeError::new(format!(
+                    "machine relocation r{} FUNC_INDEX requires a call_direct target",
+                    index
+                )));
+            }
+        }
+    }
+
+    for (address, bytes) in patches {
+        memory.patch_bytes(address, &bytes).map_err(RuntimeError::from)?;
+    }
+    Ok(direct_calls)
+}
+
+#[derive(Clone, Copy)]
+enum ResolvedMachineSymbol {
+    Function(FuncId),
+    Address(VmAddress),
 }
 
 fn decode_machine_memory_bits(
@@ -935,6 +1146,15 @@ fn prepare_function(function: &Function) -> PreparedFunction {
         body: Rc::new(function.clone()),
         variable_plan: Rc::new(variable_plan),
     }
+}
+
+fn machine_scalar_matches(expected: MachineScalarType, value: &Value) -> bool {
+    matches!(
+        (expected, value),
+        (MachineScalarType::MachineInt, Value::MachineInt(_))
+            | (MachineScalarType::MachineFloat, Value::MachineFloat(_))
+            | (MachineScalarType::Address, Value::Address(_))
+    )
 }
 
 fn native_spec(name: &str) -> Option<&'static NativeSpec> {
@@ -1078,7 +1298,10 @@ pub struct RuntimeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{BlockId, Function, NativeId, NativeImport};
+    use crate::bytecode::{
+        BlockId, Function, NativeId, NativeImport, Relocation, RelocationKind, RelocationTarget,
+        Symbol, SymbolTarget,
+    };
     use crate::runtime::{new_cell, new_environment};
     use std::cell::RefCell;
 
@@ -1360,6 +1583,8 @@ mod tests {
         Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -1370,6 +1595,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -1387,6 +1614,8 @@ mod tests {
         Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -1400,6 +1629,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -1444,6 +1675,8 @@ mod tests {
             name: name.to_string(),
             arity,
             machine_frame_size,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count,
             upvalues: Vec::new(),
             params: params.iter().map(|param| (*param).to_string()).collect(),
@@ -1453,10 +1686,37 @@ mod tests {
         }
     }
 
+    fn machine_abi_function(
+        id: u32,
+        name: &str,
+        machine_params: &[MachineScalarType],
+        machine_return: Option<MachineScalarType>,
+        local_count: usize,
+        params: &[&str],
+        registers: usize,
+        instructions: Vec<Instruction>,
+    ) -> Function {
+        let mut function = machine_function(
+            id,
+            name,
+            machine_params.len(),
+            0,
+            local_count,
+            params,
+            registers,
+            instructions,
+        );
+        function.machine_params = machine_params.to_vec();
+        function.machine_return = machine_return;
+        function
+    }
+
     fn machine_program_with_functions(functions: Vec<Function>) -> Program {
         Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -1501,6 +1761,412 @@ mod tests {
         }?;
         assert!(matches!(result, Some(Value::Nil)));
         Ok(frame.registers)
+    }
+
+    #[test]
+    fn direct_machine_abi_calls_preserve_all_scalar_domains() {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            0,
+            0,
+            &[],
+            6,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: 0,
+                    function: FuncId(1),
+                    arguments: vec![3],
+                },
+                Instruction::CallDirect {
+                    dest: 1,
+                    function: FuncId(2),
+                    arguments: vec![4],
+                },
+                Instruction::CallDirect {
+                    dest: 2,
+                    function: FuncId(3),
+                    arguments: vec![5],
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let machine_int = machine_abi_function(
+            1,
+            "machine_int_identity",
+            &[MachineScalarType::MachineInt],
+            Some(MachineScalarType::MachineInt),
+            1,
+            &["value"],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        let machine_float = machine_abi_function(
+            2,
+            "machine_float_identity",
+            &[MachineScalarType::MachineFloat],
+            Some(MachineScalarType::MachineFloat),
+            1,
+            &["value"],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        let address = machine_abi_function(
+            3,
+            "address_identity",
+            &[MachineScalarType::Address],
+            Some(MachineScalarType::Address),
+            1,
+            &["value"],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        let program = machine_program_with_functions(vec![main, machine_int, machine_float, address]);
+        let mut vm = VM::new(&program);
+        let registers = run_machine_body(
+            &mut vm,
+            vec![
+                Value::Nil,
+                Value::Nil,
+                Value::Nil,
+                Value::machine_int(u64::MAX),
+                Value::machine_float(-0.0),
+                Value::address(0x40),
+            ],
+        )
+        .expect("direct machine ABI calls should execute");
+
+        assert!(matches!(registers[0], Value::MachineInt(value) if value == u64::MAX));
+        assert!(matches!(registers[1], Value::MachineFloat(value) if value.to_bits() == (-0.0f64).to_bits()));
+        assert!(matches!(registers[2], Value::Address(value) if value == 0x40));
+    }
+
+    #[test]
+    fn machine_abi_accepts_eight_parameters_and_rejects_nine() {
+        let params = ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"];
+        let machine_params = [MachineScalarType::MachineInt; MACHINE_ABI_MAX_PARAMS];
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            0,
+            0,
+            &[],
+            MACHINE_ABI_MAX_PARAMS + 1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: MACHINE_ABI_MAX_PARAMS,
+                    function: FuncId(1),
+                    arguments: (0..MACHINE_ABI_MAX_PARAMS).collect(),
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let callee = machine_abi_function(
+            1,
+            "eight_parameters",
+            &machine_params,
+            Some(MachineScalarType::MachineInt),
+            MACHINE_ABI_MAX_PARAMS,
+            &params,
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal {
+                    dest: 0,
+                    slot: MACHINE_ABI_MAX_PARAMS - 1,
+                },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        let program = machine_program_with_functions(vec![main, callee]);
+        let mut vm = VM::new(&program);
+        let registers = run_machine_body(
+            &mut vm,
+            (0..MACHINE_ABI_MAX_PARAMS + 1)
+                .map(|value| Value::machine_int(value as u64 + 10))
+                .collect(),
+        )
+        .expect("the eight-parameter ABI should execute");
+        assert!(matches!(
+            registers[MACHINE_ABI_MAX_PARAMS],
+            Value::MachineInt(value) if value == 17
+        ));
+
+        let too_many_params = (0..MACHINE_ABI_MAX_PARAMS + 1)
+            .map(|_| MachineScalarType::MachineInt)
+            .collect::<Vec<_>>();
+        let too_many_names = ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"];
+        let invalid = machine_program_with_functions(vec![
+            machine_function(
+                0,
+                "main",
+                0,
+                0,
+                0,
+                &[],
+                0,
+                vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+            ),
+            machine_abi_function(
+                1,
+                "nine_parameters",
+                &too_many_params,
+                Some(MachineScalarType::MachineInt),
+                MACHINE_ABI_MAX_PARAMS + 1,
+                &too_many_names,
+                1,
+                vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+            ),
+        ]);
+        let error = crate::format::verify_program(&invalid)
+            .expect_err("the ABI must reject more than eight parameters");
+        assert!(error
+            .message
+            .contains("declares 9 machine ABI parameters, maximum is 8"));
+    }
+
+    #[test]
+    fn machine_abi_rejects_wrong_argument_domains_at_the_call_boundary() {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            0,
+            0,
+            &[],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: 0,
+                    function: FuncId(1),
+                    arguments: vec![0],
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let callee = machine_abi_function(
+            1,
+            "expects_machine_int",
+            &[MachineScalarType::MachineInt],
+            Some(MachineScalarType::MachineInt),
+            1,
+            &["value"],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        let program = machine_program_with_functions(vec![main, callee]);
+        let mut vm = VM::new(&program);
+        let error = run_machine_body(&mut vm, vec![Value::number(1.0)])
+            .expect_err("dynamic numbers must not cross a machine ABI boundary");
+
+        assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+        assert!(error
+            .message
+            .contains("machine ABI argument 0 for function `expects_machine_int` expects machine_int, got number"));
+    }
+
+    #[test]
+    fn machine_abi_return_domains_and_void_returns_are_checked() {
+        let returning_main = machine_function(
+            0,
+            "main",
+            0,
+            0,
+            0,
+            &[],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: 0,
+                    function: FuncId(1),
+                    arguments: Vec::new(),
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let wrong_return = machine_abi_function(
+            1,
+            "expects_machine_int_return",
+            &[],
+            Some(MachineScalarType::MachineInt),
+            0,
+            &[],
+            0,
+            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+        );
+        let program = machine_program_with_functions(vec![returning_main, wrong_return]);
+        let mut vm = VM::new(&program);
+        let error = run_machine_body(&mut vm, vec![Value::Nil])
+            .expect_err("a nil result must not satisfy a machine integer return");
+        assert!(error.message.contains(
+            "machine ABI return for function `expects_machine_int_return` expects machine_int, got nil"
+        ));
+
+        let void_main = machine_function(
+            0,
+            "main",
+            0,
+            0,
+            0,
+            &[],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: 0,
+                    function: FuncId(1),
+                    arguments: vec![0],
+                },
+                Instruction::ReturnNil,
+            ],
+        );
+        let void = machine_abi_function(
+            1,
+            "machine_void",
+            &[MachineScalarType::MachineInt],
+            None,
+            1,
+            &["value"],
+            0,
+            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+        );
+        let program = machine_program_with_functions(vec![void_main, void]);
+        let mut vm = VM::new(&program);
+        let registers = run_machine_body(&mut vm, vec![Value::machine_int(7)])
+            .expect("a machine ABI function without a return must return nil");
+        assert!(matches!(registers[0], Value::Nil));
+    }
+
+    #[test]
+    fn indirect_machine_abi_calls_are_rejected_at_runtime() {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            0,
+            0,
+            &[],
+            0,
+            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+        );
+        let callee = machine_abi_function(
+            1,
+            "machine_target",
+            &[MachineScalarType::MachineInt],
+            Some(MachineScalarType::MachineInt),
+            1,
+            &["value"],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        let program = machine_program_with_functions(vec![main, callee]);
+        let mut vm = VM::new(&program);
+        let function = FunctionValue {
+            name: "machine_target".to_string(),
+            function_index: 1,
+            arity: 1,
+            identity: 0,
+            closure: vm.heap.new_environment(),
+            upvalues: Vec::new(),
+        };
+        let error = vm
+            .call_function(
+                &function,
+                CallArguments::One(Value::machine_int(7)),
+                false,
+                "main",
+                None,
+            )
+            .expect_err("machine ABI targets must not be called indirectly");
+        assert!(error
+            .message
+            .contains("machine ABI function `machine_target` requires a direct call"));
+    }
+
+    fn cooperative_machine_abi_call_program() -> Program {
+        let main = machine_function(0, "main", 0, 0, 0, &[], 0, Vec::new());
+        let worker = machine_function(
+            1,
+            "worker",
+            1,
+            0,
+            1,
+            &["value"],
+            2,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::CallDirect {
+                    dest: 1,
+                    function: FuncId(2),
+                    arguments: vec![0],
+                },
+                Instruction::Return { value: 1 },
+            ],
+        );
+        let callee = machine_abi_function(
+            2,
+            "scheduled_machine_identity",
+            &[MachineScalarType::MachineInt],
+            Some(MachineScalarType::MachineInt),
+            1,
+            &["value"],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        machine_program_with_functions(vec![main, worker, callee])
+    }
+
+    #[test]
+    fn cooperative_direct_calls_validate_machine_abi_arguments_and_results() {
+        let program = cooperative_machine_abi_call_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("cooperative session should start");
+        let task = run
+            .spawn(TaskSpec::function(1, vec![Value::machine_int(91)]))
+            .expect("machine ABI worker should spawn");
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("cooperative machine ABI call should complete"),
+            CooperativeStep::Complete
+        );
+        let outcome = run
+            .task_outcome(task)
+            .expect("machine ABI task outcome should be readable")
+            .expect("machine ABI task should be terminal");
+        assert!(matches!(outcome, TaskOutcome::Completed(Value::MachineInt(91))));
     }
 
     #[test]
@@ -1580,6 +2246,148 @@ mod tests {
                 .kind(),
             MemoryErrorKind::WriteToReadOnlyMemory
         );
+    }
+
+    #[test]
+    fn machine_abs64_relocations_patch_vm_addresses_after_segment_allocation() {
+        let mut program = machine_program_with_data_segments(vec![
+            DataSegment {
+                kind: MemoryRegionKind::Rodata,
+                alignment: 8,
+                size: 16,
+                initial: Some(vec![0; 16]),
+            },
+            DataSegment {
+                kind: MemoryRegionKind::Data,
+                alignment: 8,
+                size: 8,
+                initial: Some(vec![0; 8]),
+            },
+        ]);
+        program.symbols = vec![Symbol {
+            name: "global_bytes".to_string(),
+            target: SymbolTarget::Data {
+                segment: 0,
+                offset: 2,
+            },
+        }];
+        program.relocations = vec![Relocation {
+            kind: RelocationKind::Abs64,
+            symbol: "global_bytes".to_string(),
+            addend: 3,
+            target: RelocationTarget::Data {
+                segment: 1,
+                offset: 0,
+            },
+        },
+        Relocation {
+            kind: RelocationKind::Abs64,
+            symbol: "global_bytes".to_string(),
+            addend: 3,
+            target: RelocationTarget::Data {
+                segment: 0,
+                offset: 8,
+            },
+        }];
+
+        let mut vm = VM::new(&program);
+        let regions = vm.memory().regions();
+        let rodata_base = regions[0].base;
+        let data_base = regions[1].base;
+        let rodata_address = rodata_base + 5;
+        let patched = vm.memory().read_bytes(data_base, 8).unwrap();
+        assert_eq!(u64::from_le_bytes(patched.try_into().unwrap()), rodata_address);
+        let rodata_patch = vm.memory().read_bytes(rodata_base + 8, 8).unwrap();
+        assert_eq!(u64::from_le_bytes(rodata_patch.try_into().unwrap()), rodata_address);
+        assert_eq!(vm.memory_mut().write_bytes(rodata_base, &[1]), Err(MemoryError::WriteToReadOnlyMemory {
+            address: rodata_base,
+            size: 1,
+            region: MemoryRegionKind::Rodata,
+        }));
+    }
+
+    #[test]
+    fn machine_function_relocations_patch_direct_call_targets() {
+        let main = machine_function(
+            0,
+            "main",
+            0,
+            0,
+            0,
+            &[],
+            1,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::CallDirect {
+                    dest: 0,
+                    function: FuncId(0),
+                    arguments: Vec::new(),
+                },
+                Instruction::Return { value: 0 },
+            ],
+        );
+        let callee = machine_function(
+            1,
+            "resolved_target",
+            0,
+            0,
+            0,
+            &[],
+            0,
+            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+        );
+        let mut program = machine_program_with_functions(vec![main, callee]);
+        program.symbols = vec![Symbol {
+            name: "resolved_target".to_string(),
+            target: SymbolTarget::Function(FuncId(1)),
+        }];
+        program.relocations = vec![Relocation {
+            kind: RelocationKind::FuncIndex,
+            symbol: "resolved_target".to_string(),
+            addend: 0,
+            target: RelocationTarget::CallDirect {
+                function: FuncId(0),
+                instruction: 1,
+            },
+        }];
+
+        VM::new(&program)
+            .run()
+            .expect("function symbol relocation should select the resolved target");
+    }
+
+    #[test]
+    fn machine_symbol_loader_rejects_undefined_and_duplicate_symbols() {
+        let mut undefined = machine_program_with_data_segments(Vec::new());
+        undefined.relocations = vec![Relocation {
+            kind: RelocationKind::FuncIndex,
+            symbol: "missing".to_string(),
+            addend: 0,
+            target: RelocationTarget::CallDirect {
+                function: FuncId(0),
+                instruction: 0,
+            },
+        }];
+        let error = VM::new(&undefined)
+            .run()
+            .expect_err("undefined machine symbols must fail before execution");
+        assert!(error.message.contains("undefined symbol `missing`"));
+
+        let mut duplicate = machine_program_with_data_segments(Vec::new());
+        duplicate.symbols = vec![
+            Symbol {
+                name: "same".to_string(),
+                target: SymbolTarget::Function(FuncId(0)),
+            },
+            Symbol {
+                name: "same".to_string(),
+                target: SymbolTarget::Function(FuncId(0)),
+            },
+        ];
+        let error = VM::new(&duplicate)
+            .run()
+            .expect_err("duplicate machine symbols must fail before execution");
+        assert!(error.message.contains("duplicate machine symbol `same`"));
     }
 
     #[test]
@@ -2588,6 +3396,8 @@ mod tests {
                 Constant::String("b".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -2601,6 +3411,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -2693,6 +3505,8 @@ mod tests {
                 Constant::String("cd".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -2706,6 +3520,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3470,6 +4286,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::String("hello".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3483,6 +4301,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3563,6 +4383,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("3".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![
@@ -3582,6 +4404,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3643,6 +4467,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("7".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3657,6 +4483,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "main".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -3681,6 +4509,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "seven".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -3715,6 +4545,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("30".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![
@@ -3734,6 +4566,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3811,6 +4645,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: vec![Constant::Number("7".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3824,6 +4660,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3848,6 +4686,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: vec![Constant::Number("42".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3861,6 +4701,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3888,6 +4730,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "answer".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 1,
                 params: Vec::new(),
                 instructions: vec![
@@ -3905,6 +4749,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants,
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -3918,6 +4764,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3964,6 +4812,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: vec![Constant::Number("1".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -3974,6 +4824,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -3994,6 +4846,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![
@@ -4013,6 +4867,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4046,6 +4902,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "identity".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -4063,6 +4921,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -4076,6 +4936,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4098,6 +4960,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "worker".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 5,
                     params: Vec::new(),
                     instructions: vec![
@@ -4124,6 +4988,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "identity".to_string(),
                     arity: 1,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -4142,6 +5008,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: vec![Constant::Nil, Constant::Number("0".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4152,6 +5020,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4187,6 +5057,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("0".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4197,6 +5069,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4211,6 +5085,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "target".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
@@ -4226,6 +5102,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "waiter".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
@@ -4241,6 +5119,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "failure".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
@@ -4262,6 +5142,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "pending".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
@@ -4286,6 +5168,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("4".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -4299,6 +5183,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4313,6 +5199,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "odd".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
@@ -4339,6 +5227,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "even".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
@@ -4373,6 +5263,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("4".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -4387,6 +5279,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "main".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -4401,6 +5295,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "odd".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 2,
                     params: Vec::new(),
                     instructions: vec![
@@ -4427,6 +5323,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "even".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 2,
                     params: Vec::new(),
                     instructions: vec![
@@ -5541,6 +6439,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5551,6 +6451,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5575,6 +6477,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "fail".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 4,
                 params: Vec::new(),
                 instructions: vec![
@@ -5603,6 +6507,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("1".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5613,6 +6519,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5659,6 +6567,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -5672,6 +6582,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5732,6 +6644,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number(depth.to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5742,6 +6656,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5764,6 +6680,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "recurse".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 7,
                 params: vec!["n".to_string()],
                 instructions: vec![
@@ -5822,6 +6740,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             vm.call_function(
                 &function,
                 CallArguments::One(Value::number(2.0)),
+                false,
                 "main",
                 None,
             )
@@ -5843,6 +6762,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             constants: vec![Constant::Number("1".to_string())],
             names: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5852,6 +6773,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5866,6 +6789,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "eligible".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 1,
                 params: Vec::new(),
                 instructions: vec![
@@ -6176,6 +7101,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6186,6 +7113,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6200,6 +7129,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "identity".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -6238,6 +7169,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("10".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6248,6 +7181,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6262,6 +7197,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "expand".to_string(),
                     arity: 1,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 5,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -6291,6 +7228,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "identity".to_string(),
                     arity: 1,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -6349,6 +7288,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6359,6 +7300,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6373,6 +7316,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "greater_than_one".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -6417,6 +7362,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Nil],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6427,6 +7374,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6441,6 +7390,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "no_args".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 0,
                     params: Vec::new(),
                     instructions: Vec::new(),
@@ -6453,6 +7404,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "returns_nil".to_string(),
                     arity: 1,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -6521,6 +7474,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("2".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6531,6 +7486,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6545,6 +7502,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "is_two".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: vec!["item".to_string()],
                 instructions: vec![
@@ -6633,6 +7592,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Nil],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6643,6 +7604,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6657,6 +7620,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "no_args".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 0,
                     params: Vec::new(),
                     instructions: Vec::new(),
@@ -6669,6 +7634,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "returns_nil".to_string(),
                     arity: 1,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
@@ -6737,6 +7704,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6747,6 +7716,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6761,6 +7732,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "add".to_string(),
                 arity: 2,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: vec!["acc".to_string(), "item".to_string()],
                 instructions: vec![
@@ -6810,6 +7783,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -6820,6 +7795,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -6834,6 +7811,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "one_arg".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 0,
                 params: vec!["item".to_string()],
                 instructions: Vec::new(),
@@ -6948,6 +7927,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("2".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -6961,6 +7942,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7432,6 +8415,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Nil],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -7445,6 +8430,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7556,6 +8543,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7566,6 +8555,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7593,6 +8584,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 constants: vec![Constant::Number("1".to_string())],
                 names: Vec::new(),
                 data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
                 globals: Vec::new(),
                 types: Vec::new(),
                 native_imports: Vec::new(),
@@ -7602,6 +8595,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: "main".to_string(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -7630,6 +8625,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             name: "recurse".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             registers: 2,
             params: Vec::new(),
             instructions: vec![
@@ -7646,6 +8643,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7656,6 +8655,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7687,6 +8688,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7697,6 +8700,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7711,6 +8716,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "identity".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 0,
                 params: vec!["item".to_string()],
                 instructions: Vec::new(),
@@ -7744,6 +8751,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Nil],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -7754,6 +8763,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7783,6 +8794,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::String("é".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -7796,6 +8809,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -7867,6 +8882,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: String::new(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -7932,6 +8949,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: String::new(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -7970,6 +8989,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "answer".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: Vec::new(),
                 instructions: vec![
@@ -8098,6 +9119,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::Number("1".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: vec![NativeImport {
@@ -8111,6 +9134,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -8125,6 +9150,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "wide_add".to_string(),
                 arity: 1,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 33,
                 params: vec!["value".to_string()],
                 instructions: function_instructions,
@@ -8232,6 +9259,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "divide".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: Vec::new(),
                 instructions: vec![
@@ -8305,6 +9334,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -8315,6 +9346,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -8329,6 +9362,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "add".to_string(),
                 arity: 2,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: vec!["left".to_string(), "right".to_string()],
                 instructions: vec![
@@ -8361,6 +9396,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             .call_function(
                 &function,
                 CallArguments::Two(Value::number(2.0), Value::number(3.0)),
+                false,
                 "main",
                 None,
             )
@@ -8369,6 +9405,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             .call_function(
                 &function,
                 CallArguments::Two(Value::number(7.0), Value::number(8.0)),
+                false,
                 "main",
                 None,
             )
@@ -8395,6 +9432,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -8405,6 +9444,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -8419,6 +9460,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "protocol_failure".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: Vec::new(),
                 instructions: instructions.clone(),
@@ -8435,6 +9478,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: String::new(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -8472,6 +9517,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -8482,6 +9529,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -8496,6 +9545,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "divide".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 registers: 3,
                 params: Vec::new(),
                 instructions: vec![
@@ -8527,7 +9578,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         jit_vm.jit = JitState::enabled_for_tests([1], 4096);
         let jit_function = function();
         let jit_error = jit_vm
-            .call_function(&jit_function, CallArguments::Empty, "main", None)
+            .call_function(&jit_function, CallArguments::Empty, false, "main", None)
             .expect_err("the JIT checkpoint should enforce the step limit");
 
         let mut interpreter_vm = VM::with_config(&program, config);
@@ -8536,6 +9587,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             .call_function(
                 &interpreter_function,
                 CallArguments::Empty,
+                false,
                 "main",
                 None,
             )
@@ -8556,6 +9608,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 Constant::String("right".to_string()),
             ],
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -8566,6 +9620,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -8587,6 +9643,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: String::new(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -8682,6 +9740,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     name: String::new(),
                     arity: 0,
                     machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
                     local_count: 0,
                     upvalues: Vec::new(),
                     params: Vec::new(),
@@ -9075,6 +10135,7 @@ struct CallRequest {
     dest: usize,
     function: FunctionValue,
     arguments: CallArguments,
+    direct: bool,
     caller: String,
     call_site: Option<DebugLocation>,
 }
@@ -9413,6 +10474,7 @@ pub struct VM<'a> {
     heap: Heap,
     memory: LinearMemory,
     initialization_error: Option<RuntimeError>,
+    direct_call_relocations: BTreeMap<(usize, usize), FuncId>,
     machine_stack: Option<MachineStack>,
     global_cells: Vec<Option<Cell>>,
     global_names: Vec<String>,
@@ -10052,6 +11114,8 @@ impl<'a> CooperativeRun<'a> {
         let mut frame = match spec {
             TaskSpec::Main => {
                 let entry = self.vm.program.entry.0 as usize;
+                self.vm
+                    .validate_machine_call(&self.vm.program.functions[entry], &[], true)?;
                 let machine_frame_size = self.vm.program.functions[entry].machine_frame_size;
                 Frame {
                     body: Some(Rc::new(self.vm.program.functions[entry].clone())),
@@ -10080,6 +11144,8 @@ impl<'a> CooperativeRun<'a> {
                         arguments.len()
                     )));
                 }
+                self.vm
+                    .validate_machine_call(&cached.body, &arguments, true)?;
                 self.vm.new_function_frame(
                     index,
                     &cached,
@@ -10144,7 +11210,14 @@ impl<'a> VM<'a> {
         };
         let heap = Heap::new();
         let mut memory = LinearMemory::new();
-        let initialization_error = initialize_machine_segments(&mut memory, &program.data_segments).err();
+        let (initialization_error, direct_call_relocations) =
+            match initialize_machine_segments(&mut memory, &program.data_segments) {
+                Ok(regions) => match resolve_machine_relocations(&mut memory, program, &regions) {
+                    Ok(relocations) => (None, relocations),
+                    Err(error) => (Some(error), BTreeMap::new()),
+                },
+                Err(error) => (Some(error), BTreeMap::new()),
+            };
         let mut global_count = 0usize;
         for function in &program.functions {
             for instruction in &function.instructions {
@@ -10201,6 +11274,7 @@ impl<'a> VM<'a> {
             heap,
             memory,
             initialization_error,
+            direct_call_relocations,
             machine_stack: None,
             global_cells: vec![None; global_count],
             global_names,
@@ -10541,7 +11615,14 @@ impl<'a> VM<'a> {
             // vectors for the one execution of this VM instance.
             let execution = self
                 .allocate_current_machine_frame(&mut frame)
-                .and_then(|_| self.execute_body(&self.program.functions[entry], &mut frame));
+                .and_then(|_| self.execute_body(&self.program.functions[entry], &mut frame))
+                .and_then(|result| {
+                    self.validate_machine_return(
+                        &self.program.functions[entry],
+                        result.as_ref(),
+                    )?;
+                    Ok(result)
+                });
             let cleanup = self.release_current_machine_frame(&frame);
             match (execution, cleanup) {
                 (Err(error), _) => Err(error),
@@ -10716,6 +11797,15 @@ impl<'a> VM<'a> {
             }
 
             if instruction_index >= body.instructions.len() {
+                if let Err(error) = self.validate_machine_return(&body, None) {
+                    let error = self.decorate_scheduled_error(
+                        error,
+                        task,
+                        &body,
+                        instruction_index,
+                    );
+                    return self.stop_scheduled_task(context.task_id, task, error);
+                }
                 if self.task_trace_enabled {
                     let trace_result = {
                         let ScheduledVmTask { frames, trace, .. } = task;
@@ -10888,6 +11978,15 @@ impl<'a> VM<'a> {
                 }
                 Ok(InstructionAction::Jumped) => {}
                 Ok(InstructionAction::Return(value)) => {
+                    if let Err(error) = self.validate_machine_return(&body, Some(&value)) {
+                        let error = self.decorate_scheduled_error(
+                            error,
+                            task,
+                            &body,
+                            instruction_index,
+                        );
+                        return self.stop_scheduled_task(context.task_id, task, error);
+                    }
                     if self.task_trace_enabled {
                         let rendered = value.to_string();
                         let trace_result = {
@@ -10983,12 +12082,19 @@ impl<'a> VM<'a> {
             error.push_frame(request.caller, error.location.clone());
             return Err(error);
         }
+        let arguments = request.arguments.values();
+        if let Err(mut error) = self.validate_machine_call(&cached.body, &arguments, request.direct)
+        {
+            error.location = request.call_site.clone();
+            error.push_frame(request.caller.clone(), error.location.clone());
+            return Err(error);
+        }
         self.check_call_depth_at(task.frames.len().saturating_sub(1))?;
 
         let frame = self.new_function_frame(
             request.function.function_index,
             &cached,
-            request.arguments.values(),
+            arguments,
             request.function.closure.clone(),
             request.function.upvalues.clone(),
             Some(ReturnTarget {
@@ -11336,6 +12442,7 @@ impl<'a> VM<'a> {
                     let result = self.call_function(
                         function,
                         values,
+                        false,
                         frame.function.as_ref(),
                         call_site,
                     )?;
@@ -11346,7 +12453,8 @@ impl<'a> VM<'a> {
                     function,
                     arguments,
                 } => {
-                    let function = self.direct_call_function_value(function.0 as usize, frame)?;
+                    let target = self.resolved_direct_call_target(frame, instruction_index, *function);
+                    let function = self.direct_call_function_value(target.0 as usize, frame)?;
                     let values = match arguments.as_slice() {
                         [] => CallArguments::Empty,
                         [argument] => {
@@ -11368,6 +12476,7 @@ impl<'a> VM<'a> {
                     let result = self.call_function(
                         &function,
                         values,
+                        true,
                         frame.function.as_ref(),
                         call_site,
                     )?;
@@ -12491,6 +13600,7 @@ impl<'a> VM<'a> {
                     dest: *dest,
                     function: function.clone(),
                     arguments: values,
+                    direct: false,
                     caller: frame.function.to_string(),
                     call_site: call_site.cloned(),
                 }));
@@ -12500,7 +13610,8 @@ impl<'a> VM<'a> {
                 function,
                 arguments,
             } => {
-                let function = self.direct_call_function_value(function.0 as usize, frame)?;
+                let target = self.resolved_direct_call_target(frame, instruction_index, *function);
+                let function = self.direct_call_function_value(target.0 as usize, frame)?;
                 let values = match arguments.as_slice() {
                     [] => CallArguments::Empty,
                     [argument] => CallArguments::One(self.read_register(frame, *argument)?),
@@ -12521,6 +13632,7 @@ impl<'a> VM<'a> {
                     dest: *dest,
                     function,
                     arguments: values,
+                    direct: true,
                     caller: frame.function.to_string(),
                     call_site: call_site.cloned(),
                 }));
@@ -13285,6 +14397,21 @@ impl<'a> VM<'a> {
         self.prepared_functions.get(function_index).cloned()
     }
 
+    fn resolved_direct_call_target(
+        &self,
+        frame: &Frame,
+        instruction_index: usize,
+        encoded: FuncId,
+    ) -> FuncId {
+        let caller = frame
+            .function_index
+            .unwrap_or(self.program.entry.0 as usize);
+        self.direct_call_relocations
+            .get(&(caller, instruction_index))
+            .copied()
+            .unwrap_or(encoded)
+    }
+
     fn new_function_frame(
         &mut self,
         function_index: usize,
@@ -13333,6 +14460,12 @@ impl<'a> VM<'a> {
             .functions
             .get(function_index)
             .ok_or_else(|| RuntimeError::new("function index out of range"))?;
+        if function.has_machine_abi() {
+            return Err(RuntimeError::new(format!(
+                "machine ABI function `{}` cannot be used as a function value; use call_direct",
+                function.name
+            )));
+        }
         self.charge_runtime_elements(1)?;
         let closure = self.capture_environment(frame);
         let upvalues = function
@@ -13440,6 +14573,7 @@ impl<'a> VM<'a> {
                 let result = self.call_function(
                     &function,
                     CallArguments::Empty,
+                    true,
                     &caller,
                     None,
                 );
@@ -13586,6 +14720,7 @@ impl<'a> VM<'a> {
         &mut self,
         function: &FunctionValue,
         arguments: CallArguments,
+        direct: bool,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -13593,7 +14728,7 @@ impl<'a> VM<'a> {
         if owns_machine_stack {
             self.machine_stack = Some(self.new_machine_stack()?);
         }
-        let result = self.call_function_active(function, arguments, caller, call_site);
+        let result = self.call_function_active(function, arguments, direct, caller, call_site);
         if owns_machine_stack {
             if let Some(stack) = self.machine_stack.as_mut() {
                 stack.release_all(&mut self.memory);
@@ -13607,6 +14742,7 @@ impl<'a> VM<'a> {
         &mut self,
         function: &FunctionValue,
         arguments: CallArguments,
+        direct: bool,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -13629,6 +14765,11 @@ impl<'a> VM<'a> {
         }
 
         let jit_arguments = arguments.values();
+        if let Err(mut error) = self.validate_machine_call(&cached.body, &jit_arguments, direct) {
+            error.location = call_site.cloned();
+            error.push_frame(caller.to_string(), call_site.cloned());
+            return Err(error);
+        }
 
         self.check_call_depth()?;
 
@@ -13643,7 +14784,7 @@ impl<'a> VM<'a> {
         self.allocate_current_machine_frame(&mut frame)?;
 
         self.call_depth += 1;
-        let result = if self.jit.is_enabled() {
+        let result = if self.jit.is_enabled() && !cached.body.has_machine_abi() {
             match self.execute_jit_function(
                 function.function_index,
                 &mut frame,
@@ -13662,8 +14803,16 @@ impl<'a> VM<'a> {
             Ok(()) => result,
             Err(error) => Err(error),
         };
+        let result = match result {
+            Ok(result) => {
+                let result = result.unwrap_or(Value::Nil);
+                self.validate_machine_return(&cached.body, Some(&result))
+                    .map(|_| result)
+            }
+            Err(error) => Err(error),
+        };
         match result {
-            Ok(result) => Ok(result.unwrap_or(Value::Nil)),
+            Ok(result) => Ok(result),
             Err(mut error) => {
                 if error.location.is_none() {
                     error.location = call_site.cloned();
@@ -13672,6 +14821,94 @@ impl<'a> VM<'a> {
                 Err(error)
             }
         }
+    }
+
+    fn validate_machine_call(
+        &self,
+        function: &Function,
+        arguments: &[Value],
+        direct: bool,
+    ) -> Result<(), RuntimeError> {
+        if !function.has_machine_abi() {
+            return Ok(());
+        }
+        if function.machine_params.len() > MACHINE_ABI_MAX_PARAMS {
+            return Err(RuntimeError::new(format!(
+                "function `{}` declares {} machine ABI parameters, maximum is {}",
+                function.name,
+                function.machine_params.len(),
+                MACHINE_ABI_MAX_PARAMS
+            )));
+        }
+        if function.machine_params.len() != function.arity {
+            return Err(RuntimeError::new(format!(
+                "function `{}` machine ABI declares {} parameters, but function arity is {}",
+                function.name,
+                function.machine_params.len(),
+                function.arity
+            )));
+        }
+        if !direct {
+            return Err(RuntimeError::new(format!(
+                "machine ABI function `{}` requires a direct call",
+                function.name
+            )));
+        }
+        if arguments.len() != function.machine_params.len() {
+            return Err(RuntimeError::new(format!(
+                "machine ABI function `{}` expects {} arguments, got {}",
+                function.name,
+                function.machine_params.len(),
+                arguments.len()
+            )));
+        }
+        for (index, (expected, actual)) in function
+            .machine_params
+            .iter()
+            .zip(arguments.iter())
+            .enumerate()
+        {
+            if !machine_scalar_matches(*expected, actual) {
+                return Err(RuntimeError::new(format!(
+                    "machine ABI argument {} for function `{}` expects {}, got {}",
+                    index,
+                    function.name,
+                    expected.as_str(),
+                    actual.type_name()
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_machine_return(
+        &self,
+        function: &Function,
+        value: Option<&Value>,
+    ) -> Result<(), RuntimeError> {
+        if !function.has_machine_abi() {
+            return Ok(());
+        }
+        let value = value.unwrap_or(&Value::Nil);
+        let Some(expected) = function.machine_return else {
+            if matches!(value, Value::Nil) {
+                return Ok(());
+            }
+            return Err(RuntimeError::new(format!(
+                "machine ABI function `{}` has no return value, got {}",
+                function.name,
+                value.type_name()
+            )));
+        };
+        if !machine_scalar_matches(expected, value) {
+            return Err(RuntimeError::new(format!(
+                "machine ABI return for function `{}` expects {}, got {}",
+                function.name,
+                expected.as_str(),
+                value.type_name()
+            )));
+        }
+        Ok(())
     }
 
     fn allocate_array(&mut self, elements: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -14043,6 +15280,7 @@ impl<'a> VM<'a> {
             mapped.push(self.call_function(
                 callback,
                 CallArguments::One(element),
+                false,
                 caller,
                 call_site,
             )?);
@@ -14073,6 +15311,7 @@ impl<'a> VM<'a> {
             let keep = self.call_function(
                 predicate,
                 CallArguments::One(element.clone()),
+                false,
                 caller,
                 call_site,
             )?;
@@ -14108,6 +15347,7 @@ impl<'a> VM<'a> {
             let result = self.call_function(
                 callback,
                 CallArguments::One(element),
+                false,
                 caller,
                 call_site,
             )?;
@@ -14155,6 +15395,7 @@ impl<'a> VM<'a> {
             let result = self.call_function(
                 predicate,
                 CallArguments::One(element),
+                false,
                 caller,
                 call_site,
             )?;
@@ -14194,6 +15435,7 @@ impl<'a> VM<'a> {
             let result = self.call_function(
                 predicate,
                 CallArguments::One(element),
+                false,
                 caller,
                 call_site,
             )?;
@@ -14228,6 +15470,7 @@ impl<'a> VM<'a> {
             let result = self.call_function(
                 predicate,
                 CallArguments::One(element.clone()),
+                false,
                 caller,
                 call_site,
             )?;
@@ -14262,6 +15505,7 @@ impl<'a> VM<'a> {
             let result = self.call_function(
                 predicate,
                 CallArguments::One(element),
+                false,
                 caller,
                 call_site,
             )?;
@@ -14297,6 +15541,7 @@ impl<'a> VM<'a> {
             accumulator = self.call_function(
                 callback,
                 CallArguments::Two(accumulator, element),
+                false,
                 caller,
                 call_site,
             )?;

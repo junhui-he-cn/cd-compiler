@@ -69,6 +69,11 @@ pub struct Program {
     /// Static machine storage loaded before execution. Dynamic globals remain
     /// represented by `globals` and are intentionally kept separate.
     pub data_segments: Vec<DataSegment>,
+    /// Machine symbols are resolved after all static segments have been
+    /// allocated. They are intentionally separate from dynamic globals.
+    pub symbols: Vec<Symbol>,
+    /// Machine relocations are applied by the loader after symbol resolution.
+    pub relocations: Vec<Relocation>,
     pub types: Vec<TypeLayout>,
     pub native_imports: Vec<NativeImport>,
     pub modules: Vec<ModuleInit>,
@@ -86,6 +91,60 @@ pub struct DataSegment {
     pub alignment: u64,
     pub size: u64,
     pub initial: Option<Vec<u8>>,
+}
+
+/// The VM-level target denoted by one machine symbol.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SymbolTarget {
+    /// A function-table entry. This is a VM function index, never a host
+    /// executable address.
+    Function(FuncId),
+    /// A byte inside one static data segment.
+    Data { segment: usize, offset: u64 },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Symbol {
+    pub name: String,
+    pub target: SymbolTarget,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RelocationKind {
+    /// Write a resolved VM address as a little-endian u64.
+    Abs64,
+    /// Resolve a function symbol into a direct-call function-table index.
+    FuncIndex,
+}
+
+impl RelocationKind {
+    pub const ABS64: Self = Self::Abs64;
+    pub const FUNC_INDEX: Self = Self::FuncIndex;
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Abs64 => "ABS64",
+            Self::FuncIndex => "FUNC_INDEX",
+        }
+    }
+}
+
+/// The artifact location patched by a machine relocation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RelocationTarget {
+    /// An eight-byte payload location in a static segment.
+    Data { segment: usize, offset: u64 },
+    /// The function operand of one `CallDirect` instruction.
+    CallDirect { function: FuncId, instruction: usize },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Relocation {
+    pub kind: RelocationKind,
+    pub symbol: String,
+    /// Signed VM-level addend. `FUNC_INDEX` currently requires zero.
+    pub addend: i64,
+    pub target: RelocationTarget,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -252,6 +311,30 @@ impl MachineMemoryType {
     }
 }
 
+/// Scalar domain used by the register-facing machine call ABI.
+///
+/// This is deliberately separate from `MachineMemoryType`: memory types carry
+/// a load/store width, while ABI scalars describe only the value domain.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MachineScalarType {
+    MachineInt,
+    MachineFloat,
+    Address,
+}
+
+impl MachineScalarType {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::MachineInt => "machine_int",
+            Self::MachineFloat => "machine_float",
+            Self::Address => "address",
+        }
+    }
+}
+
+/// Maximum number of scalar values in the 0.3 register call boundary.
+pub const MACHINE_ABI_MAX_PARAMS: usize = 8;
+
 /// Predicate used by the machine integer comparison instruction.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MachineIntPredicate {
@@ -306,6 +389,11 @@ pub struct Function {
     /// Reserved machine stack bytes for one invocation. Zero preserves the
     /// dynamic-only function representation.
     pub machine_frame_size: u64,
+    /// Register-facing machine ABI argument domains. An empty vector means
+    /// that this function has no scalar ABI parameter metadata.
+    pub machine_params: Vec<MachineScalarType>,
+    /// Optional register-facing machine ABI result domain.
+    pub machine_return: Option<MachineScalarType>,
     /// Number of compiler-assigned local slots (excluding parameters).
     pub local_count: usize,
     /// Explicit upvalue descriptors.
@@ -314,6 +402,15 @@ pub struct Function {
     pub registers: usize,
     pub instructions: Vec<Instruction>,
     pub locations: Vec<Option<DebugLocation>>,
+}
+
+impl Function {
+    /// Whether this function has an explicit scalar machine call boundary.
+    /// Machine frame metadata alone remains compatible with the pre-ABI frame
+    /// model used by VM03-06 through VM03-08.
+    pub fn has_machine_abi(&self) -> bool {
+        !self.machine_params.is_empty() || self.machine_return.is_some()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

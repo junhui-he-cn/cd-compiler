@@ -1,7 +1,8 @@
 use crate::bytecode::{
     BlockId, Constant, DataSegment, DebugLocation, DebugRange, DebugSource, FuncId, Function,
     GlobalId, Instruction, LocalId, MachineIntWidth, ModuleInit, NativeId, NativeImport, Program,
-    TypeId, TypeLayout, UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
+    RelocationKind, RelocationTarget, SymbolTarget, MACHINE_ABI_MAX_PARAMS, TypeId, TypeLayout,
+    UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
 };
 use crate::memory::{MemoryRegionKind, NULL_GUARD_END};
 use crate::vm::native_arity_bounds;
@@ -37,6 +38,9 @@ pub enum FormatError {
         opcode: &'static str,
     },
     UnsupportedMachineDataSegment { segment: usize },
+    UnsupportedMachineSymbols { symbol: usize },
+    UnsupportedMachineRelocations { relocation: usize },
+    UnsupportedMachineAbi { function: usize },
 }
 
 impl fmt::Display for FormatError {
@@ -63,6 +67,28 @@ impl fmt::Display for FormatError {
                 "cdbc 0.2 formatter cannot emit machine data segment d{}; cdbc 0.3 serialization is deferred to VM03-11",
                 segment
             ),
+            Self::UnsupportedMachineSymbols { symbol } => write!(
+                f,
+                "cdbc 0.2 formatter cannot emit machine symbol s{}; cdbc 0.3 serialization is deferred to VM03-11",
+                symbol
+            ),
+            Self::UnsupportedMachineRelocations { relocation } => write!(
+                f,
+                "cdbc 0.2 formatter cannot emit machine relocation r{}; cdbc 0.3 serialization is deferred to VM03-11",
+                relocation
+            ),
+            Self::UnsupportedMachineAbi { function } => {
+                let context = if *function == 0 {
+                    "main".to_string()
+                } else {
+                    format!("function f{}", function - 1)
+                };
+                write!(
+                    f,
+                    "cdbc 0.2 formatter cannot emit machine ABI metadata for {}; cdbc 0.3 serialization is deferred to VM03-11",
+                    context
+                )
+            }
         }
     }
 }
@@ -407,6 +433,8 @@ impl<'a> Parser<'a> {
             name: "main".to_string(),
             arity: 0,
             machine_frame_size: 0,
+            machine_params: Vec::new(),
+            machine_return: None,
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
@@ -530,6 +558,8 @@ impl<'a> Parser<'a> {
                 name,
                 arity,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: arity.max(max_local_slot.saturating_add(1)),
                 upvalues,
                 params,
@@ -1014,6 +1044,8 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
         names,
         globals,
         data_segments: Vec::new(),
+        symbols: Vec::new(),
+        relocations: Vec::new(),
         types,
         native_imports,
         modules,
@@ -1208,7 +1240,7 @@ fn verify_module_artifact_at_line(
     artifact: &ModuleArtifact,
     line: usize,
 ) -> Result<(), ParseError> {
-    validate_program(&artifact.program, line)?;
+    validate_program_with_external_symbols(&artifact.program, line)?;
     validate_module_envelope(artifact, line)
 }
 
@@ -1304,8 +1336,215 @@ fn validate_data_segments(segments: &[DataSegment], line: usize) -> Result<(), P
     Ok(())
 }
 
+fn validate_machine_linkage(
+    program: &Program,
+    line: usize,
+    allow_external_symbols: bool,
+) -> Result<(), ParseError> {
+    let mut symbols = BTreeSet::new();
+    for (index, symbol) in program.symbols.iter().enumerate() {
+        if symbol.name.is_empty() {
+            return Err(validation_error(
+                line,
+                format!("machine symbol s{} has an empty name", index),
+            ));
+        }
+        if !symbols.insert(symbol.name.as_str()) {
+            return Err(validation_error(
+                line,
+                format!("machine symbol s{} duplicates name `{}`", index, symbol.name),
+            ));
+        }
+        match symbol.target {
+            SymbolTarget::Function(function) => {
+                if program.functions.get(function.0 as usize).is_none() {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine symbol s{} function f{} is out of range",
+                            index, function.0
+                        ),
+                    ));
+                }
+            }
+            SymbolTarget::Data { segment, offset } => {
+                let Some(data_segment) = program.data_segments.get(segment) else {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine symbol s{} data segment d{} is out of range",
+                            index, segment
+                        ),
+                    ));
+                };
+                if offset >= data_segment.size {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine symbol s{} offset {} is outside data segment d{} size {}",
+                            index, offset, segment, data_segment.size
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+
+    for (index, relocation) in program.relocations.iter().enumerate() {
+        if relocation.symbol.is_empty() {
+            return Err(validation_error(
+                line,
+                format!("machine relocation r{} has an empty symbol name", index),
+            ));
+        }
+        let Some(symbol) = program
+            .symbols
+            .iter()
+            .find(|symbol| symbol.name == relocation.symbol)
+        else {
+            if allow_external_symbols {
+                continue;
+            }
+            return Err(validation_error(
+                line,
+                format!(
+                    "machine relocation r{} references undefined symbol `{}`",
+                    index, relocation.symbol
+                ),
+            ));
+        };
+
+        match (&relocation.kind, &relocation.target, &symbol.target) {
+            (RelocationKind::Abs64, RelocationTarget::Data { segment, offset }, SymbolTarget::Data { .. }) => {
+                let Some(data_segment) = program.data_segments.get(*segment) else {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} data segment d{} is out of range",
+                            index, segment
+                        ),
+                    ));
+                };
+                if offset
+                    .checked_add(8)
+                    .map_or(true, |end| end > data_segment.size)
+                {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} target range is outside data segment d{}",
+                            index, segment
+                        ),
+                    ));
+                }
+                if !matches!(
+                    data_segment.kind,
+                    MemoryRegionKind::Rodata | MemoryRegionKind::Data | MemoryRegionKind::Bss
+                ) {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} targets incompatible segment d{} kind {}",
+                            index, segment, data_segment.kind
+                        ),
+                    ));
+                }
+            }
+            (RelocationKind::Abs64, RelocationTarget::Data { .. }, SymbolTarget::Function(_)) => {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "machine relocation r{} ABS64 requires a data symbol",
+                        index
+                    ),
+                ));
+            }
+            (RelocationKind::Abs64, RelocationTarget::CallDirect { .. }, _) => {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "machine relocation r{} ABS64 requires a data target",
+                        index
+                    ),
+                ));
+            }
+            (
+                RelocationKind::FuncIndex,
+                RelocationTarget::CallDirect {
+                    function,
+                    instruction,
+                },
+                SymbolTarget::Function(_),
+            ) => {
+                if relocation.addend != 0 {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} FUNC_INDEX does not accept an addend",
+                            index
+                        ),
+                    ));
+                }
+                let Some(body) = program.functions.get(function.0 as usize) else {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} call body f{} is out of range",
+                            index, function.0
+                        ),
+                    ));
+                };
+                if !matches!(body.instructions.get(*instruction), Some(Instruction::CallDirect { .. })) {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} target is not a call_direct operand",
+                            index
+                        ),
+                    ));
+                }
+            }
+            (RelocationKind::FuncIndex, RelocationTarget::CallDirect { .. }, SymbolTarget::Data { .. }) => {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "machine relocation r{} FUNC_INDEX requires a function symbol",
+                        index
+                    ),
+                ));
+            }
+            (RelocationKind::FuncIndex, RelocationTarget::Data { .. }, _) => {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "machine relocation r{} FUNC_INDEX requires a call_direct target",
+                        index
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
+    validate_program_with_external_symbols_inner(program, line, false)
+}
+
+fn validate_program_with_external_symbols(
+    program: &Program,
+    line: usize,
+) -> Result<(), ParseError> {
+    validate_program_with_external_symbols_inner(program, line, true)
+}
+
+fn validate_program_with_external_symbols_inner(
+    program: &Program,
+    line: usize,
+    allow_external_symbols: bool,
+) -> Result<(), ParseError> {
     validate_data_segments(&program.data_segments, line)?;
+    validate_machine_linkage(program, line, allow_external_symbols)?;
     for (index, name) in program.globals.iter().enumerate() {
         if *name >= program.names.len() {
             return Err(validation_error(
@@ -1414,6 +1653,28 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
                     index,
                     function.arity,
                     function.params.len()
+                ),
+            ));
+        }
+        if function.machine_params.len() > MACHINE_ABI_MAX_PARAMS {
+            return Err(validation_error(
+                line,
+                format!(
+                    "function f{} declares {} machine ABI parameters, maximum is {}",
+                    index,
+                    function.machine_params.len(),
+                    MACHINE_ABI_MAX_PARAMS
+                ),
+            ));
+        }
+        if function.has_machine_abi() && function.machine_params.len() != function.arity {
+            return Err(validation_error(
+                line,
+                format!(
+                    "function f{} machine ABI declares {} parameters, but function arity is {}",
+                    index,
+                    function.machine_params.len(),
+                    function.arity
                 ),
             ));
         }
@@ -2260,6 +2521,18 @@ fn validate_instruction(
         } => {
             register(*dest, "destination")?;
             function(*value)?;
+            let target = &program.functions[value.0 as usize];
+            if target.has_machine_abi() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} make_function f{} targets a machine ABI function; use call_direct",
+                        context,
+                        instruction_index,
+                        value.0.saturating_sub(1)
+                    ),
+                ));
+            }
         }
         Instruction::Array { dest, elements } => {
             register(*dest, "destination")?;
@@ -2949,6 +3222,12 @@ fn reject_unsupported_machine_instructions(program: &Program) -> Result<(), Form
     if !program.data_segments.is_empty() {
         return Err(FormatError::UnsupportedMachineDataSegment { segment: 0 });
     }
+    if !program.symbols.is_empty() {
+        return Err(FormatError::UnsupportedMachineSymbols { symbol: 0 });
+    }
+    if !program.relocations.is_empty() {
+        return Err(FormatError::UnsupportedMachineRelocations { relocation: 0 });
+    }
     for (function, body) in program.functions.iter().enumerate() {
         for (instruction, operation) in body.instructions.iter().enumerate() {
             if let Some(opcode) = machine_instruction_opcode(operation) {
@@ -2958,6 +3237,9 @@ fn reject_unsupported_machine_instructions(program: &Program) -> Result<(), Form
                     opcode,
                 });
             }
+        }
+        if body.has_machine_abi() {
+            return Err(FormatError::UnsupportedMachineAbi { function });
         }
     }
     Ok(())
@@ -4392,7 +4674,10 @@ fn quote_string(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{DataSegment, MachineIntWidth, MachineMemoryType};
+    use crate::bytecode::{
+        DataSegment, MachineIntWidth, MachineMemoryType, MachineScalarType, Relocation,
+        RelocationKind, RelocationTarget, Symbol, SymbolTarget,
+    };
     use crate::memory::MemoryRegionKind;
 
     fn program_with_data_segments(data_segments: Vec<DataSegment>) -> Program {
@@ -4401,6 +4686,8 @@ mod tests {
             names: Vec::new(),
             globals: Vec::new(),
             data_segments,
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
             modules: Vec::new(),
@@ -4409,6 +4696,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4474,6 +4763,8 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4484,6 +4775,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4509,6 +4802,18 @@ mod tests {
                 opcode: "iconst",
             }
         );
+        assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
+    }
+
+    #[test]
+    fn checked_formatter_rejects_machine_abi_metadata_before_0_3_serialization() {
+        let mut program = program_with_data_segments(Vec::new());
+        program.functions[0].machine_return = Some(MachineScalarType::MachineInt);
+
+        let error = format_program_checked(&program)
+            .expect_err("0.2 formatter must reject machine ABI metadata");
+        assert_eq!(error, FormatError::UnsupportedMachineAbi { function: 0 });
+        assert!(error.to_string().contains("machine ABI metadata for main"));
         assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
     }
 
@@ -4586,10 +4891,84 @@ mod tests {
     }
 
     #[test]
+    fn checked_formatter_rejects_machine_symbols_and_relocations_before_0_3_serialization() {
+        let mut program = program_with_data_segments(Vec::new());
+        program.symbols.push(Symbol {
+            name: "entry".to_string(),
+            target: SymbolTarget::Function(FuncId(0)),
+        });
+        let error = format_program_checked(&program)
+            .expect_err("0.2 formatter must reject machine symbols");
+        assert_eq!(error, FormatError::UnsupportedMachineSymbols { symbol: 0 });
+
+        program.symbols.clear();
+        program.relocations.push(Relocation {
+            kind: RelocationKind::FuncIndex,
+            symbol: "entry".to_string(),
+            addend: 0,
+            target: RelocationTarget::CallDirect {
+                function: FuncId(0),
+                instruction: 0,
+            },
+        });
+        let error = format_program_checked(&program)
+            .expect_err("0.2 formatter must reject machine relocations");
+        assert_eq!(
+            error,
+            FormatError::UnsupportedMachineRelocations { relocation: 0 }
+        );
+    }
+
+    #[test]
+    fn verifies_machine_symbol_and_relocation_contract() {
+        let mut program = program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 8,
+            size: 8,
+            initial: Some(vec![0; 8]),
+        }]);
+        program.symbols.push(Symbol {
+            name: "data".to_string(),
+            target: SymbolTarget::Data {
+                segment: 0,
+                offset: 0,
+            },
+        });
+        program.relocations.push(Relocation {
+            kind: RelocationKind::Abs64,
+            symbol: "data".to_string(),
+            addend: 0,
+            target: RelocationTarget::Data {
+                segment: 0,
+                offset: 0,
+            },
+        });
+        verify_program(&program).expect("valid machine linkage should verify");
+
+        let mut undefined = program.clone();
+        undefined.relocations[0].symbol = "missing".to_string();
+        let error = verify_program(&undefined).expect_err("undefined symbols must reject");
+        assert!(error.message.contains("undefined symbol `missing`"));
+
+        let mut duplicate = program;
+        duplicate.symbols.push(Symbol {
+            name: "data".to_string(),
+            target: SymbolTarget::Data {
+                segment: 0,
+                offset: 0,
+            },
+        });
+        let error = verify_program(&duplicate).expect_err("duplicate symbols must reject");
+        assert!(error.message.contains("duplicates name `data`"));
+    }
+
+    #[test]
     fn formats_and_rejects_typed_memory_opcodes_at_the_0_2_boundary() {
         let mut program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4600,6 +4979,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4769,6 +5150,8 @@ mod tests {
         let mut program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4779,6 +5162,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -4856,6 +5241,8 @@ mod tests {
         let mut program = Program {
             constants: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -4866,6 +5253,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
@@ -5088,6 +5477,8 @@ mod tests {
             constants: vec![Constant::Nil],
             names: Vec::new(),
             data_segments: Vec::new(),
+            symbols: Vec::new(),
+            relocations: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
@@ -5097,6 +5488,8 @@ mod tests {
                 name: "main".to_string(),
                 arity: 0,
                 machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),

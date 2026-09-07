@@ -20,10 +20,19 @@ and segment permission validation before execution; linked module products
 carry their segment descriptors in expansion order. VM03-08 now adds checked
 interpreter execution for `MEMCPY`, `MEMMOVE`, and `MEMSET`, including
 zero-length operations, overlap-safe moves, deterministic overlap traps, and
-atomic range/permission validation. Floating-point and mixed integer/float
-conversions from VM03-03 remain pending. Machine execution remains
-interpreter-first; neither machine instructions nor segment descriptors are
-part of the cdbc 0.2 text artifact writer.
+atomic range/permission validation. VM03-09 now adds a checked register-facing
+machine ABI with
+`MachineInt`, `MachineFloat`, and `Address` scalar domains, up to eight
+direct-call parameters, one optional scalar return, explicit indirect-call
+rejection, linker metadata preservation, and interpreter fallback when JIT is
+enabled. VM03-10 now adds VM-level function and data symbols, `ABS64` data
+patches, `FUNC_INDEX` direct-call relocations, module-linker index rebasing,
+duplicate/undefined-symbol rejection, and loader ordering that allocates
+segments and resolves all symbols before applying patches. Floating-point and
+mixed integer/float conversions from VM03-03 remain pending. Machine execution
+remains interpreter-first; machine instructions, segment descriptors, machine
+ABI metadata, symbols, and relocations are not part of the cdbc 0.2 text
+artifact writer.
 The compiler, language, and compiler tools have a separate current-state record in
 [`docs/roadmap.md`](roadmap.md).
 
