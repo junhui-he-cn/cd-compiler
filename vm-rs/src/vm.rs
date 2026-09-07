@@ -244,6 +244,12 @@ pub enum RuntimeErrorKind {
     InvalidAddress,
     InvalidMemoryOperation,
     StackOverflow,
+    IntegerDivisionByZero,
+    IntegerDivisionOverflow,
+    InvalidShiftAmount,
+    InvalidConversion,
+    InvalidInstruction,
+    InvalidOperand,
 }
 
 impl RuntimeErrorKind {
@@ -259,6 +265,12 @@ impl RuntimeErrorKind {
             Self::InvalidAddress => "invalid_address",
             Self::InvalidMemoryOperation => "invalid_memory_operation",
             Self::StackOverflow => "stack_overflow",
+            Self::IntegerDivisionByZero => "integer_division_by_zero",
+            Self::IntegerDivisionOverflow => "integer_division_overflow",
+            Self::InvalidShiftAmount => "invalid_shift_amount",
+            Self::InvalidConversion => "invalid_conversion",
+            Self::InvalidInstruction => "invalid_instruction",
+            Self::InvalidOperand => "invalid_operand",
         }
     }
 }
@@ -814,7 +826,7 @@ fn initialize_machine_segments(
 ) -> Result<Vec<MemoryRegion>, RuntimeError> {
     for (index, segment) in segments.iter().enumerate() {
         if segment.alignment == 0 || !segment.alignment.is_power_of_two() {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_instruction(format!(
                 "data segment d{} alignment {} is not a positive power of two",
                 index, segment.alignment
             )));
@@ -822,16 +834,16 @@ fn initialize_machine_segments(
         match segment.kind {
             MemoryRegionKind::Rodata | MemoryRegionKind::Data => {
                 let Some(initial) = segment.initial.as_deref() else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "data segment d{} in {} has no initialization payload",
                         index, segment.kind
                     )));
                 };
                 let initial_size = u64::try_from(initial.len()).map_err(|_| {
-                    RuntimeError::new(format!("data segment d{} initialization is too large", index))
+                    RuntimeError::invalid_instruction(format!("data segment d{} initialization is too large", index))
                 })?;
                 if initial_size != segment.size {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "data segment d{} declares size {}, but initialization has {} bytes",
                         index, segment.size, initial_size
                     )));
@@ -839,14 +851,14 @@ fn initialize_machine_segments(
             }
             MemoryRegionKind::Bss => {
                 if segment.initial.is_some() {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "bss data segment d{} has an initialization payload",
                         index
                     )));
                 }
             }
             MemoryRegionKind::Heap | MemoryRegionKind::Stack => {
-                return Err(RuntimeError::new(format!(
+                return Err(RuntimeError::invalid_instruction(format!(
                     "data segment d{} has unsupported kind {}",
                     index, segment.kind
                 )));
@@ -873,23 +885,39 @@ fn initialize_machine_segments(
                     .allocate_region_with_bytes(
                         kind,
                         segment.alignment,
-                        segment.initial.as_deref().expect("validated segment payload"),
+                        segment.initial.as_deref().ok_or_else(|| {
+                            RuntimeError::invalid_instruction(format!(
+                                "data segment d{} in {} has no initialization payload",
+                                index, segment.kind
+                            ))
+                        })?,
                     )
                     .map_err(RuntimeError::from)?,
                 MemoryRegionKind::Bss => memory
                     .allocate_region(kind, segment.size, segment.alignment)
                     .map_err(RuntimeError::from)?,
                 MemoryRegionKind::Heap | MemoryRegionKind::Stack => {
-                    unreachable!("unsupported segment kinds were rejected above")
+                    return Err(RuntimeError::invalid_instruction(format!(
+                        "data segment d{} has unsupported kind {}",
+                        index, segment.kind
+                    )))
                 }
             };
             regions[index] = Some(region);
         }
     }
-    Ok(regions
+    regions
         .into_iter()
-        .map(|region| region.expect("validated static segment kind"))
-        .collect())
+        .enumerate()
+        .map(|(index, region)| {
+            region.ok_or_else(|| {
+                RuntimeError::invalid_instruction(format!(
+                    "data segment d{} has no allocated static region",
+                    index
+                ))
+            })
+        })
+        .collect()
 }
 
 fn add_machine_address_addend(address: VmAddress, addend: i64) -> Option<VmAddress> {
@@ -909,13 +937,13 @@ fn resolve_machine_relocations(
     let mut symbols = BTreeMap::new();
     for (index, symbol) in program.symbols.iter().enumerate() {
         if symbol.name.is_empty() {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_instruction(format!(
                 "machine symbol s{} has an empty name",
                 index
             )));
         }
         if symbols.contains_key(&symbol.name) {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_instruction(format!(
                 "duplicate machine symbol `{}`",
                 symbol.name
             )));
@@ -923,7 +951,7 @@ fn resolve_machine_relocations(
         let resolved = match &symbol.target {
             SymbolTarget::Function(function) => {
                 if program.functions.get(function.0 as usize).is_none() {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine symbol `{}` references function f{} out of range",
                         symbol.name, function.0
                     )));
@@ -932,25 +960,25 @@ fn resolve_machine_relocations(
             }
             SymbolTarget::Data { segment, offset } => {
                 let Some(descriptor) = program.data_segments.get(*segment) else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine symbol `{}` references data segment d{} out of range",
                         symbol.name, segment
                     )));
                 };
                 let Some(region) = regions.get(*segment) else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine symbol `{}` has no allocated data segment d{}",
                         symbol.name, segment
                     )));
                 };
                 let Some(address) = region.base.checked_add(*offset) else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine symbol `{}` address overflows",
                         symbol.name
                     )));
                 };
                 if *offset >= descriptor.size || !region.contains(address) {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine symbol `{}` offset {} is outside data segment d{}",
                         symbol.name, offset, segment
                     )));
@@ -963,10 +991,10 @@ fn resolve_machine_relocations(
 
     let mut patches = Vec::new();
     let mut direct_calls = BTreeMap::new();
-    let mut patched_data = BTreeMap::new();
+    let mut patched_data: BTreeMap<usize, Vec<(u64, u64, usize)>> = BTreeMap::new();
     for (index, relocation) in program.relocations.iter().enumerate() {
         let Some(symbol) = symbols.get(&relocation.symbol) else {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_instruction(format!(
                 "machine relocation r{} references undefined symbol `{}`",
                 index, relocation.symbol
             )));
@@ -978,44 +1006,49 @@ fn resolve_machine_relocations(
                 ResolvedMachineSymbol::Address(symbol_address),
             ) => {
                 let Some(descriptor) = program.data_segments.get(*segment) else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} targets data segment d{} out of range",
                         index, segment
                     )));
                 };
                 let Some(region) = regions.get(*segment) else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} has no allocated target segment d{}",
                         index, segment
                     )));
                 };
                 let Some(end) = offset.checked_add(8) else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} target offset overflows",
                         index
                     )));
                 };
                 if end > descriptor.size || end > region.size() {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} target range is outside data segment d{}",
                         index, segment
                     )));
                 }
                 let target_address = region.base.checked_add(*offset).ok_or_else(|| {
-                    RuntimeError::new(format!(
+                    RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} target address overflows",
                         index
                     ))
                 })?;
-                if patched_data.insert((*segment, *offset), ()).is_some() {
-                    return Err(RuntimeError::new(format!(
-                        "machine relocation r{} duplicates a data target",
-                        index
+                let ranges = patched_data.entry(*segment).or_default();
+                if let Some((_, _, previous)) = ranges
+                    .iter()
+                    .find(|(start, previous_end, _)| *offset < *previous_end && *start < end)
+                {
+                    return Err(RuntimeError::invalid_instruction(format!(
+                        "machine relocation r{} overlaps relocation r{} in data segment d{}",
+                        index, previous, segment
                     )));
                 }
+                ranges.push((*offset, end, index));
                 let resolved = add_machine_address_addend(*symbol_address, relocation.addend)
                     .ok_or_else(|| {
-                        RuntimeError::new(format!(
+                        RuntimeError::invalid_instruction(format!(
                             "machine relocation r{} symbol address overflows",
                             index
                         ))
@@ -1023,13 +1056,13 @@ fn resolve_machine_relocations(
                 patches.push((target_address, resolved.to_le_bytes()));
             }
             (RelocationKind::Abs64, RelocationTarget::Data { .. }, _) => {
-                return Err(RuntimeError::new(format!(
+                return Err(RuntimeError::invalid_instruction(format!(
                     "machine relocation r{} ABS64 requires a data symbol",
                     index
                 )));
             }
             (RelocationKind::Abs64, RelocationTarget::CallDirect { .. }, _) => {
-                return Err(RuntimeError::new(format!(
+                return Err(RuntimeError::invalid_instruction(format!(
                     "machine relocation r{} ABS64 requires a data target",
                     index
                 )));
@@ -1043,38 +1076,38 @@ fn resolve_machine_relocations(
                 ResolvedMachineSymbol::Function(target),
             ) => {
                 if relocation.addend != 0 {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} FUNC_INDEX does not accept an addend",
                         index
                     )));
                 }
                 let Some(body) = program.functions.get(function.0 as usize) else {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} call body f{} is out of range",
                         index, function.0
                     )));
                 };
                 if !matches!(body.instructions.get(*instruction), Some(Instruction::CallDirect { .. })) {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} target is not a call_direct operand",
                         index
                     )));
                 }
                 if direct_calls.insert((function.0 as usize, *instruction), *target).is_some() {
-                    return Err(RuntimeError::new(format!(
+                    return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} duplicates a call target",
                         index
                     )));
                 }
             }
             (RelocationKind::FuncIndex, RelocationTarget::CallDirect { .. }, _) => {
-                return Err(RuntimeError::new(format!(
+                return Err(RuntimeError::invalid_instruction(format!(
                     "machine relocation r{} FUNC_INDEX requires a function symbol",
                     index
                 )));
             }
             (RelocationKind::FuncIndex, RelocationTarget::Data { .. }, _) => {
-                return Err(RuntimeError::new(format!(
+                return Err(RuntimeError::invalid_instruction(format!(
                     "machine relocation r{} FUNC_INDEX requires a call_direct target",
                     index
                 )));
@@ -1099,7 +1132,7 @@ fn decode_machine_memory_bits(
     memory_type: MachineMemoryType,
 ) -> Result<u64, RuntimeError> {
     if bytes.len() != memory_type.size() {
-        return Err(RuntimeError::new(format!(
+        return Err(RuntimeError::invalid_instruction(format!(
             "load {} expected {} bytes, got {}",
             memory_type.as_str(),
             memory_type.size(),
@@ -1659,6 +1692,55 @@ mod tests {
         program
     }
 
+    #[test]
+    fn unverified_loader_rejects_overlapping_machine_relocations() {
+        let mut program = machine_program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 8,
+            size: 16,
+            initial: Some(vec![0; 16]),
+        }]);
+        program.symbols.push(crate::bytecode::Symbol {
+            name: "data".to_string(),
+            target: SymbolTarget::Data {
+                segment: 0,
+                offset: 0,
+            },
+        });
+        program.relocations = vec![
+            Relocation {
+                kind: RelocationKind::Abs64,
+                symbol: "data".to_string(),
+                addend: 0,
+                target: RelocationTarget::Data {
+                    segment: 0,
+                    offset: 0,
+                },
+            },
+            Relocation {
+                kind: RelocationKind::Abs64,
+                symbol: "data".to_string(),
+                addend: 0,
+                target: RelocationTarget::Data {
+                    segment: 0,
+                    offset: 4,
+                },
+            },
+        ];
+
+        let error = VM::new(&program)
+            .run()
+            .expect_err("unverified loader must reject overlapping relocations");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidInstruction);
+        assert!(
+            error
+                .message
+                .contains("machine relocation r1 overlaps relocation r0"),
+            "{}",
+            error.message
+        );
+    }
+
     fn machine_function(
         id: u32,
         name: &str,
@@ -1980,7 +2062,7 @@ mod tests {
         let error = run_machine_body(&mut vm, vec![Value::number(1.0)])
             .expect_err("dynamic numbers must not cross a machine ABI boundary");
 
-        assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidOperand);
         assert!(error
             .message
             .contains("machine ABI argument 0 for function `expects_machine_int` expects machine_int, got number"));
@@ -2538,13 +2620,41 @@ mod tests {
         let error = vm
             .run_inner()
             .expect_err("invalid data payload should not reach execution");
-        assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidInstruction);
         assert!(error.message.contains("initialization has 3 bytes"));
         assert!(vm
             .memory()
             .regions()
             .iter()
             .all(|region| region.kind != MemoryRegionKind::Stack));
+    }
+
+    #[test]
+    fn malformed_entry_points_return_checked_instruction_errors() {
+        let mut missing_entry = empty_program();
+        missing_entry.functions.clear();
+        let error = VM::new(&missing_entry)
+            .run()
+            .expect_err("missing entry functions must not panic");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidInstruction);
+        assert!(error.message.contains("entry function f0 is out of range"));
+
+        let mut wrong_entry = empty_program();
+        wrong_entry.entry = FuncId(1);
+        let error = VM::new(&wrong_entry)
+            .run()
+            .expect_err("non-zero entry functions must not panic");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidInstruction);
+        assert!(error.message.contains("entry must be f0, found f1"));
+
+        let mut session = VM::new(&missing_entry)
+            .start_cooperative(1)
+            .expect("scheduler construction should not inspect the entry body");
+        let error = session
+            .spawn(TaskSpec::Main)
+            .expect_err("cooperative entry creation must be checked");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidInstruction);
+        assert!(error.message.contains("entry function f0 is out of range"));
     }
 
     #[test]
@@ -3374,7 +3484,7 @@ mod tests {
             },
             vec![Value::address(0x1000), Value::number(1.0)],
         );
-        assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidOperand);
         assert_eq!(error.message, "store f64 expects machine_float, got number");
     }
 
@@ -4032,6 +4142,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 ],
                 3,
                 "integer division by zero",
+                RuntimeErrorKind::IntegerDivisionByZero,
             ),
             (
                 vec![
@@ -4056,6 +4167,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 ],
                 3,
                 "integer division overflow",
+                RuntimeErrorKind::IntegerDivisionOverflow,
             ),
             (
                 vec![
@@ -4080,6 +4192,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 ],
                 3,
                 "integer division overflow",
+                RuntimeErrorKind::IntegerDivisionOverflow,
             ),
             (
                 vec![
@@ -4104,15 +4217,17 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 ],
                 3,
                 "invalid shift amount",
+                RuntimeErrorKind::InvalidShiftAmount,
             ),
         ];
 
-        for (instructions, registers, message) in cases {
+        for (instructions, registers, message, kind) in cases {
             let program = machine_program(instructions, registers);
             let error = VM::with_config_verified(&program, RunConfig::unlimited())
                 .expect("trap cases should pass structural verification")
                 .run()
                 .expect_err("machine trap should be reported as a VM error");
+            assert_eq!(error.kind, kind);
             assert_eq!(error.message, message);
         }
 
@@ -4150,6 +4265,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 .expect("wide remainder trap should pass structural verification")
                 .run()
                 .expect_err("signed minimum remainder by negative one must trap");
+            assert_eq!(error.kind, RuntimeErrorKind::IntegerDivisionOverflow);
             assert_eq!(error.message, "integer division overflow");
         }
 
@@ -4205,6 +4321,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             let error = VM::new(&program)
                 .run()
                 .expect_err("unverified conversion must still reject its direction");
+            assert_eq!(error.kind, RuntimeErrorKind::InvalidConversion);
             assert!(error.message.contains(expected), "{}", error.message);
         }
 
@@ -4235,6 +4352,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             .expect("wrong-domain operands are a runtime condition")
             .run()
             .expect_err("machine arithmetic must reject dynamic values");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidOperand);
         assert_eq!(error.message, "iadd expects machine_int operands");
 
         let mut wrong_domain = machine_program(
@@ -4261,6 +4379,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             .expect("wrong-domain conversion is valid bytecode")
             .run()
             .expect_err("conversion must reject dynamic values");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidOperand);
         assert_eq!(error.message, "trunc expects machine_int, got number");
     }
 
@@ -9812,6 +9931,42 @@ impl RuntimeError {
         error
     }
 
+    fn invalid_instruction(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::InvalidInstruction;
+        error
+    }
+
+    fn invalid_operand(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::InvalidOperand;
+        error
+    }
+
+    fn integer_division_by_zero(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::IntegerDivisionByZero;
+        error
+    }
+
+    fn integer_division_overflow(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::IntegerDivisionOverflow;
+        error
+    }
+
+    fn invalid_shift_amount(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::InvalidShiftAmount;
+        error
+    }
+
+    fn invalid_conversion(message: impl Into<String>) -> Self {
+        let mut error = Self::new(message);
+        error.kind = RuntimeErrorKind::InvalidConversion;
+        error
+    }
+
     fn invalid_memory_operation(message: impl Into<String>) -> Self {
         let mut error = Self::new(message);
         error.kind = RuntimeErrorKind::InvalidMemoryOperation;
@@ -10232,10 +10387,11 @@ impl MachineStack {
                 .release_stack_frame(self.region.base, active.base, active.size)
                 .map_err(RuntimeError::from)?;
         }
-        let active = self
-            .frames
-            .pop()
-            .expect("machine frame stack was checked above");
+        let Some(active) = self.frames.pop() else {
+            return Err(RuntimeError::invalid_instruction(
+                "machine frame stack became empty during release",
+            ));
+        };
         self.cursor = active.cursor_before;
         Ok(())
     }
@@ -11114,13 +11270,24 @@ impl<'a> CooperativeRun<'a> {
         let mut frame = match spec {
             TaskSpec::Main => {
                 let entry = self.vm.program.entry.0 as usize;
-                self.vm
-                    .validate_machine_call(&self.vm.program.functions[entry], &[], true)?;
-                let machine_frame_size = self.vm.program.functions[entry].machine_frame_size;
+                if entry != 0 {
+                    return Err(RuntimeError::invalid_instruction(format!(
+                        "entry must be f0, found f{}",
+                        self.vm.program.entry.0
+                    )));
+                }
+                let Some(entry_function) = self.vm.program.functions.get(entry) else {
+                    return Err(RuntimeError::invalid_instruction(format!(
+                        "entry function f{} is out of range",
+                        self.vm.program.entry.0
+                    )));
+                };
+                self.vm.validate_machine_call(entry_function, &[], true)?;
+                let machine_frame_size = entry_function.machine_frame_size;
                 Frame {
-                    body: Some(Rc::new(self.vm.program.functions[entry].clone())),
+                    body: Some(Rc::new(entry_function.clone())),
                     ip: 0,
-                    registers: vec![Value::Nil; self.vm.program.functions[entry].registers],
+                    registers: vec![Value::Nil; entry_function.registers],
                     locals: self.vm.heap.new_local_slots(),
                     closure: self.vm.heap.new_environment(),
                     upvalues: Vec::new(),
@@ -11218,17 +11385,10 @@ impl<'a> VM<'a> {
                 },
                 Err(error) => (Some(error), BTreeMap::new()),
             };
-        let mut global_count = 0usize;
-        for function in &program.functions {
-            for instruction in &function.instructions {
-                if let Instruction::LoadGlobal { slot, .. }
-                | Instruction::InitGlobal { slot, .. }
-                | Instruction::SetGlobal { slot, .. } = instruction
-                {
-                    global_count = global_count.max(slot.saturating_add(1));
-                }
-            }
-        }
+        // Global slots are an artifact-table boundary. A malformed
+        // instruction must not turn its arbitrary slot number into a host
+        // allocation request; the verifier checks every instruction slot.
+        let global_count = program.globals.len();
         let global_names = program
             .globals
             .iter()
@@ -11593,12 +11753,24 @@ impl<'a> VM<'a> {
         self.check_machine_memory_initialization()?;
         self.check_cancellation()?;
         let entry = self.program.entry.0 as usize;
+        if entry != 0 {
+            return Err(RuntimeError::invalid_instruction(format!(
+                "entry must be f0, found f{}",
+                self.program.entry.0
+            )));
+        }
+        let Some(entry_body) = self.program.functions.get(entry) else {
+            return Err(RuntimeError::invalid_instruction(format!(
+                "entry function f{} is out of range",
+                self.program.entry.0
+            )));
+        };
         self.machine_stack = Some(self.new_machine_stack()?);
         let execution = {
             let mut frame = Frame {
                 body: None,
                 ip: 0,
-                registers: vec![Value::Nil; self.program.functions[entry].registers],
+                registers: vec![Value::Nil; entry_body.registers],
                 locals: self.heap.new_local_slots(),
                 closure: self.heap.new_environment(),
                 upvalues: Vec::new(),
@@ -11608,19 +11780,16 @@ impl<'a> VM<'a> {
                 function_index: None,
                 return_target: None,
                 machine_frame_base: None,
-                machine_frame_size: self.program.functions[entry].machine_frame_size,
+                machine_frame_size: entry_body.machine_frame_size,
             };
             // The entry body is immutable after artifact verification. Borrow it
             // directly instead of cloning its instruction and debug-location
             // vectors for the one execution of this VM instance.
             let execution = self
                 .allocate_current_machine_frame(&mut frame)
-                .and_then(|_| self.execute_body(&self.program.functions[entry], &mut frame))
+                .and_then(|_| self.execute_body(entry_body, &mut frame))
                 .and_then(|result| {
-                    self.validate_machine_return(
-                        &self.program.functions[entry],
-                        result.as_ref(),
-                    )?;
+                    self.validate_machine_return(entry_body, result.as_ref())?;
                     Ok(result)
                 });
             let cleanup = self.release_current_machine_frame(&frame);
@@ -11659,10 +11828,22 @@ impl<'a> VM<'a> {
         let mut scheduler = CooperativeScheduler::new(quantum)
             .map_err(|error| RuntimeError::new(error.to_string()))?;
         let entry = self.program.entry.0 as usize;
-        let main_body = Rc::new(self.program.functions[entry].clone());
+        if entry != 0 {
+            return Err(RuntimeError::invalid_instruction(format!(
+                "entry must be f0, found f{}",
+                self.program.entry.0
+            )));
+        }
+        let Some(entry_body) = self.program.functions.get(entry) else {
+            return Err(RuntimeError::invalid_instruction(format!(
+                "entry function f{} is out of range",
+                self.program.entry.0
+            )));
+        };
+        let main_body = Rc::new(entry_body.clone());
         let mut root = Frame::main(
             main_body,
-            self.program.functions[entry].registers,
+            entry_body.registers,
             self.heap.new_local_slots(),
             self.heap.new_environment(),
         );
@@ -12487,11 +12668,17 @@ impl<'a> VM<'a> {
                     let block_map = frame
                         .function_index
                         .and_then(|index| self.block_maps.get(index));
-                    let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                    let block_map = block_map
+                        .or_else(|| self.block_maps.first())
+                        .ok_or_else(|| {
+                            RuntimeError::invalid_instruction("branch has no function body")
+                        })?;
                     let next = block_map
                         .get(&target.0)
                         .copied()
-                        .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                        .ok_or_else(|| {
+                            RuntimeError::invalid_instruction("branch target out of range")
+                        })?;
                     frame.ip = next;
                     jumped = true;
                     return Ok(None);
@@ -12504,12 +12691,18 @@ impl<'a> VM<'a> {
                     let block_map = frame
                         .function_index
                         .and_then(|index| self.block_maps.get(index));
-                    let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                    let block_map = block_map
+                        .or_else(|| self.block_maps.first())
+                        .ok_or_else(|| {
+                            RuntimeError::invalid_instruction("branch has no function body")
+                        })?;
                     let taken = self.read_register_ref(frame, *condition)?.is_truthy();
                     let next = block_map
                         .get(if taken { &if_true.0 } else { &if_false.0 })
                         .copied()
-                        .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                        .ok_or_else(|| {
+                            RuntimeError::invalid_instruction("branch target out of range")
+                        })?;
                     frame.ip = next;
                     jumped = true;
                     return Ok(None);
@@ -12792,8 +12985,7 @@ impl<'a> VM<'a> {
             }
             Instruction::InitGlobal { slot, value } => {
                 let value = self.read_register(frame, *value)?;
-                self.init_global(*slot, value);
-                Ok(())
+                self.init_global(*slot, value)
             }
             Instruction::SetGlobal { slot, value } => {
                 let value = self.read_register(frame, *value)?;
@@ -13524,7 +13716,9 @@ impl<'a> VM<'a> {
             | Instruction::BrIf { .. }
             | Instruction::ReturnNil
             | Instruction::Return { .. } => {
-                Err(RuntimeError::new("instruction is specific to one dispatch path"))
+                Err(RuntimeError::invalid_instruction(
+                    "instruction is specific to one dispatch path",
+                ))
             }
         }
     }
@@ -13547,11 +13741,17 @@ impl<'a> VM<'a> {
                 let block_map = frame
                     .function_index
                     .and_then(|index| self.block_maps.get(index));
-                let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                let block_map = block_map
+                    .or_else(|| self.block_maps.first())
+                    .ok_or_else(|| {
+                        RuntimeError::invalid_instruction("branch has no function body")
+                    })?;
                 let next = block_map
                     .get(&target.0)
                     .copied()
-                    .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                    .ok_or_else(|| {
+                        RuntimeError::invalid_instruction("branch target out of range")
+                    })?;
                 frame.ip = next;
                 return Ok(InstructionAction::Jumped);
             }
@@ -13563,12 +13763,18 @@ impl<'a> VM<'a> {
                 let block_map = frame
                     .function_index
                     .and_then(|index| self.block_maps.get(index));
-                let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                let block_map = block_map
+                    .or_else(|| self.block_maps.first())
+                    .ok_or_else(|| {
+                        RuntimeError::invalid_instruction("branch has no function body")
+                    })?;
                 let taken = self.read_register_ref(frame, *condition)?.is_truthy();
                 let next = block_map
                     .get(if taken { &if_true.0 } else { &if_false.0 })
                     .copied()
-                    .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                    .ok_or_else(|| {
+                        RuntimeError::invalid_instruction("branch target out of range")
+                    })?;
                 frame.ip = next;
                 return Ok(InstructionAction::Jumped);
             }
@@ -14833,7 +15039,7 @@ impl<'a> VM<'a> {
             return Ok(());
         }
         if function.machine_params.len() > MACHINE_ABI_MAX_PARAMS {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_instruction(format!(
                 "function `{}` declares {} machine ABI parameters, maximum is {}",
                 function.name,
                 function.machine_params.len(),
@@ -14841,7 +15047,7 @@ impl<'a> VM<'a> {
             )));
         }
         if function.machine_params.len() != function.arity {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_instruction(format!(
                 "function `{}` machine ABI declares {} parameters, but function arity is {}",
                 function.name,
                 function.machine_params.len(),
@@ -14849,13 +15055,13 @@ impl<'a> VM<'a> {
             )));
         }
         if !direct {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_instruction(format!(
                 "machine ABI function `{}` requires a direct call",
                 function.name
             )));
         }
         if arguments.len() != function.machine_params.len() {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_operand(format!(
                 "machine ABI function `{}` expects {} arguments, got {}",
                 function.name,
                 function.machine_params.len(),
@@ -14869,7 +15075,7 @@ impl<'a> VM<'a> {
             .enumerate()
         {
             if !machine_scalar_matches(*expected, actual) {
-                return Err(RuntimeError::new(format!(
+                return Err(RuntimeError::invalid_operand(format!(
                     "machine ABI argument {} for function `{}` expects {}, got {}",
                     index,
                     function.name,
@@ -14894,14 +15100,14 @@ impl<'a> VM<'a> {
             if matches!(value, Value::Nil) {
                 return Ok(());
             }
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_operand(format!(
                 "machine ABI function `{}` has no return value, got {}",
                 function.name,
                 value.type_name()
             )));
         };
         if !machine_scalar_matches(expected, value) {
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_operand(format!(
                 "machine ABI return for function `{}` expects {}, got {}",
                 function.name,
                 expected.as_str(),
@@ -15939,12 +16145,16 @@ impl<'a> VM<'a> {
         Ok(cell.borrow().clone())
     }
 
-    fn init_global(&mut self, slot: usize, value: Value) {
-        let cell = self.heap.new_cell(value);
-        if self.global_cells.len() <= slot {
-            self.global_cells.resize(slot + 1, None);
+    fn init_global(&mut self, slot: usize, value: Value) -> Result<(), RuntimeError> {
+        if slot >= self.global_cells.len() {
+            return Err(RuntimeError::invalid_instruction(format!(
+                "global slot g{} is out of range",
+                slot
+            )));
         }
+        let cell = self.heap.new_cell(value);
         self.global_cells[slot] = Some(cell);
+        Ok(())
     }
 
     fn set_global(&mut self, slot: usize, value: Value) -> Result<(), RuntimeError> {
@@ -16055,7 +16265,7 @@ impl<'a> VM<'a> {
             } else {
                 "to_width < from_width"
             };
-            return Err(RuntimeError::new(format!(
+            return Err(RuntimeError::invalid_conversion(format!(
                 "{} requires {}, found {} -> {}",
                 op_name,
                 relation,
@@ -16081,7 +16291,7 @@ impl<'a> VM<'a> {
     ) -> Result<u64, RuntimeError> {
         match self.read_register_ref(frame, value)? {
             Value::MachineInt(value) => Ok(*value),
-            other => Err(RuntimeError::new(format!(
+            other => Err(RuntimeError::invalid_operand(format!(
                 "{} expects machine_int, got {}",
                 op_name,
                 other.type_name()
@@ -16097,7 +16307,7 @@ impl<'a> VM<'a> {
     ) -> Result<f64, RuntimeError> {
         match self.read_register_ref(frame, value)? {
             Value::MachineFloat(value) => Ok(*value),
-            other => Err(RuntimeError::new(format!(
+            other => Err(RuntimeError::invalid_operand(format!(
                 "{} expects machine_float, got {}",
                 op_name,
                 other.type_name()
@@ -16113,7 +16323,7 @@ impl<'a> VM<'a> {
     ) -> Result<u64, RuntimeError> {
         match self.read_register_ref(frame, value)? {
             Value::Address(value) => Ok(*value),
-            other => Err(RuntimeError::new(format!(
+            other => Err(RuntimeError::invalid_operand(format!(
                 "{} expects address, got {}",
                 op_name,
                 other.type_name()
@@ -16161,7 +16371,7 @@ impl<'a> VM<'a> {
             | MachineMemoryType::I64 => Value::machine_int(raw),
             MachineMemoryType::F32 => {
                 let bits = u32::try_from(raw)
-                    .map_err(|_| RuntimeError::new("load f32 bits exceed 32 bits"))?;
+                    .map_err(|_| RuntimeError::invalid_instruction("load f32 bits exceed 32 bits"))?;
                 Value::machine_float(f32::from_bits(bits) as f64)
             }
             MachineMemoryType::F64 => Value::machine_float(f64::from_bits(raw)),
@@ -16187,7 +16397,7 @@ impl<'a> VM<'a> {
                 let value = match source {
                     Value::MachineInt(value) => value,
                     other => {
-                        return Err(RuntimeError::new(format!(
+                        return Err(RuntimeError::invalid_operand(format!(
                             "store {} expects machine_int, got {}",
                             memory_type.as_str(),
                             other.type_name()
@@ -16282,7 +16492,7 @@ impl<'a> VM<'a> {
             self.read_register_ref(frame, right)?,
         ) {
             (Value::MachineInt(left), Value::MachineInt(right)) => Ok((*left, *right)),
-            _ => Err(RuntimeError::new(format!(
+            _ => Err(RuntimeError::invalid_operand(format!(
                 "{} expects machine_int operands",
                 op_name
             ))),
@@ -16328,7 +16538,9 @@ impl<'a> VM<'a> {
         )?;
         let right = right & width.mask();
         if right == 0 {
-            return Err(RuntimeError::new("integer division by zero"));
+            return Err(RuntimeError::integer_division_by_zero(
+                "integer division by zero",
+            ));
         }
 
         let result = if signed {
@@ -16336,7 +16548,9 @@ impl<'a> VM<'a> {
             let right = signed_machine_int(right, width);
             let minimum = -(1i128 << (width.bits() - 1));
             if left == minimum && right == -1 {
-                return Err(RuntimeError::new("integer division overflow"));
+                return Err(RuntimeError::integer_division_overflow(
+                    "integer division overflow",
+                ));
             }
             if remainder { left % right } else { left / right }
         } else {
@@ -16362,7 +16576,7 @@ impl<'a> VM<'a> {
         let value = self.expect_machine_int(frame, value, machine_shift_name(kind))?;
         let amount = self.expect_machine_int(frame, amount, machine_shift_name(kind))?;
         if amount >= u64::from(width.bits()) {
-            return Err(RuntimeError::new("invalid shift amount"));
+            return Err(RuntimeError::invalid_shift_amount("invalid shift amount"));
         }
         let value = value & width.mask();
         let result = match kind {

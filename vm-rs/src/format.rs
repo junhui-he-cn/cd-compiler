@@ -7,7 +7,7 @@ use crate::bytecode::{
 };
 use crate::memory::{MemoryRegionKind, NULL_GUARD_END};
 use crate::vm::native_arity_bounds;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// Stable artifact family accepted and emitted by this VM.
@@ -1556,8 +1556,17 @@ fn validate_data_segments(segments: &[DataSegment], line: usize) -> Result<(), P
         }
     }
 
+    machine_segment_bases(segments, line)?;
+    Ok(())
+}
+
+fn machine_segment_bases(
+    segments: &[DataSegment],
+    line: usize,
+) -> Result<Vec<u64>, ParseError> {
     // Static addresses are deterministic regardless of descriptor order:
     // the ABI reserves RODATA, DATA, and BSS in that order.
+    let mut bases = vec![0; segments.len()];
     let mut cursor = NULL_GUARD_END;
     for kind in [
         MemoryRegionKind::Rodata,
@@ -1576,6 +1585,7 @@ fn validate_data_segments(segments: &[DataSegment], line: usize) -> Result<(), P
                     format!("data segment d{} address placement overflows", index),
                 )
             })?;
+            bases[index] = base;
             cursor = base.checked_add(segment.size).ok_or_else(|| {
                 validation_error(
                     line,
@@ -1584,7 +1594,7 @@ fn validate_data_segments(segments: &[DataSegment], line: usize) -> Result<(), P
             })?;
         }
     }
-    Ok(())
+    Ok(bases)
 }
 
 fn validate_machine_linkage(
@@ -1592,6 +1602,7 @@ fn validate_machine_linkage(
     line: usize,
     allow_external_symbols: bool,
 ) -> Result<(), ParseError> {
+    let segment_bases = machine_segment_bases(&program.data_segments, line)?;
     let mut symbols = BTreeSet::new();
     for (index, symbol) in program.symbols.iter().enumerate() {
         if symbol.name.is_empty() {
@@ -1641,12 +1652,121 @@ fn validate_machine_linkage(
         }
     }
 
+    let mut relocation_data_ranges: BTreeMap<usize, Vec<(u64, u64, usize)>> = BTreeMap::new();
+    let mut relocation_call_targets = BTreeSet::new();
     for (index, relocation) in program.relocations.iter().enumerate() {
         if relocation.symbol.is_empty() {
             return Err(validation_error(
                 line,
                 format!("machine relocation r{} has an empty symbol name", index),
             ));
+        }
+        match (&relocation.kind, &relocation.target) {
+            (RelocationKind::Abs64, RelocationTarget::Data { segment, offset }) => {
+                let Some(data_segment) = program.data_segments.get(*segment) else {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} data segment d{} is out of range",
+                            index, segment
+                        ),
+                    ));
+                };
+                let end = offset.checked_add(8).ok_or_else(|| {
+                    validation_error(
+                        line,
+                        format!("machine relocation r{} target offset overflows", index),
+                    )
+                })?;
+                if end > data_segment.size {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} target range is outside data segment d{}",
+                            index, segment
+                        ),
+                    ));
+                }
+                let ranges = relocation_data_ranges.entry(*segment).or_default();
+                if let Some((_, _, previous)) = ranges
+                    .iter()
+                    .find(|(start, previous_end, _)| *offset < *previous_end && *start < end)
+                {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} overlaps relocation r{} in data segment d{}",
+                            index, previous, segment
+                        ),
+                    ));
+                }
+                ranges.push((*offset, end, index));
+            }
+            (RelocationKind::Abs64, RelocationTarget::CallDirect { .. }) => {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "machine relocation r{} ABS64 requires a data target",
+                        index
+                    ),
+                ));
+            }
+            (
+                RelocationKind::FuncIndex,
+                RelocationTarget::CallDirect {
+                    function,
+                    instruction,
+                },
+            ) => {
+                if relocation.addend != 0 {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} FUNC_INDEX does not accept an addend",
+                            index
+                        ),
+                    ));
+                }
+                let Some(body) = program.functions.get(function.0 as usize) else {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} call body f{} is out of range",
+                            index, function.0
+                        ),
+                    ));
+                };
+                if !matches!(
+                    body.instructions.get(*instruction),
+                    Some(Instruction::CallDirect { .. })
+                ) {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} target is not a call_direct operand",
+                            index
+                        ),
+                    ));
+                }
+                if !relocation_call_targets.insert((function.0 as usize, *instruction)) {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} duplicates a call target",
+                            index
+                        ),
+                    ));
+                }
+            }
+            (RelocationKind::FuncIndex, RelocationTarget::Data { .. }) => {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "machine relocation r{} FUNC_INDEX requires a call_direct target",
+                        index
+                    ),
+                ));
+            }
         }
         let Some(symbol) = program
             .symbols
@@ -1697,6 +1817,45 @@ fn validate_machine_linkage(
                         format!(
                             "machine relocation r{} targets incompatible segment d{} kind {}",
                             index, segment, data_segment.kind
+                        ),
+                    ));
+                }
+                let SymbolTarget::Data {
+                    segment: symbol_segment,
+                    offset: symbol_offset,
+                } = &symbol.target
+                else {
+                    unreachable!("symbol target was checked by the match arm");
+                };
+                let symbol_base = segment_bases
+                    .get(*symbol_segment)
+                    .copied()
+                    .ok_or_else(|| {
+                        validation_error(
+                            line,
+                            format!(
+                                "machine relocation r{} symbol data segment d{} is out of range",
+                                index, symbol_segment
+                            ),
+                        )
+                    })?;
+                let symbol_address = symbol_base.checked_add(*symbol_offset).ok_or_else(|| {
+                    validation_error(
+                        line,
+                        format!("machine relocation r{} symbol address overflows", index),
+                    )
+                })?;
+                let resolved = if relocation.addend >= 0 {
+                    symbol_address.checked_add(relocation.addend as u64)
+                } else {
+                    symbol_address.checked_sub(relocation.addend.unsigned_abs())
+                };
+                if resolved.map_or(true, |address| address < NULL_GUARD_END) {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} symbol address enters the null guard",
+                            index
                         ),
                     ));
                 }
@@ -2757,6 +2916,22 @@ fn validate_instruction(
             Ok(())
         }
     };
+    let global_slot = |index: usize| {
+        if index >= program.globals.len() {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} global g{} out of range (global count {})",
+                    context,
+                    instruction_index,
+                    index,
+                    program.globals.len()
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
 
     match instruction {
         Instruction::Constant {
@@ -2955,14 +3130,14 @@ fn validate_instruction(
         }
         Instruction::LoadGlobal { dest, slot } => {
             register(*dest, "destination")?;
-            let _ = slot;
+            global_slot(*slot)?;
         }
         Instruction::InitGlobal { slot, value } => {
-            let _ = slot;
+            global_slot(*slot)?;
             register(*value, "global value")?;
         }
         Instruction::SetGlobal { slot, value } => {
-            let _ = slot;
+            global_slot(*slot)?;
             register(*value, "global value")?;
         }
         Instruction::Call {
@@ -5993,6 +6168,111 @@ mod tests {
         });
         let error = verify_program(&duplicate).expect_err("duplicate symbols must reject");
         assert!(error.message.contains("duplicates name `data`"));
+    }
+
+    #[test]
+    fn verifier_rejects_machine_relocation_aliases_and_invalid_global_slots() {
+        let mut overlapping = program_with_data_segments(vec![DataSegment {
+            kind: MemoryRegionKind::Data,
+            alignment: 8,
+            size: 16,
+            initial: Some(vec![0; 16]),
+        }]);
+        overlapping.symbols.push(Symbol {
+            name: "data".to_string(),
+            target: SymbolTarget::Data {
+                segment: 0,
+                offset: 0,
+            },
+        });
+        overlapping.relocations = vec![
+            Relocation {
+                kind: RelocationKind::Abs64,
+                symbol: "data".to_string(),
+                addend: 0,
+                target: RelocationTarget::Data {
+                    segment: 0,
+                    offset: 0,
+                },
+            },
+            Relocation {
+                kind: RelocationKind::Abs64,
+                symbol: "data".to_string(),
+                addend: 0,
+                target: RelocationTarget::Data {
+                    segment: 0,
+                    offset: 4,
+                },
+            },
+        ];
+        let error = verify_program(&overlapping)
+            .expect_err("overlapping eight-byte relocation targets must be rejected");
+        assert!(error.message.contains("overlaps relocation r0"), "{}", error.message);
+
+        let mut null_guard = overlapping.clone();
+        null_guard.relocations.truncate(1);
+        null_guard.relocations[0].addend = -1;
+        let error = verify_program(&null_guard)
+            .expect_err("relocation addends must not enter the null guard");
+        assert!(
+            error.message.contains("symbol address enters the null guard"),
+            "{}",
+            error.message
+        );
+
+        let mut duplicate_call = program_with_data_segments(Vec::new());
+        duplicate_call.functions[0].registers = 1;
+        duplicate_call.functions[0].instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::CallDirect {
+                dest: 0,
+                function: FuncId(0),
+                arguments: Vec::new(),
+            },
+            Instruction::ReturnNil,
+        ];
+        duplicate_call.functions[0].locations = vec![None; 3];
+        duplicate_call.symbols.push(Symbol {
+            name: "entry".to_string(),
+            target: SymbolTarget::Function(FuncId(0)),
+        });
+        duplicate_call.relocations = vec![
+            Relocation {
+                kind: RelocationKind::FuncIndex,
+                symbol: "entry".to_string(),
+                addend: 0,
+                target: RelocationTarget::CallDirect {
+                    function: FuncId(0),
+                    instruction: 1,
+                },
+            },
+            Relocation {
+                kind: RelocationKind::FuncIndex,
+                symbol: "entry".to_string(),
+                addend: 0,
+                target: RelocationTarget::CallDirect {
+                    function: FuncId(0),
+                    instruction: 1,
+                },
+            },
+        ];
+        let error = verify_program(&duplicate_call)
+            .expect_err("duplicate direct-call relocations must be rejected");
+        assert!(error.message.contains("duplicates a call target"), "{}", error.message);
+
+        let mut invalid_global = program_with_data_segments(Vec::new());
+        invalid_global.names.push("global".to_string());
+        invalid_global.globals.push(0);
+        invalid_global.functions[0].registers = 1;
+        invalid_global.functions[0].instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::LoadGlobal { dest: 0, slot: 1 },
+            Instruction::ReturnNil,
+        ];
+        invalid_global.functions[0].locations = vec![None; 3];
+        let error = verify_program(&invalid_global)
+            .expect_err("global instructions must stay inside the global table");
+        assert!(error.message.contains("global g1 out of range"), "{}", error.message);
     }
 
     #[test]

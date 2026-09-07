@@ -33,6 +33,12 @@ strict Rust-side `cdbc 0.3` reader and explicit machine-artifact writer, with
 round-trip support for machine opcodes, segment payloads, ABI metadata,
 symbols, and relocations; the existing C++ emitter and default formatter stay
 on `cdbc 0.2` until the compiler-side artifact cutover is separately chosen.
+VM03-12 now adds typed machine traps for arithmetic, shifts, conversions,
+instruction and operand failures, plus load-time verifier coverage for machine
+types, widths, registers, memory and frame metadata, global slots, symbols,
+relocations, and call ABI boundaries. The loader keeps the same invalid-product
+classification for unverified in-memory programs and avoids host panics while
+handling malformed entry, branch, frame, and machine-linkage state.
 Floating-point and mixed integer/float conversions from VM03-03 remain
 pending. Machine execution remains interpreter-first.
 The compiler, language, and compiler tools have a separate current-state record in
