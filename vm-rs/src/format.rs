@@ -1404,39 +1404,6 @@ fn validate_module_envelope(artifact: &ModuleArtifact, line: usize) -> Result<()
     Ok(())
 }
 
-const SUPPORTED_NATIVE_FUNCTIONS: &[&str] = &[
-    "push",
-    "pop",
-    "remove",
-    "clear",
-    "merge",
-    "keys",
-    "values",
-    "floor",
-    "ceil",
-    "sqrt",
-    "str",
-    "substr",
-    "charAt",
-    "typeOf",
-    "hash",
-    "contains",
-    "slice",
-    "copy",
-    "concat",
-    "map",
-    "filter",
-    "flatMap",
-    "any",
-    "all",
-    "count",
-    "find",
-    "findIndex",
-    "reduce",
-    "range",
-    "print",
-];
-
 fn validation_error(line: usize, message: impl Into<String>) -> ParseError {
     ParseError {
         line,
@@ -1996,7 +1963,7 @@ fn validate_program_with_external_symbols_inner(
                 format!("native import i{} must declare abi=1", index),
             ));
         }
-        if !SUPPORTED_NATIVE_FUNCTIONS.contains(&import.name.as_str()) {
+        if native_arity_bounds(&import.name).is_none() {
             return Err(validation_error(
                 line,
                 format!(
