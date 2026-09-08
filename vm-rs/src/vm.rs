@@ -11504,6 +11504,21 @@ struct ActiveTaskTrace {
 }
 
 #[derive(Default)]
+struct CooperativeState<'a> {
+    task_output_events: Vec<TaskOutputEvent>,
+    task_trace_enabled: bool,
+    task_trace_collect_events: bool,
+    task_trace_events: Vec<TaskTraceEvent>,
+    active_task: Option<TaskId>,
+    active_task_trace: Option<ActiveTaskTrace>,
+    active_task_profile: Option<ActiveTaskProfile>,
+    debug_hook: Option<Box<dyn CooperativeDebugHook + 'a>>,
+    active_debug_state: Option<CooperativeDebugState>,
+    debug_quit: bool,
+    next_event_sequence: usize,
+}
+
+#[derive(Default)]
 struct TaskProfileState {
     started: bool,
     instruction_count: usize,
@@ -11731,17 +11746,7 @@ pub struct VM<'a> {
     jit: JitState,
     output: String,
     output_bytes: usize,
-    task_output_events: Vec<TaskOutputEvent>,
-    task_trace_enabled: bool,
-    task_trace_collect_events: bool,
-    task_trace_events: Vec<TaskTraceEvent>,
-    active_cooperative_task: Option<TaskId>,
-    active_task_trace: Option<ActiveTaskTrace>,
-    active_task_profile: Option<ActiveTaskProfile>,
-    cooperative_debug_hook: Option<Box<dyn CooperativeDebugHook + 'a>>,
-    active_cooperative_debug_state: Option<CooperativeDebugState>,
-    cooperative_debug_quit: bool,
-    next_task_event_sequence: usize,
+    cooperative: CooperativeState<'a>,
     instruction_steps: usize,
     call_depth: usize,
     runtime_elements: usize,
@@ -11818,7 +11823,7 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
     }
 
     fn materialize(&mut self, kind: JitSafepointKind) {
-        let task_id = self.vm.active_cooperative_task;
+        let task_id = self.vm.cooperative.active_task;
         let instruction = self.frame.ip;
         self.last_materialization = Some(self.vm.jit.materialize_frame(
             self.frame,
@@ -12084,11 +12089,11 @@ impl<'a> CooperativeRun<'a> {
             .dispatch(|task, context| {
                 if let Some(state) = debug_state {
                     debug_assert_eq!(state.running, context.task_id);
-                    debug_assert!(self.vm.active_cooperative_debug_state.is_none());
-                    self.vm.active_cooperative_debug_state = Some(state);
+                    debug_assert!(self.vm.cooperative.active_debug_state.is_none());
+                    self.vm.cooperative.active_debug_state = Some(state);
                 }
                 let step = self.vm.execute_scheduled_slice(task, context);
-                self.vm.active_cooperative_debug_state = None;
+                self.vm.cooperative.active_debug_state = None;
                 step
             })
             .map_err(|error| RuntimeError::new(error.to_string()))?;
@@ -12103,7 +12108,7 @@ impl<'a> CooperativeRun<'a> {
             });
         };
 
-        if self.vm.cooperative_debug_quit {
+        if self.vm.cooperative.debug_quit {
             self.scheduler.cancel_pending_except(result.task_id);
             self.release_terminal_frames();
             self.vm.heap.collect_garbage();
@@ -12224,7 +12229,7 @@ impl<'a> CooperativeRun<'a> {
 
     /// Whether the cooperative debugger hook requested a session quit.
     pub fn debug_quit(&self) -> bool {
-        self.vm.cooperative_debug_quit
+        self.vm.cooperative.debug_quit
     }
 
     /// Return all terminal outcomes in stable task-id order.
@@ -12245,24 +12250,24 @@ impl<'a> CooperativeRun<'a> {
 
     /// Return committed output chunks in scheduler dispatch order.
     pub fn output_events(&self) -> &[TaskOutputEvent] {
-        &self.vm.task_output_events
+        &self.vm.cooperative.task_output_events
     }
 
     /// Drain committed output chunks without resetting their session sequence
     /// or the cumulative output-byte resource budget.
     pub fn take_output_events(&mut self) -> Vec<TaskOutputEvent> {
-        std::mem::take(&mut self.vm.task_output_events)
+        std::mem::take(&mut self.vm.cooperative.task_output_events)
     }
 
     /// Return task-attributed trace observations in scheduler event order.
     pub fn trace_events(&self) -> &[TaskTraceEvent] {
-        &self.vm.task_trace_events
+        &self.vm.cooperative.task_trace_events
     }
 
     /// Drain task trace observations without resetting the shared session
     /// event sequence.
     pub fn take_trace_events(&mut self) -> Vec<TaskTraceEvent> {
-        std::mem::take(&mut self.vm.task_trace_events)
+        std::mem::take(&mut self.vm.cooperative.task_trace_events)
     }
 
     /// Return a deterministic snapshot of aggregate and per-task counters.
@@ -12291,7 +12296,7 @@ impl<'a> CooperativeRun<'a> {
     }
 
     fn debug_state_for_next_dispatch(&self) -> Option<CooperativeDebugState> {
-        self.vm.cooperative_debug_hook.as_ref()?;
+        self.vm.cooperative.debug_hook.as_ref()?;
         let mut ready = self.scheduler.ready_task_ids();
         let running = ready.first().copied()?;
         ready.remove(0);
@@ -12516,17 +12521,7 @@ impl<'a> VM<'a> {
             jit: JitState::disabled(),
             output: String::new(),
             output_bytes: 0,
-            task_output_events: Vec::new(),
-            task_trace_enabled: false,
-            task_trace_collect_events: false,
-            task_trace_events: Vec::new(),
-            active_cooperative_task: None,
-            active_task_trace: None,
-            active_task_profile: None,
-            cooperative_debug_hook: None,
-            active_cooperative_debug_state: None,
-            cooperative_debug_quit: false,
-            next_task_event_sequence: 0,
+            cooperative: CooperativeState::default(),
             instruction_steps: 0,
             call_depth: 0,
             runtime_elements: 0,
@@ -12644,8 +12639,8 @@ impl<'a> VM<'a> {
         mut self,
         quantum: usize,
     ) -> Result<CooperativeRun<'a>, TaskControlError> {
-        self.task_trace_enabled = true;
-        self.task_trace_collect_events = true;
+        self.cooperative.task_trace_enabled = true;
+        self.cooperative.task_trace_collect_events = true;
         self.start_cooperative(quantum)
     }
 
@@ -12668,9 +12663,9 @@ impl<'a> VM<'a> {
         quantum: usize,
         hook: Box<dyn CooperativeDebugHook + 'a>,
     ) -> Result<CooperativeRun<'a>, TaskControlError> {
-        self.task_trace_enabled = true;
-        self.task_trace_collect_events = false;
-        self.cooperative_debug_hook = Some(hook);
+        self.cooperative.task_trace_enabled = true;
+        self.cooperative.task_trace_collect_events = false;
+        self.cooperative.debug_hook = Some(hook);
         self.start_cooperative(quantum)
     }
 
@@ -12766,7 +12761,7 @@ impl<'a> VM<'a> {
         if let Some(function) = self.profile.functions.get_mut(index) {
             function.calls = function.calls.saturating_add(1);
         }
-        if let Some(active) = self.active_task_profile.as_mut() {
+        if let Some(active) = self.cooperative.active_task_profile.as_mut() {
             active.state.function_entry(frame);
         }
     }
@@ -12785,7 +12780,7 @@ impl<'a> VM<'a> {
             let hits = self.profile.source_ranges.entry(key).or_insert(0);
             *hits = hits.saturating_add(1);
         }
-        if let Some(active) = self.active_task_profile.as_mut() {
+        if let Some(active) = self.cooperative.active_task_profile.as_mut() {
             active.state.instruction(frame, location);
         }
     }
@@ -12796,7 +12791,7 @@ impl<'a> VM<'a> {
         }
         let calls = self.profile.natives.entry(name.to_string()).or_insert(0);
         *calls = calls.saturating_add(1);
-        if let Some(active) = self.active_task_profile.as_mut() {
+        if let Some(active) = self.cooperative.active_task_profile.as_mut() {
             active.state.native_call(name);
         }
     }
@@ -13007,7 +13002,7 @@ impl<'a> VM<'a> {
                 task.profile.started = true;
             }
 
-            if self.task_trace_enabled && !task.trace.started {
+            if self.cooperative.task_trace_enabled && !task.trace.started {
                 let location = body.locations.first().cloned().flatten();
                 let trace_result = {
                     let ScheduledVmTask { frames, trace, .. } = task;
@@ -13028,7 +13023,7 @@ impl<'a> VM<'a> {
                         self.decorate_scheduled_error(error, task, &body, instruction_index);
                     return self.stop_scheduled_task(context.task_id, task, error);
                 }
-                if self.task_trace_enabled {
+                if self.cooperative.task_trace_enabled {
                     let trace_result = {
                         let ScheduledVmTask { frames, trace, .. } = task;
                         match frames.current() {
@@ -13067,7 +13062,7 @@ impl<'a> VM<'a> {
             }
 
             let location = body.locations.get(instruction_index).cloned().flatten();
-            if self.task_trace_enabled {
+            if self.cooperative.task_trace_enabled {
                 let trace_result = {
                     let ScheduledVmTask { frames, trace, .. } = task;
                     match frames.current() {
@@ -13086,7 +13081,7 @@ impl<'a> VM<'a> {
                     return TaskStep::Fail;
                 }
             }
-            if self.cooperative_debug_hook.is_some() {
+            if self.cooperative.debug_hook.is_some() {
                 let debug_result = {
                     let ScheduledVmTask { frames, trace, .. } = task;
                     match frames.current() {
@@ -13110,18 +13105,18 @@ impl<'a> VM<'a> {
             }
             let previous_call_depth = self.call_depth;
             let scheduled_call_depth = task.frames.len().saturating_sub(1);
-            debug_assert!(self.active_cooperative_task.is_none());
-            self.active_cooperative_task = Some(context.task_id);
-            if self.task_trace_enabled {
-                debug_assert!(self.active_task_trace.is_none());
-                self.active_task_trace = Some(ActiveTaskTrace {
+            debug_assert!(self.cooperative.active_task.is_none());
+            self.cooperative.active_task = Some(context.task_id);
+            if self.cooperative.task_trace_enabled {
+                debug_assert!(self.cooperative.active_task_trace.is_none());
+                self.cooperative.active_task_trace = Some(ActiveTaskTrace {
                     task_id: context.task_id,
                     state: std::mem::take(&mut task.trace),
                 });
             }
             if self.profile.enabled {
-                debug_assert!(self.active_task_profile.is_none());
-                self.active_task_profile = Some(ActiveTaskProfile {
+                debug_assert!(self.cooperative.active_task_profile.is_none());
+                self.cooperative.active_task_profile = Some(ActiveTaskProfile {
                     task_id: context.task_id,
                     state: std::mem::take(&mut task.profile),
                 });
@@ -13168,8 +13163,9 @@ impl<'a> VM<'a> {
             };
             task.machine_stack = Some(active_stack);
             self.machine_stack = saved_stack;
-            if self.task_trace_enabled {
+            if self.cooperative.task_trace_enabled {
                 let active = self
+                    .cooperative
                     .active_task_trace
                     .take()
                     .expect("traced scheduled execution retains task state");
@@ -13178,13 +13174,14 @@ impl<'a> VM<'a> {
             }
             if self.profile.enabled {
                 let active = self
+                    .cooperative
                     .active_task_profile
                     .take()
                     .expect("profiled scheduled execution retains task state");
                 debug_assert_eq!(active.task_id, context.task_id);
                 task.profile = active.state;
             }
-            debug_assert_eq!(self.active_cooperative_task.take(), Some(context.task_id));
+            debug_assert_eq!(self.cooperative.active_task.take(), Some(context.task_id));
             self.heap.observe_estimated_bytes();
 
             match action {
@@ -13200,7 +13197,7 @@ impl<'a> VM<'a> {
                             self.decorate_scheduled_error(error, task, &body, instruction_index);
                         return self.stop_scheduled_task(context.task_id, task, error);
                     }
-                    if self.task_trace_enabled {
+                    if self.cooperative.task_trace_enabled {
                         let rendered = value.to_string();
                         let trace_result = {
                             let ScheduledVmTask { frames, trace, .. } = task;
@@ -13325,7 +13322,7 @@ impl<'a> VM<'a> {
         task.frames
             .push(frame)
             .map_err(|error| RuntimeError::new(error.to_string()))?;
-        if self.task_trace_enabled {
+        if self.cooperative.task_trace_enabled {
             let ScheduledVmTask { frames, trace, .. } = task;
             let frame = frames
                 .current()
@@ -13385,12 +13382,12 @@ impl<'a> VM<'a> {
         task: &mut ScheduledVmTask,
         error: RuntimeError,
     ) -> TaskStep {
-        if error.kind == RuntimeErrorKind::DebuggerQuit && self.cooperative_debug_hook.is_some() {
+        if error.kind == RuntimeErrorKind::DebuggerQuit && self.cooperative.debug_hook.is_some() {
             task.error = None;
             self.release_task_frames(task);
             return TaskStep::Cancel;
         }
-        if self.cooperative_debug_hook.is_some() && task.trace.started {
+        if self.cooperative.debug_hook.is_some() && task.trace.started {
             let debug_result = task.frames.current().map_or(Ok(()), |frame| {
                 self.cooperative_debug_error(
                     task_id,
@@ -13412,7 +13409,7 @@ impl<'a> VM<'a> {
         } else {
             TaskStep::Fail
         };
-        if self.task_trace_enabled && task.trace.started {
+        if self.cooperative.task_trace_enabled && task.trace.started {
             if let Err(trace_error) = self.task_trace_failure(task_id, task, &error.message) {
                 task.error = Some(trace_error);
                 self.release_task_frames(task);
@@ -13432,7 +13429,7 @@ impl<'a> VM<'a> {
         if self.trace.enabled {
             self.trace_enter(frame, location.clone());
         }
-        if self.active_task_trace.is_some() {
+        if self.cooperative.active_task_trace.is_some() {
             self.active_task_trace_enter(frame, location)?;
         }
         Ok(())
@@ -13447,7 +13444,7 @@ impl<'a> VM<'a> {
         if self.trace.enabled {
             self.trace_instruction(frame, instruction, location.clone());
         }
-        if self.active_task_trace.is_some() {
+        if self.cooperative.active_task_trace.is_some() {
             self.active_task_trace_instruction(frame, instruction, location)?;
         }
         Ok(())
@@ -13464,9 +13461,9 @@ impl<'a> VM<'a> {
         let mut output = value.clone();
         output.push('\n');
         let location = body.locations.get(instruction).cloned().flatten();
-        if let Some(task_id) = self.active_cooperative_task {
+        if let Some(task_id) = self.cooperative.active_task {
             let sequence = self.append_task_output(task_id, &output)?;
-            if self.active_task_trace.is_some() {
+            if self.cooperative.active_task_trace.is_some() {
                 self.active_task_trace_event_at_sequence(
                     sequence,
                     TraceEventKind::Output,
@@ -13499,7 +13496,7 @@ impl<'a> VM<'a> {
         value: &Value,
     ) -> Result<(), RuntimeError> {
         let location = body.locations.get(instruction).cloned().flatten();
-        if self.active_task_trace.is_some() {
+        if self.cooperative.active_task_trace.is_some() {
             let rendered = value.to_string();
             self.active_task_trace_event(
                 TraceEventKind::Return,
@@ -13541,7 +13538,7 @@ impl<'a> VM<'a> {
             );
             self.trace_leave(frame, Some(instruction), None);
         }
-        if self.active_task_trace.is_some() {
+        if self.cooperative.active_task_trace.is_some() {
             self.active_task_trace_event(
                 TraceEventKind::Error,
                 frame,
@@ -13562,7 +13559,7 @@ impl<'a> VM<'a> {
         if self.trace.enabled {
             self.trace_leave(frame, instruction, None);
         }
-        if self.active_task_trace.is_some() {
+        if self.cooperative.active_task_trace.is_some() {
             self.active_task_trace_leave(frame, instruction, None)?;
         }
         Ok(())
@@ -13583,7 +13580,7 @@ impl<'a> VM<'a> {
         // resolve it once instead of re-testing every instruction; diagnostics
         // reconstruct the location on failure.
         let needs_location = self.trace.enabled
-            || self.active_task_trace.is_some()
+            || self.cooperative.active_task_trace.is_some()
             || self.debug_hook.is_some()
             || self.profile.enabled;
         while frame.ip < body.instructions.len() {
@@ -13592,8 +13589,9 @@ impl<'a> VM<'a> {
                 .then(|| body.locations.get(instruction_index).cloned().flatten())
                 .flatten();
             self.trace_recursive_instruction(frame, instruction_index, location.clone())?;
-            if self.cooperative_debug_hook.is_some() {
+            if self.cooperative.debug_hook.is_some() {
                 let active = self
+                    .cooperative
                     .active_task_trace
                     .as_ref()
                     .map(|active| (active.task_id, active.state.stack.clone()));
@@ -13735,6 +13733,7 @@ impl<'a> VM<'a> {
                     }
                     if error.kind != RuntimeErrorKind::DebuggerQuit {
                         let active = self
+                            .cooperative
                             .active_task_trace
                             .as_ref()
                             .map(|active| (active.task_id, active.state.stack.clone()));
@@ -15188,7 +15187,7 @@ impl<'a> VM<'a> {
         self.output_bytes = next;
         if self.profile.enabled {
             self.profile.output_bytes = self.output_bytes;
-            if let Some(active) = self.active_task_profile.as_mut() {
+            if let Some(active) = self.cooperative.active_task_profile.as_mut() {
                 active.state.output(text.len());
             }
         }
@@ -15196,7 +15195,7 @@ impl<'a> VM<'a> {
     }
 
     fn next_cooperative_event_sequence(&self) -> Result<(usize, usize), RuntimeError> {
-        let sequence = self.next_task_event_sequence;
+        let sequence = self.cooperative.next_event_sequence;
         let next_sequence = sequence
             .checked_add(1)
             .ok_or_else(|| RuntimeError::new("cooperative task event sequence exhausted"))?;
@@ -15206,8 +15205,8 @@ impl<'a> VM<'a> {
     fn append_task_output(&mut self, task_id: TaskId, text: &str) -> Result<usize, RuntimeError> {
         let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
         self.append_output(text)?;
-        self.next_task_event_sequence = next_sequence;
-        self.task_output_events.push(TaskOutputEvent {
+        self.cooperative.next_event_sequence = next_sequence;
+        self.cooperative.task_output_events.push(TaskOutputEvent {
             sequence,
             task_id,
             text: text.to_string(),
@@ -15228,9 +15227,9 @@ impl<'a> VM<'a> {
             location: location.clone(),
         });
         trace.last_locations.push(location.clone());
-        if self.task_trace_collect_events {
+        if self.cooperative.task_trace_collect_events {
             let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
-            self.next_task_event_sequence = next_sequence;
+            self.cooperative.next_event_sequence = next_sequence;
             self.push_task_trace_event(
                 sequence,
                 task_id,
@@ -15258,7 +15257,7 @@ impl<'a> VM<'a> {
             .last()
             .map(|last| *last != location)
             .unwrap_or(true);
-        let sequence = if changed && self.task_trace_collect_events {
+        let sequence = if changed && self.cooperative.task_trace_collect_events {
             Some(self.next_cooperative_event_sequence()?)
         } else {
             None
@@ -15270,7 +15269,7 @@ impl<'a> VM<'a> {
             active.location = location.clone();
         }
         if let Some((sequence, next_sequence)) = sequence {
-            self.next_task_event_sequence = next_sequence;
+            self.cooperative.next_event_sequence = next_sequence;
             self.push_task_trace_event(
                 sequence,
                 task_id,
@@ -15295,11 +15294,11 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) -> Result<(), RuntimeError> {
-        if !self.task_trace_collect_events {
+        if !self.cooperative.task_trace_collect_events {
             return Ok(());
         }
         let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
-        self.next_task_event_sequence = next_sequence;
+        self.cooperative.next_event_sequence = next_sequence;
         self.push_task_trace_event(
             sequence,
             task_id,
@@ -15324,7 +15323,7 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) {
-        if self.task_trace_collect_events {
+        if self.cooperative.task_trace_collect_events {
             self.push_task_trace_event(
                 sequence,
                 task_id,
@@ -15375,7 +15374,7 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) {
-        self.task_trace_events.push(TaskTraceEvent {
+        self.cooperative.task_trace_events.push(TaskTraceEvent {
             sequence,
             task_id,
             kind,
@@ -15441,11 +15440,11 @@ impl<'a> VM<'a> {
         frame: &Frame,
         location: Option<DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        let Some(mut active) = self.active_task_trace.take() else {
+        let Some(mut active) = self.cooperative.active_task_trace.take() else {
             return Err(RuntimeError::new("missing cooperative task trace state"));
         };
         let result = self.task_trace_enter(active.task_id, &mut active.state, frame, location);
-        self.active_task_trace = Some(active);
+        self.cooperative.active_task_trace = Some(active);
         result
     }
 
@@ -15455,7 +15454,7 @@ impl<'a> VM<'a> {
         instruction: usize,
         location: Option<DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        let Some(mut active) = self.active_task_trace.take() else {
+        let Some(mut active) = self.cooperative.active_task_trace.take() else {
             return Err(RuntimeError::new("missing cooperative task trace state"));
         };
         let result = self.task_trace_instruction(
@@ -15465,7 +15464,7 @@ impl<'a> VM<'a> {
             instruction,
             location,
         );
-        self.active_task_trace = Some(active);
+        self.cooperative.active_task_trace = Some(active);
         result
     }
 
@@ -15477,7 +15476,7 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) -> Result<(), RuntimeError> {
-        let Some(active) = self.active_task_trace.take() else {
+        let Some(active) = self.cooperative.active_task_trace.take() else {
             return Err(RuntimeError::new("missing cooperative task trace state"));
         };
         let result = self.task_trace_event(
@@ -15489,7 +15488,7 @@ impl<'a> VM<'a> {
             location,
             value,
         );
-        self.active_task_trace = Some(active);
+        self.cooperative.active_task_trace = Some(active);
         result
     }
 
@@ -15502,7 +15501,7 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) -> Result<(), RuntimeError> {
-        let Some(active) = self.active_task_trace.take() else {
+        let Some(active) = self.cooperative.active_task_trace.take() else {
             return Err(RuntimeError::new("missing cooperative task trace state"));
         };
         self.task_trace_event_at_sequence(
@@ -15515,7 +15514,7 @@ impl<'a> VM<'a> {
             location,
             value,
         );
-        self.active_task_trace = Some(active);
+        self.cooperative.active_task_trace = Some(active);
         Ok(())
     }
 
@@ -15525,12 +15524,12 @@ impl<'a> VM<'a> {
         instruction: Option<usize>,
         value: Option<String>,
     ) -> Result<(), RuntimeError> {
-        let Some(mut active) = self.active_task_trace.take() else {
+        let Some(mut active) = self.cooperative.active_task_trace.take() else {
             return Err(RuntimeError::new("missing cooperative task trace state"));
         };
         let result =
             self.task_trace_leave(active.task_id, &mut active.state, frame, instruction, value);
-        self.active_task_trace = Some(active);
+        self.cooperative.active_task_trace = Some(active);
         result
     }
 
@@ -15582,17 +15581,18 @@ impl<'a> VM<'a> {
         instruction: usize,
         location: Option<DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        if self.cooperative_debug_hook.is_none() {
+        if self.cooperative.debug_hook.is_none() {
             return Ok(());
         }
         let pause = self.cooperative_debug_pause(task_id, stack, frame, instruction, location);
         let control = self
-            .cooperative_debug_hook
+            .cooperative
+            .debug_hook
             .as_mut()
             .expect("cooperative debug hook checked above")
             .on_instruction(pause);
         if control == DebugControl::Quit {
-            self.cooperative_debug_quit = true;
+            self.cooperative.debug_quit = true;
             return Err(RuntimeError::debug_quit());
         }
         Ok(())
@@ -15607,17 +15607,18 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         error: &RuntimeError,
     ) -> Result<(), RuntimeError> {
-        if self.cooperative_debug_hook.is_none() {
+        if self.cooperative.debug_hook.is_none() {
             return Ok(());
         }
         let pause = self.cooperative_debug_pause(task_id, stack, frame, instruction, location);
         let control = self
-            .cooperative_debug_hook
+            .cooperative
+            .debug_hook
             .as_mut()
             .expect("cooperative debug hook checked above")
             .on_error(pause, error);
         if control == DebugControl::Quit {
-            self.cooperative_debug_quit = true;
+            self.cooperative.debug_quit = true;
             return Err(RuntimeError::debug_quit());
         }
         Ok(())
@@ -15632,7 +15633,8 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
     ) -> CooperativeDebugPause {
         let scheduler = self
-            .active_cooperative_debug_state
+            .cooperative
+            .active_debug_state
             .clone()
             .expect("cooperative debug callback retains scheduler state");
         debug_assert_eq!(scheduler.running, task_id);
@@ -15975,9 +15977,9 @@ impl<'a> VM<'a> {
     }
 
     fn jit_execution_mode(&self) -> JitExecutionMode {
-        if self.active_cooperative_task.is_some() {
+        if self.cooperative.active_task.is_some() {
             JitExecutionMode::Cooperative
-        } else if self.debug_hook.is_some() || self.cooperative_debug_hook.is_some() {
+        } else if self.debug_hook.is_some() || self.cooperative.debug_hook.is_some() {
             JitExecutionMode::Debug
         } else if self.profile.enabled {
             JitExecutionMode::Profile
@@ -16031,7 +16033,7 @@ impl<'a> VM<'a> {
         // before handing the same callee to the authoritative interpreter.
         let baseline = self.jit.materialize_frame(
             frame,
-            self.active_cooperative_task,
+            self.cooperative.active_task,
             JitSafepoint::new(JitSafepointKind::Error, frame.ip),
         );
         let checkpoint_start = self.instruction_steps;
