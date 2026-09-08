@@ -1,5 +1,76 @@
 use super::*;
 
+fn reject_unsupported_machine_instructions(program: &Program) -> Result<(), FormatError> {
+    if !program.data_segments.is_empty() {
+        return Err(FormatError::UnsupportedMachineDataSegment { segment: 0 });
+    }
+    if !program.symbols.is_empty() {
+        return Err(FormatError::UnsupportedMachineSymbols { symbol: 0 });
+    }
+    if !program.relocations.is_empty() {
+        return Err(FormatError::UnsupportedMachineRelocations { relocation: 0 });
+    }
+    for (function, body) in program.functions.iter().enumerate() {
+        for (instruction, operation) in body.instructions.iter().enumerate() {
+            if let Some(opcode) = machine_instruction_opcode(operation) {
+                return Err(FormatError::UnsupportedMachineInstruction {
+                    function,
+                    instruction,
+                    opcode,
+                });
+            }
+        }
+        if body.has_machine_abi() {
+            return Err(FormatError::UnsupportedMachineAbi { function });
+        }
+    }
+    Ok(())
+}
+
+fn machine_instruction_opcode(instruction: &Instruction) -> Option<&'static str> {
+    Some(match instruction {
+        Instruction::IConst { .. } => "iconst",
+        Instruction::Trunc { .. } => "trunc",
+        Instruction::ZExt { .. } => "zext",
+        Instruction::SExt { .. } => "sext",
+        Instruction::FConst { .. } => "fconst",
+        Instruction::FAdd { .. } => "fadd",
+        Instruction::FSub { .. } => "fsub",
+        Instruction::FMul { .. } => "fmul",
+        Instruction::FDiv { .. } => "fdiv",
+        Instruction::FNeg { .. } => "fneg",
+        Instruction::FCmp { .. } => "fcmp",
+        Instruction::SIToFp { .. } => "sitofp",
+        Instruction::UIToFp { .. } => "uitofp",
+        Instruction::FPToSI { .. } => "fptosi",
+        Instruction::FPToUI { .. } => "fptoui",
+        Instruction::FPExt { .. } => "fpext",
+        Instruction::FPTrunc { .. } => "fptrunc",
+        Instruction::IAdd { .. } => "iadd",
+        Instruction::ISub { .. } => "isub",
+        Instruction::IMul { .. } => "imul",
+        Instruction::SDiv { .. } => "sdiv",
+        Instruction::UDiv { .. } => "udiv",
+        Instruction::SRem { .. } => "srem",
+        Instruction::URem { .. } => "urem",
+        Instruction::And { .. } => "and",
+        Instruction::Or { .. } => "or",
+        Instruction::Xor { .. } => "xor",
+        Instruction::IntNot { .. } => "not_int",
+        Instruction::Shl { .. } => "shl",
+        Instruction::LShr { .. } => "lshr",
+        Instruction::AShr { .. } => "ashr",
+        Instruction::ICmp { .. } => "icmp",
+        Instruction::Load { .. } => "load",
+        Instruction::Store { .. } => "store",
+        Instruction::Memcpy { .. } => "memcpy",
+        Instruction::Memmove { .. } => "memmove",
+        Instruction::Memset { .. } => "memset",
+        Instruction::FrameAddr { .. } => "frame_addr",
+        _ => return None,
+    })
+}
+
 pub fn format_program(program: &Program) -> String {
     format_program_checked(program)
         .expect("cdbc 0.2 formatter received an unsupported machine instruction")
