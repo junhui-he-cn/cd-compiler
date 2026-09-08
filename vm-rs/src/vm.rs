@@ -1262,40 +1262,7 @@ fn machine_scalar_matches(expected: MachineScalarType, value: &Value) -> bool {
 }
 
 fn native_spec(name: &str) -> Option<&'static NativeSpec> {
-    let index = match name {
-        "push" => 0,
-        "pop" => 1,
-        "remove" => 2,
-        "clear" => 3,
-        "merge" => 4,
-        "keys" => 5,
-        "values" => 6,
-        "floor" => 7,
-        "ceil" => 8,
-        "sqrt" => 9,
-        "str" => 10,
-        "substr" => 11,
-        "charAt" => 12,
-        "typeOf" => 13,
-        "hash" => 14,
-        "contains" => 15,
-        "slice" => 16,
-        "copy" => 17,
-        "concat" => 18,
-        "map" => 19,
-        "filter" => 20,
-        "flatMap" => 21,
-        "any" => 22,
-        "all" => 23,
-        "count" => 24,
-        "find" => 25,
-        "findIndex" => 26,
-        "reduce" => 27,
-        "range" => 28,
-        "print" => 29,
-        _ => return None,
-    };
-    Some(&NATIVE_SPECS[index])
+    NATIVE_SPECS.iter().find(|spec| spec.name == name)
 }
 
 /// Verification-time arity bounds for a registered native name.
@@ -13658,22 +13625,7 @@ impl<'a> VM<'a> {
                         else {
                             return Err(RuntimeError::new("can only call functions"));
                         };
-                        let values = match arguments.as_slice() {
-                            [] => CallArguments::Empty,
-                            [argument] => CallArguments::One(self.read_register(frame, *argument)?),
-                            [left, right] => {
-                                let left = self.read_register(frame, *left)?;
-                                let right = self.read_register(frame, *right)?;
-                                CallArguments::Two(left, right)
-                            }
-                            arguments => {
-                                let mut values = Vec::with_capacity(arguments.len());
-                                for argument in arguments {
-                                    values.push(self.read_register(frame, *argument)?);
-                                }
-                                CallArguments::Many(values)
-                            }
-                        };
+                        let values = self.read_call_arguments(frame, arguments)?;
                         let result = self.call_function(
                             function,
                             values,
@@ -13691,22 +13643,7 @@ impl<'a> VM<'a> {
                         let target =
                             self.resolved_direct_call_target(frame, instruction_index, *function);
                         let function = self.direct_call_function_value(target.0 as usize, frame)?;
-                        let values = match arguments.as_slice() {
-                            [] => CallArguments::Empty,
-                            [argument] => CallArguments::One(self.read_register(frame, *argument)?),
-                            [left, right] => {
-                                let left = self.read_register(frame, *left)?;
-                                let right = self.read_register(frame, *right)?;
-                                CallArguments::Two(left, right)
-                            }
-                            arguments => {
-                                let mut values = Vec::with_capacity(arguments.len());
-                                for argument in arguments {
-                                    values.push(self.read_register(frame, *argument)?);
-                                }
-                                CallArguments::Many(values)
-                            }
-                        };
+                        let values = self.read_call_arguments(frame, arguments)?;
                         let result = self.call_function(
                             &function,
                             values,
@@ -14977,22 +14914,7 @@ impl<'a> VM<'a> {
                 let Value::Function(function) = self.read_register_ref(frame, *callee)? else {
                     return Err(RuntimeError::new("can only call functions"));
                 };
-                let values = match arguments.as_slice() {
-                    [] => CallArguments::Empty,
-                    [argument] => CallArguments::One(self.read_register(frame, *argument)?),
-                    [left, right] => {
-                        let left = self.read_register(frame, *left)?;
-                        let right = self.read_register(frame, *right)?;
-                        CallArguments::Two(left, right)
-                    }
-                    arguments => {
-                        let mut values = Vec::with_capacity(arguments.len());
-                        for argument in arguments {
-                            values.push(self.read_register(frame, *argument)?);
-                        }
-                        CallArguments::Many(values)
-                    }
-                };
+                let values = self.read_call_arguments(frame, arguments)?;
                 return Ok(InstructionAction::Call(CallRequest {
                     dest: *dest,
                     function: function.clone(),
@@ -15009,22 +14931,7 @@ impl<'a> VM<'a> {
             } => {
                 let target = self.resolved_direct_call_target(frame, instruction_index, *function);
                 let function = self.direct_call_function_value(target.0 as usize, frame)?;
-                let values = match arguments.as_slice() {
-                    [] => CallArguments::Empty,
-                    [argument] => CallArguments::One(self.read_register(frame, *argument)?),
-                    [left, right] => {
-                        let left = self.read_register(frame, *left)?;
-                        let right = self.read_register(frame, *right)?;
-                        CallArguments::Two(left, right)
-                    }
-                    arguments => {
-                        let mut values = Vec::with_capacity(arguments.len());
-                        for argument in arguments {
-                            values.push(self.read_register(frame, *argument)?);
-                        }
-                        CallArguments::Many(values)
-                    }
-                };
+                let values = self.read_call_arguments(frame, arguments)?;
                 return Ok(InstructionAction::Call(CallRequest {
                     dest: *dest,
                     function,
@@ -17406,6 +17313,28 @@ impl<'a> VM<'a> {
             return Err(error.clone());
         }
         Ok(value.clone())
+    }
+
+    fn read_call_arguments(
+        &self,
+        frame: &Frame,
+        arguments: &[usize],
+    ) -> Result<CallArguments, RuntimeError> {
+        match arguments {
+            [] => Ok(CallArguments::Empty),
+            [argument] => Ok(CallArguments::One(self.read_register(frame, *argument)?)),
+            [left, right] => Ok(CallArguments::Two(
+                self.read_register(frame, *left)?,
+                self.read_register(frame, *right)?,
+            )),
+            arguments => {
+                let mut values = Vec::with_capacity(arguments.len());
+                for argument in arguments {
+                    values.push(self.read_register(frame, *argument)?);
+                }
+                Ok(CallArguments::Many(values))
+            }
+        }
     }
 
     fn read_register(&self, frame: &Frame, index: usize) -> Result<Value, RuntimeError> {
