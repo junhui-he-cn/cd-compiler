@@ -2103,34 +2103,44 @@ fn validate_program_with_external_symbols_inner(
         } else {
             format!("function f{}", index - 1)
         };
-        validate_body(
-            &context,
-            function.registers,
-            function.arity,
-            function.machine_frame_size,
-            function.local_count,
-            function.upvalues.len(),
-            &function.instructions,
-            &function.locations,
+        let validation = ValidationContext {
+            context: &context,
+            registers: function.registers,
+            arity: function.arity,
+            machine_frame_size: function.machine_frame_size,
+            local_count: function.local_count,
+            upvalue_count: function.upvalues.len(),
             program,
             line,
+        };
+        validate_body(
+            &validation,
+            &function.instructions,
+            &function.locations,
         )?;
     }
     Ok(())
 }
 
-fn validate_body(
-    context: &str,
+struct ValidationContext<'a> {
+    context: &'a str,
     registers: usize,
     arity: usize,
     machine_frame_size: u64,
     local_count: usize,
     upvalue_count: usize,
+    program: &'a Program,
+    line: usize,
+}
+
+fn validate_body(
+    validation: &ValidationContext<'_>,
     instructions: &[Instruction],
     locations: &[Option<DebugLocation>],
-    program: &Program,
-    line: usize,
 ) -> Result<(), ParseError> {
+    let context = validation.context;
+    let program = validation.program;
+    let line = validation.line;
     if locations.len() != instructions.len() {
         return Err(validation_error(
             line,
@@ -2187,28 +2197,9 @@ fn validate_body(
         }
     }
     for (instruction_index, instruction) in instructions.iter().enumerate() {
-        validate_instruction(
-            context,
-            instruction_index,
-            registers,
-            machine_frame_size,
-            local_count,
-            upvalue_count,
-            instruction,
-            program,
-            line,
-        )?;
+        validate_instruction(validation, instruction_index, instruction)?;
     }
-    validate_block_body(
-        context,
-        registers,
-        arity,
-        local_count,
-        upvalue_count,
-        instructions,
-        program,
-        line,
-    )?;
+    validate_block_body(validation, instructions)?;
     Ok(())
 }
 
@@ -2471,15 +2462,16 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
 }
 
 fn validate_block_body(
-    context: &str,
-    registers: usize,
-    arity: usize,
-    local_count: usize,
-    upvalue_count: usize,
+    validation: &ValidationContext<'_>,
     instructions: &[Instruction],
-    program: &Program,
-    line: usize,
 ) -> Result<(), ParseError> {
+    let context = validation.context;
+    let registers = validation.registers;
+    let arity = validation.arity;
+    let local_count = validation.local_count;
+    let upvalue_count = validation.upvalue_count;
+    let program = validation.program;
+    let line = validation.line;
     let mut blocks: Vec<(usize, usize)> = Vec::new();
     for (index, instruction) in instructions.iter().enumerate() {
         match instruction {
@@ -2761,16 +2753,17 @@ fn validate_block_body(
 }
 
 fn validate_instruction(
-    context: &str,
+    validation: &ValidationContext<'_>,
     instruction_index: usize,
-    registers: usize,
-    machine_frame_size: u64,
-    local_count: usize,
-    upvalue_count: usize,
     instruction: &Instruction,
-    program: &Program,
-    line: usize,
 ) -> Result<(), ParseError> {
+    let context = validation.context;
+    let registers = validation.registers;
+    let machine_frame_size = validation.machine_frame_size;
+    let local_count = validation.local_count;
+    let upvalue_count = validation.upvalue_count;
+    let program = validation.program;
+    let line = validation.line;
     let register = |index: usize, role: &str| {
         if index >= registers {
             Err(validation_error(
