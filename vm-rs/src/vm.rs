@@ -11489,6 +11489,15 @@ struct TaskTraceState {
     last_locations: Vec<Option<DebugLocation>>,
 }
 
+#[derive(Default)]
+struct TraceState {
+    enabled: bool,
+    collect_events: bool,
+    events: Vec<TraceEvent>,
+    stack: Vec<StackFrame>,
+    last_locations: Vec<Option<DebugLocation>>,
+}
+
 struct ActiveTaskTrace {
     task_id: TaskId,
     state: TaskTraceState,
@@ -11736,11 +11745,7 @@ pub struct VM<'a> {
     instruction_steps: usize,
     call_depth: usize,
     runtime_elements: usize,
-    trace_enabled: bool,
-    trace_collect_events: bool,
-    trace_events: Vec<TraceEvent>,
-    trace_stack: Vec<StackFrame>,
-    trace_last_locations: Vec<Option<DebugLocation>>,
+    trace: TraceState,
     debug_hook: Option<Box<dyn DebugHook + 'a>>,
     profile: ProfileState,
 }
@@ -12525,11 +12530,7 @@ impl<'a> VM<'a> {
             instruction_steps: 0,
             call_depth: 0,
             runtime_elements: 0,
-            trace_enabled: false,
-            trace_collect_events: false,
-            trace_events: Vec::new(),
-            trace_stack: Vec::new(),
-            trace_last_locations: Vec::new(),
+            trace: TraceState::default(),
             debug_hook: None,
             profile: ProfileState::default(),
         }
@@ -12690,18 +12691,18 @@ impl<'a> VM<'a> {
     }
 
     pub fn trace(mut self) -> TraceRun {
-        self.trace_enabled = true;
-        self.trace_collect_events = true;
+        self.trace.enabled = true;
+        self.trace.collect_events = true;
         let result = self.run_inner();
         TraceRun {
-            events: self.trace_events,
+            events: self.trace.events,
             result,
         }
     }
 
     pub fn debug(mut self, hook: Box<dyn DebugHook + 'a>) -> DebugRun {
-        self.trace_enabled = true;
-        self.trace_collect_events = false;
+        self.trace.enabled = true;
+        self.trace.collect_events = false;
         self.debug_hook = Some(hook);
         let result = self.run_inner();
         let quit = result
@@ -13428,7 +13429,7 @@ impl<'a> VM<'a> {
         frame: &Frame,
         location: Option<DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        if self.trace_enabled {
+        if self.trace.enabled {
             self.trace_enter(frame, location.clone());
         }
         if self.active_task_trace.is_some() {
@@ -13443,7 +13444,7 @@ impl<'a> VM<'a> {
         instruction: usize,
         location: Option<DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        if self.trace_enabled {
+        if self.trace.enabled {
             self.trace_instruction(frame, instruction, location.clone());
         }
         if self.active_task_trace.is_some() {
@@ -13478,7 +13479,7 @@ impl<'a> VM<'a> {
         } else {
             self.append_output(&output)?;
         }
-        if self.trace_enabled {
+        if self.trace.enabled {
             self.emit_trace(
                 TraceEventKind::Output,
                 frame,
@@ -13509,7 +13510,7 @@ impl<'a> VM<'a> {
             )?;
             self.active_task_trace_leave(frame, Some(instruction), Some(rendered))?;
         }
-        if self.trace_enabled {
+        if self.trace.enabled {
             self.emit_trace(
                 TraceEventKind::Return,
                 frame,
@@ -13530,7 +13531,7 @@ impl<'a> VM<'a> {
         error: &RuntimeError,
     ) -> Result<(), RuntimeError> {
         let location = body.locations.get(instruction).cloned().flatten();
-        if self.trace_enabled {
+        if self.trace.enabled {
             self.emit_trace(
                 TraceEventKind::Error,
                 frame,
@@ -13558,7 +13559,7 @@ impl<'a> VM<'a> {
         frame: &Frame,
         instruction: Option<usize>,
     ) -> Result<(), RuntimeError> {
-        if self.trace_enabled {
+        if self.trace.enabled {
             self.trace_leave(frame, instruction, None);
         }
         if self.active_task_trace.is_some() {
@@ -13581,7 +13582,7 @@ impl<'a> VM<'a> {
         // active hooks is stable for the duration of one body execution, so
         // resolve it once instead of re-testing every instruction; diagnostics
         // reconstruct the location on failure.
-        let needs_location = self.trace_enabled
+        let needs_location = self.trace.enabled
             || self.active_task_trace.is_some()
             || self.debug_hook.is_some()
             || self.profile.enabled;
@@ -13751,7 +13752,7 @@ impl<'a> VM<'a> {
                             function: frame.function.to_string(),
                             instruction: instruction_index,
                             location: body.locations.get(instruction_index).cloned().flatten(),
-                            stack: self.trace_stack.clone(),
+                            stack: self.trace.stack.clone(),
                             locals: self.trace_locals(frame),
                             machine: self.machine_debug_state(frame),
                         };
@@ -15534,14 +15535,14 @@ impl<'a> VM<'a> {
     }
 
     fn trace_enter(&mut self, frame: &Frame, location: Option<DebugLocation>) {
-        if !self.trace_enabled {
+        if !self.trace.enabled {
             return;
         }
-        self.trace_stack.push(StackFrame {
+        self.trace.stack.push(StackFrame {
             function: frame.function.to_string(),
             location: location.clone(),
         });
-        self.trace_last_locations.push(location.clone());
+        self.trace.last_locations.push(location.clone());
         self.emit_trace(TraceEventKind::Enter, frame, Some(0), location, None);
     }
 
@@ -15558,7 +15559,7 @@ impl<'a> VM<'a> {
             function: frame.function.to_string(),
             instruction,
             location,
-            stack: self.trace_stack.clone(),
+            stack: self.trace.stack.clone(),
             locals: self.trace_locals(frame),
             machine: self.machine_debug_state(frame),
         };
@@ -15653,18 +15654,18 @@ impl<'a> VM<'a> {
         instruction: usize,
         location: Option<DebugLocation>,
     ) {
-        if !self.trace_enabled {
+        if !self.trace.enabled {
             return;
         }
         let changed = self
-            .trace_last_locations
+            .trace.last_locations
             .last()
             .map(|last| *last != location)
             .unwrap_or(true);
-        if let Some(last) = self.trace_last_locations.last_mut() {
+        if let Some(last) = self.trace.last_locations.last_mut() {
             *last = location.clone();
         }
-        if let Some(active) = self.trace_stack.last_mut() {
+        if let Some(active) = self.trace.stack.last_mut() {
             active.location = location.clone();
         }
         if changed {
@@ -15679,16 +15680,16 @@ impl<'a> VM<'a> {
     }
 
     fn trace_leave(&mut self, frame: &Frame, instruction: Option<usize>, value: Option<String>) {
-        if !self.trace_enabled {
+        if !self.trace.enabled {
             return;
         }
         let location = self
-            .trace_stack
+            .trace.stack
             .last()
             .and_then(|active| active.location.clone());
         self.emit_trace(TraceEventKind::Exit, frame, instruction, location, value);
-        self.trace_stack.pop();
-        self.trace_last_locations.pop();
+        self.trace.stack.pop();
+        self.trace.last_locations.pop();
     }
 
     fn emit_trace(
@@ -15699,16 +15700,16 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) {
-        if !self.trace_enabled || !self.trace_collect_events {
+        if !self.trace.enabled || !self.trace.collect_events {
             return;
         }
-        self.trace_events.push(TraceEvent {
-            sequence: self.trace_events.len(),
+        self.trace.events.push(TraceEvent {
+            sequence: self.trace.events.len(),
             kind,
             function: frame.function.to_string(),
             instruction,
             location,
-            stack: self.trace_stack.clone(),
+            stack: self.trace.stack.clone(),
             locals: self.trace_locals(frame),
             value,
         });
@@ -15980,7 +15981,7 @@ impl<'a> VM<'a> {
             JitExecutionMode::Debug
         } else if self.profile.enabled {
             JitExecutionMode::Profile
-        } else if self.trace_enabled {
+        } else if self.trace.enabled {
             JitExecutionMode::Trace
         } else {
             JitExecutionMode::Ordinary
