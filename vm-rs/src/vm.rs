@@ -13811,6 +13811,182 @@ impl<'a> VM<'a> {
         }
     }
 
+    fn execute_machine_integer_instruction(
+        &mut self,
+        frame: &mut Frame,
+        instruction: &Instruction,
+    ) -> Result<(), RuntimeError> {
+        match instruction {
+            Instruction::IAdd {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "iadd",
+                u64::wrapping_add,
+            ),
+            Instruction::ISub {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "isub",
+                u64::wrapping_sub,
+            ),
+            Instruction::IMul {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "imul",
+                u64::wrapping_mul,
+            ),
+            Instruction::SDiv {
+                dest,
+                left,
+                right,
+                width,
+            } => {
+                self.execute_machine_int_division(frame, *dest, *left, *right, *width, true, false)
+            }
+            Instruction::UDiv {
+                dest,
+                left,
+                right,
+                width,
+            } => {
+                self.execute_machine_int_division(frame, *dest, *left, *right, *width, false, false)
+            }
+            Instruction::SRem {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_division(frame, *dest, *left, *right, *width, true, true),
+            Instruction::URem {
+                dest,
+                left,
+                right,
+                width,
+            } => {
+                self.execute_machine_int_division(frame, *dest, *left, *right, *width, false, true)
+            }
+            Instruction::And {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "and",
+                |left, right| left & right,
+            ),
+            Instruction::Or {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "or",
+                |left, right| left | right,
+            ),
+            Instruction::Xor {
+                dest,
+                left,
+                right,
+                width,
+            } => self.execute_machine_int_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *width,
+                "xor",
+                |left, right| left ^ right,
+            ),
+            Instruction::IntNot { dest, value, width } => {
+                let value = self.expect_machine_int(frame, *value, "not_int")?;
+                self.write_register(frame, *dest, Value::machine_int((!value) & width.mask()))
+            }
+            Instruction::Shl {
+                dest,
+                value,
+                amount,
+                width,
+            } => self.execute_machine_int_shift(
+                frame,
+                *dest,
+                *value,
+                *amount,
+                *width,
+                MachineShiftKind::Left,
+            ),
+            Instruction::LShr {
+                dest,
+                value,
+                amount,
+                width,
+            } => self.execute_machine_int_shift(
+                frame,
+                *dest,
+                *value,
+                *amount,
+                *width,
+                MachineShiftKind::LogicalRight,
+            ),
+            Instruction::AShr {
+                dest,
+                value,
+                amount,
+                width,
+            } => self.execute_machine_int_shift(
+                frame,
+                *dest,
+                *value,
+                *amount,
+                *width,
+                MachineShiftKind::ArithmeticRight,
+            ),
+            Instruction::ICmp {
+                dest,
+                left,
+                right,
+                width,
+                predicate,
+            } => self.execute_machine_int_compare(frame, *dest, *left, *right, *width, *predicate),
+            _ => Err(RuntimeError::invalid_instruction(
+                "instruction is not a machine integer operation",
+            )),
+        }
+    }
+
     /// Shared instruction semantics for both the ordinary and cooperative
     /// dispatch paths. Output, calls, returns, and jump control flow stay in
     /// the callers because the two paths attribute those observably.
@@ -14292,170 +14468,23 @@ impl<'a> VM<'a> {
                 *to_format,
                 "fptrunc",
             ),
-            Instruction::IAdd {
-                dest,
-                left,
-                right,
-                width,
-            } => self.execute_machine_int_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *width,
-                "iadd",
-                u64::wrapping_add,
-            ),
-            Instruction::ISub {
-                dest,
-                left,
-                right,
-                width,
-            } => self.execute_machine_int_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *width,
-                "isub",
-                u64::wrapping_sub,
-            ),
-            Instruction::IMul {
-                dest,
-                left,
-                right,
-                width,
-            } => self.execute_machine_int_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *width,
-                "imul",
-                u64::wrapping_mul,
-            ),
-            Instruction::SDiv {
-                dest,
-                left,
-                right,
-                width,
-            } => {
-                self.execute_machine_int_division(frame, *dest, *left, *right, *width, true, false)
+            Instruction::IAdd { .. }
+            | Instruction::ISub { .. }
+            | Instruction::IMul { .. }
+            | Instruction::SDiv { .. }
+            | Instruction::UDiv { .. }
+            | Instruction::SRem { .. }
+            | Instruction::URem { .. }
+            | Instruction::And { .. }
+            | Instruction::Or { .. }
+            | Instruction::Xor { .. }
+            | Instruction::IntNot { .. }
+            | Instruction::Shl { .. }
+            | Instruction::LShr { .. }
+            | Instruction::AShr { .. }
+            | Instruction::ICmp { .. } => {
+                self.execute_machine_integer_instruction(frame, instruction)
             }
-            Instruction::UDiv {
-                dest,
-                left,
-                right,
-                width,
-            } => {
-                self.execute_machine_int_division(frame, *dest, *left, *right, *width, false, false)
-            }
-            Instruction::SRem {
-                dest,
-                left,
-                right,
-                width,
-            } => self.execute_machine_int_division(frame, *dest, *left, *right, *width, true, true),
-            Instruction::URem {
-                dest,
-                left,
-                right,
-                width,
-            } => {
-                self.execute_machine_int_division(frame, *dest, *left, *right, *width, false, true)
-            }
-            Instruction::And {
-                dest,
-                left,
-                right,
-                width,
-            } => self.execute_machine_int_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *width,
-                "and",
-                |left, right| left & right,
-            ),
-            Instruction::Or {
-                dest,
-                left,
-                right,
-                width,
-            } => self.execute_machine_int_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *width,
-                "or",
-                |left, right| left | right,
-            ),
-            Instruction::Xor {
-                dest,
-                left,
-                right,
-                width,
-            } => self.execute_machine_int_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *width,
-                "xor",
-                |left, right| left ^ right,
-            ),
-            Instruction::IntNot { dest, value, width } => {
-                let value = self.expect_machine_int(frame, *value, "not_int")?;
-                self.write_register(frame, *dest, Value::machine_int((!value) & width.mask()))
-            }
-            Instruction::Shl {
-                dest,
-                value,
-                amount,
-                width,
-            } => self.execute_machine_int_shift(
-                frame,
-                *dest,
-                *value,
-                *amount,
-                *width,
-                MachineShiftKind::Left,
-            ),
-            Instruction::LShr {
-                dest,
-                value,
-                amount,
-                width,
-            } => self.execute_machine_int_shift(
-                frame,
-                *dest,
-                *value,
-                *amount,
-                *width,
-                MachineShiftKind::LogicalRight,
-            ),
-            Instruction::AShr {
-                dest,
-                value,
-                amount,
-                width,
-            } => self.execute_machine_int_shift(
-                frame,
-                *dest,
-                *value,
-                *amount,
-                *width,
-                MachineShiftKind::ArithmeticRight,
-            ),
-            Instruction::ICmp {
-                dest,
-                left,
-                right,
-                width,
-                predicate,
-            } => self.execute_machine_int_compare(frame, *dest, *left, *right, *width, *predicate),
             Instruction::Negate { dest, value } => {
                 let input = self.expect_number(frame, *value, "negate")?;
                 self.write_register(frame, *dest, Value::number(-input))
