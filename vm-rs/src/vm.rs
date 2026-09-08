@@ -13771,6 +13771,46 @@ impl<'a> VM<'a> {
         Ok(None)
     }
 
+    fn execute_machine_memory_instruction(
+        &mut self,
+        frame: &mut Frame,
+        instruction: &Instruction,
+    ) -> Result<(), RuntimeError> {
+        match instruction {
+            Instruction::FrameAddr { dest, offset } => {
+                self.execute_machine_frame_addr(frame, *dest, *offset)
+            }
+            Instruction::Load {
+                dest,
+                address,
+                memory_type,
+            } => self.execute_machine_load(frame, *dest, *address, *memory_type),
+            Instruction::Store {
+                address,
+                source,
+                memory_type,
+            } => self.execute_machine_store(frame, *address, *source, *memory_type),
+            Instruction::Memcpy {
+                destination,
+                source,
+                size,
+            } => self.execute_machine_memcpy(frame, *destination, *source, *size),
+            Instruction::Memmove {
+                destination,
+                source,
+                size,
+            } => self.execute_machine_memmove(frame, *destination, *source, *size),
+            Instruction::Memset {
+                destination,
+                value,
+                size,
+            } => self.execute_machine_memset(frame, *destination, *value, *size),
+            _ => Err(RuntimeError::invalid_instruction(
+                "instruction is not a machine memory operation",
+            )),
+        }
+    }
+
     /// Shared instruction semantics for both the ordinary and cooperative
     /// dispatch paths. Output, calls, returns, and jump control flow stay in
     /// the callers because the two paths attribute those observably.
@@ -14036,37 +14076,17 @@ impl<'a> VM<'a> {
                 )?;
                 self.write_register(frame, *dest, result)
             }
-            Instruction::FrameAddr { dest, offset } => {
-                self.execute_machine_frame_addr(frame, *dest, *offset)
+            Instruction::FrameAddr { .. }
+            | Instruction::Load { .. }
+            | Instruction::Store { .. }
+            | Instruction::Memcpy { .. }
+            | Instruction::Memmove { .. }
+            | Instruction::Memset { .. } => {
+                self.execute_machine_memory_instruction(frame, instruction)
             }
             Instruction::IConst { dest, width, raw } => {
                 self.write_register(frame, *dest, Value::machine_int(raw & width.mask()))
             }
-            Instruction::Load {
-                dest,
-                address,
-                memory_type,
-            } => self.execute_machine_load(frame, *dest, *address, *memory_type),
-            Instruction::Store {
-                address,
-                source,
-                memory_type,
-            } => self.execute_machine_store(frame, *address, *source, *memory_type),
-            Instruction::Memcpy {
-                destination,
-                source,
-                size,
-            } => self.execute_machine_memcpy(frame, *destination, *source, *size),
-            Instruction::Memmove {
-                destination,
-                source,
-                size,
-            } => self.execute_machine_memmove(frame, *destination, *source, *size),
-            Instruction::Memset {
-                destination,
-                value,
-                size,
-            } => self.execute_machine_memset(frame, *destination, *value, *size),
             Instruction::Trunc {
                 dest,
                 value,
