@@ -11576,6 +11576,16 @@ struct ActiveTaskProfile {
     state: TaskProfileState,
 }
 
+#[derive(Default)]
+struct ProfileState {
+    enabled: bool,
+    instruction_count: usize,
+    output_bytes: usize,
+    functions: Vec<ProfileFunction>,
+    natives: BTreeMap<String, usize>,
+    source_ranges: BTreeMap<(usize, usize, usize), usize>,
+}
+
 fn profile_function_index(frame: &Frame) -> usize {
     frame.function_index.unwrap_or(0)
 }
@@ -11732,12 +11742,7 @@ pub struct VM<'a> {
     trace_stack: Vec<StackFrame>,
     trace_last_locations: Vec<Option<DebugLocation>>,
     debug_hook: Option<Box<dyn DebugHook + 'a>>,
-    profile_enabled: bool,
-    profile_instruction_count: usize,
-    profile_output_bytes: usize,
-    profile_functions: Vec<ProfileFunction>,
-    profile_natives: BTreeMap<String, usize>,
-    profile_source_ranges: BTreeMap<(usize, usize, usize), usize>,
+    profile: ProfileState,
 }
 
 /// The result of crossing a JIT safepoint back into VM-owned state.
@@ -12259,7 +12264,7 @@ impl<'a> CooperativeRun<'a> {
     /// Ordinary cooperative sessions return `None` because profiling is
     /// explicitly opt-in.
     pub fn profile_report(&self) -> Option<CooperativeProfileReport> {
-        if !self.vm.profile_enabled {
+        if !self.vm.profile.enabled {
             return None;
         }
         let heap_stats = self.vm.heap.stats();
@@ -12391,7 +12396,7 @@ impl<'a> CooperativeRun<'a> {
             result: None,
             error: None,
             trace: TaskTraceState::default(),
-            profile: if self.vm.profile_enabled {
+            profile: if self.vm.profile.enabled {
                 TaskProfileState::enabled(self.vm.program)
             } else {
                 TaskProfileState::default()
@@ -12526,12 +12531,7 @@ impl<'a> VM<'a> {
             trace_stack: Vec::new(),
             trace_last_locations: Vec::new(),
             debug_hook: None,
-            profile_enabled: false,
-            profile_instruction_count: 0,
-            profile_output_bytes: 0,
-            profile_functions: Vec::new(),
-            profile_natives: BTreeMap::new(),
-            profile_source_ranges: BTreeMap::new(),
+            profile: ProfileState::default(),
         }
     }
 
@@ -12720,15 +12720,16 @@ impl<'a> VM<'a> {
         let (tracked_heap_allocations, tracked_heap_peak_live) = self.heap.profile_counts();
         let heap_snapshot = heap_stats.snapshot();
         ProfileReport {
-            instruction_count: self.profile_instruction_count,
-            output_bytes: self.profile_output_bytes,
+            instruction_count: self.profile.instruction_count,
+            output_bytes: self.profile.output_bytes,
             tracked_heap_allocations,
             tracked_heap_peak_live,
             tracked_heap_estimated_live_bytes: heap_snapshot.estimated_live_bytes,
             tracked_heap_estimated_peak_live_bytes: heap_snapshot.estimated_peak_live_bytes,
-            functions: self.profile_functions.clone(),
+            functions: self.profile.functions.clone(),
             natives: self
-                .profile_natives
+                .profile
+                .natives
                 .iter()
                 .map(|(name, calls)| ProfileNative {
                     name: name.clone(),
@@ -12736,7 +12737,8 @@ impl<'a> VM<'a> {
                 })
                 .collect(),
             source_ranges: self
-                .profile_source_ranges
+                .profile
+                .source_ranges
                 .iter()
                 .map(|((source, start, end), hits)| ProfileSourceRange {
                     range: DebugRange {
@@ -12751,16 +12753,16 @@ impl<'a> VM<'a> {
     }
 
     fn enable_profile(&mut self) {
-        self.profile_enabled = true;
-        self.profile_functions = empty_profile_functions(self.program);
+        self.profile.enabled = true;
+        self.profile.functions = empty_profile_functions(self.program);
     }
 
     fn profile_function_entry(&mut self, frame: &Frame) {
-        if !self.profile_enabled {
+        if !self.profile.enabled {
             return;
         }
         let index = profile_function_index(frame);
-        if let Some(function) = self.profile_functions.get_mut(index) {
+        if let Some(function) = self.profile.functions.get_mut(index) {
             function.calls = function.calls.saturating_add(1);
         }
         if let Some(active) = self.active_task_profile.as_mut() {
@@ -12769,17 +12771,17 @@ impl<'a> VM<'a> {
     }
 
     fn profile_instruction(&mut self, frame: &Frame, location: Option<&DebugLocation>) {
-        if !self.profile_enabled {
+        if !self.profile.enabled {
             return;
         }
-        self.profile_instruction_count = self.profile_instruction_count.saturating_add(1);
+        self.profile.instruction_count = self.profile.instruction_count.saturating_add(1);
         let index = profile_function_index(frame);
-        if let Some(function) = self.profile_functions.get_mut(index) {
+        if let Some(function) = self.profile.functions.get_mut(index) {
             function.instructions = function.instructions.saturating_add(1);
         }
         if let Some(range) = location.and_then(|location| location.range.as_ref()) {
             let key = (range.source, range.start, range.end);
-            let hits = self.profile_source_ranges.entry(key).or_insert(0);
+            let hits = self.profile.source_ranges.entry(key).or_insert(0);
             *hits = hits.saturating_add(1);
         }
         if let Some(active) = self.active_task_profile.as_mut() {
@@ -12788,10 +12790,10 @@ impl<'a> VM<'a> {
     }
 
     fn profile_native_call(&mut self, name: &str) {
-        if !self.profile_enabled {
+        if !self.profile.enabled {
             return;
         }
-        let calls = self.profile_natives.entry(name.to_string()).or_insert(0);
+        let calls = self.profile.natives.entry(name.to_string()).or_insert(0);
         *calls = calls.saturating_add(1);
         if let Some(active) = self.active_task_profile.as_mut() {
             active.state.native_call(name);
@@ -12988,7 +12990,7 @@ impl<'a> VM<'a> {
                 }
             };
 
-            if self.profile_enabled && !task.profile.started {
+            if self.profile.enabled && !task.profile.started {
                 let frame = match task.frames.current() {
                     Ok(frame) => frame,
                     Err(error) => {
@@ -13116,7 +13118,7 @@ impl<'a> VM<'a> {
                     state: std::mem::take(&mut task.trace),
                 });
             }
-            if self.profile_enabled {
+            if self.profile.enabled {
                 debug_assert!(self.active_task_profile.is_none());
                 self.active_task_profile = Some(ActiveTaskProfile {
                     task_id: context.task_id,
@@ -13136,7 +13138,7 @@ impl<'a> VM<'a> {
             let saved_stack = self.machine_stack.replace(active_stack);
             let action = match task.frames.current_mut() {
                 Ok(frame) => {
-                    if self.profile_enabled {
+                    if self.profile.enabled {
                         self.profile_instruction(frame, location.as_ref());
                     }
                     self.call_depth = scheduled_call_depth;
@@ -13173,7 +13175,7 @@ impl<'a> VM<'a> {
                 debug_assert_eq!(active.task_id, context.task_id);
                 task.trace = active.state;
             }
-            if self.profile_enabled {
+            if self.profile.enabled {
                 let active = self
                     .active_task_profile
                     .take()
@@ -13311,7 +13313,7 @@ impl<'a> VM<'a> {
             .as_mut()
             .ok_or_else(|| RuntimeError::new("task machine stack is not active"))
             .and_then(|stack| self.allocate_task_machine_frame(stack, &mut frame))?;
-        if self.profile_enabled {
+        if self.profile.enabled {
             self.profile_function_entry(&frame);
             task.profile.function_entry(&frame);
         }
@@ -13571,7 +13573,7 @@ impl<'a> VM<'a> {
         frame: &mut Frame,
     ) -> Result<Option<Value>, RuntimeError> {
         frame.ip = 0;
-        if self.profile_enabled {
+        if self.profile.enabled {
             self.profile_function_entry(frame);
         }
         self.enter_recursive_trace(frame, body.locations.first().cloned().flatten())?;
@@ -13582,7 +13584,7 @@ impl<'a> VM<'a> {
         let needs_location = self.trace_enabled
             || self.active_task_trace.is_some()
             || self.debug_hook.is_some()
-            || self.profile_enabled;
+            || self.profile.enabled;
         while frame.ip < body.instructions.len() {
             let instruction_index = frame.ip;
             let location = needs_location
@@ -13611,7 +13613,7 @@ impl<'a> VM<'a> {
             let mut jumped = false;
             let result = (|| -> Result<Option<Value>, RuntimeError> {
                 self.checkpoint_instruction()?;
-                if self.profile_enabled {
+                if self.profile.enabled {
                     self.profile_instruction(frame, location.as_ref());
                 }
                 let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
@@ -15183,8 +15185,8 @@ impl<'a> VM<'a> {
         }
         self.output.push_str(text);
         self.output_bytes = next;
-        if self.profile_enabled {
-            self.profile_output_bytes = self.output_bytes;
+        if self.profile.enabled {
+            self.profile.output_bytes = self.output_bytes;
             if let Some(active) = self.active_task_profile.as_mut() {
                 active.state.output(text.len());
             }
@@ -15976,7 +15978,7 @@ impl<'a> VM<'a> {
             JitExecutionMode::Cooperative
         } else if self.debug_hook.is_some() || self.cooperative_debug_hook.is_some() {
             JitExecutionMode::Debug
-        } else if self.profile_enabled {
+        } else if self.profile.enabled {
             JitExecutionMode::Profile
         } else if self.trace_enabled {
             JitExecutionMode::Trace
@@ -16603,7 +16605,7 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if self.profile_enabled {
+        if self.profile.enabled {
             self.profile_native_call(spec.name);
         }
         if arguments.len() < spec.min_arity || arguments.len() > spec.max_arity {
