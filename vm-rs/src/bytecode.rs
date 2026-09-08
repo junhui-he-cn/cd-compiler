@@ -135,7 +135,10 @@ pub enum RelocationTarget {
     /// An eight-byte payload location in a static segment.
     Data { segment: usize, offset: u64 },
     /// The function operand of one `CallDirect` instruction.
-    CallDirect { function: FuncId, instruction: usize },
+    CallDirect {
+        function: FuncId,
+        instruction: usize,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -245,6 +248,22 @@ impl MachineIntWidth {
             Self::W16 => "16",
             Self::W32 => "32",
             Self::W64 => "64",
+        }
+    }
+}
+
+/// IEEE floating-point format selected by a machine floating-point instruction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MachineFloatFormat {
+    F32,
+    F64,
+}
+
+impl MachineFloatFormat {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::F32 => "f32",
+            Self::F64 => "f64",
         }
     }
 }
@@ -363,6 +382,46 @@ impl MachineIntPredicate {
             Self::Ule => "ule",
             Self::Ugt => "ugt",
             Self::Uge => "uge",
+        }
+    }
+}
+
+/// Ordered and unordered predicates used by machine floating-point compare.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MachineFloatPredicate {
+    OEq,
+    ONe,
+    OLt,
+    OLe,
+    OGt,
+    OGe,
+    UEq,
+    UNe,
+    ULt,
+    ULe,
+    UGt,
+    UGe,
+    Ord,
+    Uno,
+}
+
+impl MachineFloatPredicate {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::OEq => "oeq",
+            Self::ONe => "one",
+            Self::OLt => "olt",
+            Self::OLe => "ole",
+            Self::OGt => "ogt",
+            Self::OGe => "oge",
+            Self::UEq => "ueq",
+            Self::UNe => "une",
+            Self::ULt => "ult",
+            Self::ULe => "ule",
+            Self::UGt => "ugt",
+            Self::UGe => "uge",
+            Self::Ord => "ord",
+            Self::Uno => "uno",
         }
     }
 }
@@ -789,6 +848,83 @@ pub enum Instruction {
         value: usize,
         from_width: MachineIntWidth,
         to_width: MachineIntWidth,
+    },
+    FConst {
+        dest: usize,
+        format: MachineFloatFormat,
+        bits: u64,
+    },
+    FAdd {
+        dest: usize,
+        left: usize,
+        right: usize,
+        format: MachineFloatFormat,
+    },
+    FSub {
+        dest: usize,
+        left: usize,
+        right: usize,
+        format: MachineFloatFormat,
+    },
+    FMul {
+        dest: usize,
+        left: usize,
+        right: usize,
+        format: MachineFloatFormat,
+    },
+    FDiv {
+        dest: usize,
+        left: usize,
+        right: usize,
+        format: MachineFloatFormat,
+    },
+    FNeg {
+        dest: usize,
+        value: usize,
+        format: MachineFloatFormat,
+    },
+    FCmp {
+        dest: usize,
+        left: usize,
+        right: usize,
+        format: MachineFloatFormat,
+        predicate: MachineFloatPredicate,
+    },
+    SIToFp {
+        dest: usize,
+        value: usize,
+        int_width: MachineIntWidth,
+        float_format: MachineFloatFormat,
+    },
+    UIToFp {
+        dest: usize,
+        value: usize,
+        int_width: MachineIntWidth,
+        float_format: MachineFloatFormat,
+    },
+    FPToSI {
+        dest: usize,
+        value: usize,
+        float_format: MachineFloatFormat,
+        int_width: MachineIntWidth,
+    },
+    FPToUI {
+        dest: usize,
+        value: usize,
+        float_format: MachineFloatFormat,
+        int_width: MachineIntWidth,
+    },
+    FPExt {
+        dest: usize,
+        value: usize,
+        from_format: MachineFloatFormat,
+        to_format: MachineFloatFormat,
+    },
+    FPTrunc {
+        dest: usize,
+        value: usize,
+        from_format: MachineFloatFormat,
+        to_format: MachineFloatFormat,
     },
     IAdd {
         dest: usize,

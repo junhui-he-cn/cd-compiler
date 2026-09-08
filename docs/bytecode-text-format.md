@@ -12,6 +12,11 @@ This format is not the same as the current `--bytecode` debug print. The debug p
 
 This format is the text artifact contract at the compiler/VM boundary. The C++ compiler can emit `.cdbc` files with `--emit-bytecode` or independent module products with `--emit-module-bytecode`; the Rust VM can parse, canonicalize, link, and execute them with `dump`, `link`, and `run`.
 
+The `cdbc 0.3` Machine Foundation is frozen as a Rust VM and explicit machine
+artifact contract by
+[`cdbc-0.3-machine-abi-001`](decisions/cdbc-0.3-machine-abi-001.md). The C++
+compiler and its default linked/module artifact paths remain on `cdbc 0.2`.
+
 ```sh
 compiler_design --emit-bytecode output.cdbc input.cd
 compiler_design --emit-module-bytecode module-products input.cd
@@ -24,10 +29,17 @@ compiler-design-vm debug output.cdbc
 
 ## Header
 
-Every file starts with a format identifier and version:
+Every file starts with a format identifier and version. The current C++
+compiler and default formatter use:
 
 ```text
 cdbc 0.2
+```
+
+The explicit Rust machine-artifact formatter uses:
+
+```text
+cdbc 0.3
 ```
 
 The Rust VM accepts `cdbc 0.2` and `cdbc 0.3`; legacy `cdbc 0.1` headers and
@@ -35,7 +47,10 @@ unknown versions are rejected before body parsing. The existing C++ compiler
 emitter and the default Rust formatter continue to emit `cdbc 0.2`. The
 machine-aware Rust APIs `format_program_v03` and `format_artifact_v03` emit
 `cdbc 0.3`. A 0.3 reader preserves every 0.2 field and adds the machine fields
-described below; a 0.2 writer never silently drops them.
+described below; a 0.2 writer never silently drops them. The VM `dump` command
+uses the 0.2 canonical formatter for legacy artifacts and the 0.3 formatter
+when machine instructions, segments, symbols, relocations, or ABI metadata are
+present.
 
 `cdbc 0.3` is an explicit machine-artifact boundary. It does not change the
 dynamic `number`/`bool`/`string` constant encodings, and it never serializes a
@@ -80,7 +95,9 @@ the parameter count against `arity` and rejects malformed metadata.
 
 ## Artifact kinds
 
-The `cdbc 0.2` envelope has two strict artifact kinds:
+The current compiler `cdbc 0.2` envelope has two strict artifact kinds. The
+explicit machine writer retains the same linked/module distinction and adds
+the machine sections described above when needed:
 
 - A linked program has no `artifact` declaration and is the existing output of
   `--emit-bytecode`. It may be passed to the VM `run` command.
@@ -420,6 +437,47 @@ return
 return_nil
 ```
 
+Machine-only opcodes are available only in `cdbc 0.3` artifacts:
+
+```text
+iconst  load  store  frame_addr
+trunc   zext  sext
+iadd    isub  imul  sdiv  udiv  srem  urem
+and     or    xor    not_int  shl  lshr  ashr  icmp
+fconst  fadd  fsub  fmul  fdiv  fneg  fcmp
+sitofp  uitofp  fptosi  fptoui  fpext  fptrunc
+memcpy  memmove  memset
+```
+
+Machine instruction forms use the destination-first register syntax emitted by
+the canonical formatter. Floating-point operations select `f32` or `f64` per
+instruction:
+
+```text
+rD = fconst f32, 0x3fc00000
+rD = fadd rL, rR, f64
+rD = fneg rV, f32
+rD = fcmp rL, rR, f64, une
+rD = sitofp rV, 32, f32
+rD = fptoui rV, f64, 64
+rD = fpext rV, f32, f64
+rD = fptrunc rV, f64, f32
+```
+
+`fconst` carries IEEE bits, using eight hexadecimal digits for `f32` and sixteen
+for `f64`. Non-NaN bits, signed zero, and infinities round-trip exactly; NaN
+bits are emitted as the format's canonical quiet NaN. F32 operands and results
+are rounded to binary32 at each operation boundary. Floating division by zero
+follows IEEE behavior and does not raise the integer divide-by-zero trap.
+`fcmp` accepts ordered predicates `oeq`, `one`, `olt`, `ole`, `ogt`, `oge`,
+unordered predicates `ueq`, `une`, `ult`, `ule`, `ugt`, `uge`, and `ord`/`uno`.
+
+Integer-to-float conversions may lose precision without trapping. Float-to-
+integer conversions truncate toward zero and reject NaN, infinity, and values
+outside the destination range with `InvalidConversion`. `fpext` is only
+`f32 -> f64`; `fptrunc` is only `f64 -> f32`. Invalid direction or width
+combinations are verifier errors.
+
 `call_direct fN [rArg0, ...]` targets a function by its `fN` table index when
 the compiler proves the target has no captured free variables; it bypasses
 `make_function`/`call` value indirection, still resolves global-source
@@ -589,11 +647,16 @@ The `range` native is also supported with one to three numeric arguments. Its
 result is consumed by the existing `len_range` and `range_get` instructions
 and by the iterator protocol.
 
-New opcodes must be added by updating this document, the C++ bytecode artifact emitter, and the Rust VM parser/formatter and executor together.
+Changes to the `cdbc 0.2` instruction set must update this document, the C++
+bytecode artifact emitter, and the Rust VM parser/formatter and executor
+together. Changes to the frozen `cdbc 0.3` machine instruction set must update
+this document, the Rust parser/formatter, verifier, linker, executor, and the
+VM03-16 decision record. A future C++ 0.3 producer cutover is a separate
+decision and must add the corresponding C++ lowering and parity coverage.
 
 ## Compatibility validation
 
-The Rust parser accepts only the `cdbc 0.2` header. Before `dump`, `link`, or
+The Rust parser accepts `cdbc 0.2` and `cdbc 0.3` headers. Before `dump`, `link`, or
 `run` receives an artifact, it validates finite number constants, constant/name/
 function/register references, branch targets, debug-location table shape, and
 the native import metadata plus the supported native-call capability set and
@@ -602,9 +665,10 @@ dependency targets, and insertion offsets are validated by the module envelope
 and linker path. Invalid artifacts are rejected before VM execution; valid
 linked programs and module products retain the canonical text described above.
 
-The version and compatibility matrix is recorded in
-`docs/decisions/m4a-artifact-validation.md`. No successor version is selected
-for this validation-only extension.
+The `cdbc 0.2` compatibility matrix is recorded in
+`docs/decisions/m4a-artifact-validation.md` and the X1 compatibility decision.
+The separate `cdbc 0.3` machine freeze is recorded in
+`docs/decisions/cdbc-0.3-machine-abi-001.md`.
 
 ## Non-Goals for This Phase
 

@@ -791,9 +791,7 @@ impl JitState {
                     });
                 }
                 Instruction::CallDirect { .. } => {
-                    return JitEligibility::Fallback(JitFallbackReason::DirectCall {
-                        instruction,
-                    });
+                    return JitEligibility::Fallback(JitFallbackReason::DirectCall { instruction });
                 }
                 Instruction::CallNative { native, .. } => {
                     let name = program
@@ -1191,11 +1189,10 @@ fn lower_to_cranelift_ir(
     ));
     signature.returns.push(AbiParam::new(types::I64));
 
-    let mut ir_function =
-        CraneliftFunction::with_name_signature(
-            UserFuncName::user(0, function_index as u32),
-            signature,
-        );
+    let mut ir_function = CraneliftFunction::with_name_signature(
+        UserFuncName::user(0, function_index as u32),
+        signature,
+    );
     let helper_refs = backend.map(|backend| backend.import_helpers(&mut ir_function));
     let mut builder_context = FunctionBuilderContext::new();
     {
@@ -1818,6 +1815,19 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::Trunc { .. } => "trunc",
         Instruction::ZExt { .. } => "zext",
         Instruction::SExt { .. } => "sext",
+        Instruction::FConst { .. } => "fconst",
+        Instruction::FAdd { .. } => "fadd",
+        Instruction::FSub { .. } => "fsub",
+        Instruction::FMul { .. } => "fmul",
+        Instruction::FDiv { .. } => "fdiv",
+        Instruction::FNeg { .. } => "fneg",
+        Instruction::FCmp { .. } => "fcmp",
+        Instruction::SIToFp { .. } => "sitofp",
+        Instruction::UIToFp { .. } => "uitofp",
+        Instruction::FPToSI { .. } => "fptosi",
+        Instruction::FPToUI { .. } => "fptoui",
+        Instruction::FPExt { .. } => "fpext",
+        Instruction::FPTrunc { .. } => "fptrunc",
         Instruction::IAdd { .. } => "iadd",
         Instruction::ISub { .. } => "isub",
         Instruction::IMul { .. } => "imul",

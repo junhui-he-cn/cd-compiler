@@ -1,11 +1,14 @@
 # cdbc 0.3 Machine Foundation
 
-Status: VM03-00 contract for the cdbc 0.3 implementation line.
+Status: VM03-16 ABI frozen on 2026-09-08 for the Rust VM machine-artifact
+implementation line. The decision record is
+[`cdbc-0.3-machine-abi-001`](decisions/cdbc-0.3-machine-abi-001.md).
 
-This document defines the machine layer that will be added to the Compiler
-Design VM. It is a VM and artifact contract, not a description of the current
-0.2 implementation. Later milestones must implement these rules before the
-ABI can be declared frozen.
+This document defines the machine layer implemented alongside the existing
+dynamic Compiler Design VM. It is a VM and artifact contract, not a request to
+change the C++ compiler's current `cdbc 0.2` output. The Rust VM exposes the
+explicit `cdbc 0.3` machine reader and writer; compiler-side artifact cutover
+requires a separate decision.
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are normative.
 
@@ -684,8 +687,9 @@ cdbc 0.3
 ~~~
 
 The artifact version is separate from the repository's semantic release
-version. The 0.3 writer emits only cdbc 0.3 once implementation begins. A 0.3
-reader MUST accept valid 0.2 artifacts and preserve their dynamic semantics.
+version. The explicit 0.3 writer emits only cdbc 0.3. The C++ compiler and
+default compiler path continue to emit cdbc 0.2. A 0.3 reader MUST accept
+valid 0.2 artifacts and preserve their dynamic semantics.
 A 0.2 reader MUST reject a 0.3 header cleanly as an unsupported version before
 interpreting the body.
 
@@ -712,8 +716,8 @@ debug_locations:
 debug_ranges:
 ~~~
 
-The exact canonical text grammar is implemented in VM03-11, but its semantic
-schema is fixed here:
+The exact canonical text grammar is implemented by VM03-11, and its semantic
+schema is frozen here:
 
 - machine integer constants carry raw u64 bits plus an explicit integer width
   where the instruction consumes them;
@@ -797,8 +801,8 @@ debug/trace tests, and JIT fallback tests.
 
 ## 18. Milestone boundary
 
-VM03-00 is complete when this document defines, without relying on LLVM or a
-host ABI:
+The VM03-00 contract-completeness checklist below is satisfied by the
+implementation and VM03-16 decision without relying on LLVM or a host ABI:
 
 - the machine value model;
 - integer representation, widths, signedness, wrapping, shifts, division,
@@ -815,6 +819,6 @@ host ABI:
 - debug/disassembly and interpreter fallback policy; and
 - the cdbc 0.2/0.3 compatibility contract.
 
-VM03-01 begins implementation of MachineInt, MachineFloat, and Address. No
-machine opcode implementation, cdbc 0.3 parser, or JIT lowering is implied by
-completing VM03-00.
+VM03-01 through VM03-15 provide the implementation evidence for this contract.
+VM03-16 freezes the machine ABI and JIT fallback boundary. It does not imply a
+C++ compiler cutover, LLVM integration, or complete machine JIT lowering.

@@ -8,6 +8,10 @@
 C++ 发射端在 `src/BytecodeTextEmitter.cpp`，Rust 解析与执行端在
 `vm-rs/src/format.rs` 与 `vm-rs/src/vm.rs`。若本文档与实现冲突，以实现和英文契约为准。
 
+本文档只覆盖编译器当前发射的 `cdbc 0.2`。Rust VM 另外接受显式的
+`cdbc 0.3` machine 工件；其机器值、线性内存、frame、符号/重定位和 trap
+契约见 [`cdbc-0.3-machine-foundation.md`](cdbc-0.3-machine-foundation.md)。
+
 ## 1. 定位与工件种类
 
 `.cdbc`（Compiler Design ByteCode）是编译器与 Rust VM 之间稳定、版本化、可验证的
@@ -20,7 +24,8 @@ C++ 发射端在 `src/BytecodeTextEmitter.cpp`，Rust 解析与执行端在
 cdbc 0.2
 ```
 
-VM 只接受 `cdbc 0.2`；`cdbc 0.1` 旧头在执行前被拒绝为不支持的版本。工件使用数值
+编译器和默认工件路径使用 `cdbc 0.2`；Rust VM 同时接受有效的 `cdbc 0.2` 与显式
+`cdbc 0.3` machine 工件。`cdbc 0.1` 旧头和未知版本在执行前被拒绝为不支持的版本。工件使用数值
 slot（`lN/uN/gN`）与 native 导入索引（`iN`），VM 热路径不再按名字解析或按名字查找
 native。
 
@@ -151,11 +156,12 @@ C++ 发射端以 `std::numeric_limits<double>::max_digits10`（17 位有效数�
 
 ### 2.6 执行前验证
 
-Rust 解析器只接受 `cdbc 0.2` 头。执行前验证：数字常量有限；
-常量/名字/函数/寄存器/native 导入引用不越界；跳转目标合法；调试位置表形状正确；
-native 名字在支持集合内、`abi=1`、导入名不重复、调用元数在范围内；模块封套的身份、
-入口元数据、依赖目标与插入偏移合法。无效工件在执行前被拒绝，错误分类为
-`parse` / `unsupported_version` / `verification`。
+Rust 解析器接受 `cdbc 0.2` 与显式 `cdbc 0.3` 头；本节以下验证规则针对本文覆盖的
+`cdbc 0.2` 正文。验证包括：数字常量有限；常量/名字/函数/寄存器/native 导入引用不越界；
+跳转目标合法；调试位置表形状正确；native 名字在支持集合内、`abi=1`、导入名不重复、
+调用元数在范围内；模块封套的身份、入口元数据、依赖目标与插入偏移合法。`cdbc 0.3`
+机器区段、指令和链接验证见 [`cdbc-0.3-machine-foundation.md`](cdbc-0.3-machine-foundation.md)。
+无效工件在执行前被拒绝，错误分类为 `parse` / `unsupported_version` / `verification`。
 
 ## 3. 执行模型与通用语义
 
@@ -598,8 +604,10 @@ return rV
 
 ## 6. 兼容性与非目标
 
-- `cdbc 0.2` 是强兼容契约：新 opcode、新 section、语义变化都必须同步更新 C++ 发射端、
-  Rust 解析/格式化/执行端、本参考、英文契约与黄金工件。
+- `cdbc 0.2` 是编译器的强兼容契约：新 opcode、新 section、语义变化都必须同步更新
+  C++ 发射端、Rust 解析/格式化/执行端、本参考、英文契约与黄金工件。
+- `cdbc 0.3` 是单独冻结的 Rust VM machine 契约；新增或 breaking machine 语义必须遵守
+  [`cdbc-0.3-machine-abi-001`](decisions/cdbc-0.3-machine-abi-001.md) 的版本和测试规则。
 - 本格式当前**不是**二进制编码，不定义二进制布局、压缩、校验器内部结构、GC 布局、
   任务调度器协议或 JIT 元数据格式。这些是后续阶段或决策门的范围。
 - 字符串不做 grapheme 分段与归一化；`number` 无整数/浮点之分；字符串不支持 `index`。

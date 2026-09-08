@@ -1,9 +1,9 @@
 use crate::bytecode::{
     BlockId, Constant, DataSegment, DebugLocation, DebugRange, DebugSource, FuncId, Function,
-    GlobalId, Instruction, LocalId, MachineIntPredicate, MachineIntWidth, MachineMemoryType,
-    MachineScalarType, ModuleInit, NativeId, NativeImport, Program,
-    RelocationKind, RelocationTarget, SymbolTarget, MACHINE_ABI_MAX_PARAMS, TypeId, TypeLayout,
-    UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
+    GlobalId, Instruction, LocalId, MachineFloatFormat, MachineFloatPredicate, MachineIntPredicate,
+    MachineIntWidth, MachineMemoryType, MachineScalarType, ModuleInit, NativeId, NativeImport,
+    Program, RelocationKind, RelocationTarget, SymbolTarget, TypeId, TypeLayout, UpvalueDesc,
+    UpvalueId, UpvalueSource, VariantId, VariantLayout, MACHINE_ABI_MAX_PARAMS,
 };
 use crate::memory::{MemoryRegionKind, NULL_GUARD_END};
 use crate::vm::native_arity_bounds;
@@ -48,10 +48,18 @@ pub enum FormatError {
         instruction: usize,
         opcode: &'static str,
     },
-    UnsupportedMachineDataSegment { segment: usize },
-    UnsupportedMachineSymbols { symbol: usize },
-    UnsupportedMachineRelocations { relocation: usize },
-    UnsupportedMachineAbi { function: usize },
+    UnsupportedMachineDataSegment {
+        segment: usize,
+    },
+    UnsupportedMachineSymbols {
+        symbol: usize,
+    },
+    UnsupportedMachineRelocations {
+        relocation: usize,
+    },
+    UnsupportedMachineAbi {
+        function: usize,
+    },
 }
 
 impl fmt::Display for FormatError {
@@ -693,14 +701,14 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 self.advance();
-                let (upvalue_text, source_text) =
-                    split_once(upvalue_line, candidate, " = ")?;
-                let upvalue_index_text = upvalue_text.strip_prefix("upvalue ").ok_or_else(|| {
-                    ParseError {
-                        line: upvalue_line,
-                        message: "expected upvalue reference".to_string(),
-                    }
-                })?;
+                let (upvalue_text, source_text) = split_once(upvalue_line, candidate, " = ")?;
+                let upvalue_index_text =
+                    upvalue_text
+                        .strip_prefix("upvalue ")
+                        .ok_or_else(|| ParseError {
+                            line: upvalue_line,
+                            message: "expected upvalue reference".to_string(),
+                        })?;
                 let upvalue_index =
                     parse_prefixed(upvalue_line, upvalue_index_text, 'u', "upvalue reference")?;
                 if upvalue_index != upvalues.len() {
@@ -725,7 +733,8 @@ impl<'a> Parser<'a> {
                             source_index,
                             'u',
                             "upvalue reference",
-                        )? as u32)),
+                        )?
+                            as u32)),
                     }),
                     "global" => upvalues.push(UpvalueDesc {
                         source: UpvalueSource::Global(GlobalId(parse_prefixed(
@@ -1068,8 +1077,7 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
             }
             parser.advance();
             let (global_ref, name_ref) = split_once(line_number, line, " = ")?;
-            let global_index =
-                parse_prefixed(line_number, global_ref, 'g', "global reference")?;
+            let global_index = parse_prefixed(line_number, global_ref, 'g', "global reference")?;
             if global_index != globals.len() {
                 return Err(ParseError {
                     line: line_number,
@@ -1162,14 +1170,9 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
             if layout.is_enum {
                 let mut index = 2;
                 while index < parts.len() {
-                    let (variant_ref, variant_name) =
-                        split_once(line_number, parts[index], "=")?;
-                    let variant_index = parse_prefixed(
-                        line_number,
-                        variant_ref,
-                        'v',
-                        "variant reference",
-                    )?;
+                    let (variant_ref, variant_name) = split_once(line_number, parts[index], "=")?;
+                    let variant_index =
+                        parse_prefixed(line_number, variant_ref, 'v', "variant reference")?;
                     if variant_index != layout.variants.len() {
                         return Err(ParseError {
                             line: line_number,
@@ -1183,8 +1186,7 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
                             message: "expected variant payload count".to_string(),
                         });
                     }
-                    let (payload_label, count) =
-                        split_once(line_number, parts[index], "=")?;
+                    let (payload_label, count) = split_once(line_number, parts[index], "=")?;
                     if payload_label != "payload" {
                         return Err(ParseError {
                             line: line_number,
@@ -1200,14 +1202,12 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
             } else {
                 for part in &parts[2..] {
                     let (field_ref, field_name) = split_once(line_number, part, "=")?;
-                    let field_number = field_ref.strip_prefix("field").ok_or_else(|| {
-                        ParseError {
+                    let field_number =
+                        field_ref.strip_prefix("field").ok_or_else(|| ParseError {
                             line: line_number,
                             message: "expected field reference".to_string(),
-                        }
-                    })?;
-                    let field_index =
-                        parse_usize(line_number, field_number, "field index")?;
+                        })?;
+                    let field_index = parse_usize(line_number, field_number, "field index")?;
                     if field_index != layout.field_names.len() {
                         return Err(ParseError {
                             line: line_number,
@@ -1268,8 +1268,7 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
             }
             parser.advance();
             let (module_ref, init_ref) = split_once(line_number, line, " = ")?;
-            let module_index =
-                parse_prefixed(line_number, module_ref, 'm', "module reference")?;
+            let module_index = parse_prefixed(line_number, module_ref, 'm', "module reference")?;
             if module_index != modules.len() {
                 return Err(ParseError {
                     line: line_number,
@@ -1560,10 +1559,7 @@ fn validate_data_segments(segments: &[DataSegment], line: usize) -> Result<(), P
     Ok(())
 }
 
-fn machine_segment_bases(
-    segments: &[DataSegment],
-    line: usize,
-) -> Result<Vec<u64>, ParseError> {
+fn machine_segment_bases(segments: &[DataSegment], line: usize) -> Result<Vec<u64>, ParseError> {
     // Static addresses are deterministic regardless of descriptor order:
     // the ABI reserves RODATA, DATA, and BSS in that order.
     let mut bases = vec![0; segments.len()];
@@ -1614,7 +1610,10 @@ fn validate_machine_linkage(
         if !symbols.insert(symbol.name.as_str()) {
             return Err(validation_error(
                 line,
-                format!("machine symbol s{} duplicates name `{}`", index, symbol.name),
+                format!(
+                    "machine symbol s{} duplicates name `{}`",
+                    index, symbol.name
+                ),
             ));
         }
         match symbol.target {
@@ -1705,10 +1704,7 @@ fn validate_machine_linkage(
             (RelocationKind::Abs64, RelocationTarget::CallDirect { .. }) => {
                 return Err(validation_error(
                     line,
-                    format!(
-                        "machine relocation r{} ABS64 requires a data target",
-                        index
-                    ),
+                    format!("machine relocation r{} ABS64 requires a data target", index),
                 ));
             }
             (
@@ -1751,10 +1747,7 @@ fn validate_machine_linkage(
                 if !relocation_call_targets.insert((function.0 as usize, *instruction)) {
                     return Err(validation_error(
                         line,
-                        format!(
-                            "machine relocation r{} duplicates a call target",
-                            index
-                        ),
+                        format!("machine relocation r{} duplicates a call target", index),
                     ));
                 }
             }
@@ -1786,7 +1779,11 @@ fn validate_machine_linkage(
         };
 
         match (&relocation.kind, &relocation.target, &symbol.target) {
-            (RelocationKind::Abs64, RelocationTarget::Data { segment, offset }, SymbolTarget::Data { .. }) => {
+            (
+                RelocationKind::Abs64,
+                RelocationTarget::Data { segment, offset },
+                SymbolTarget::Data { .. },
+            ) => {
                 let Some(data_segment) = program.data_segments.get(*segment) else {
                     return Err(validation_error(
                         line,
@@ -1827,18 +1824,15 @@ fn validate_machine_linkage(
                 else {
                     unreachable!("symbol target was checked by the match arm");
                 };
-                let symbol_base = segment_bases
-                    .get(*symbol_segment)
-                    .copied()
-                    .ok_or_else(|| {
-                        validation_error(
-                            line,
-                            format!(
-                                "machine relocation r{} symbol data segment d{} is out of range",
-                                index, symbol_segment
-                            ),
-                        )
-                    })?;
+                let symbol_base = segment_bases.get(*symbol_segment).copied().ok_or_else(|| {
+                    validation_error(
+                        line,
+                        format!(
+                            "machine relocation r{} symbol data segment d{} is out of range",
+                            index, symbol_segment
+                        ),
+                    )
+                })?;
                 let symbol_address = symbol_base.checked_add(*symbol_offset).ok_or_else(|| {
                     validation_error(
                         line,
@@ -1863,19 +1857,13 @@ fn validate_machine_linkage(
             (RelocationKind::Abs64, RelocationTarget::Data { .. }, SymbolTarget::Function(_)) => {
                 return Err(validation_error(
                     line,
-                    format!(
-                        "machine relocation r{} ABS64 requires a data symbol",
-                        index
-                    ),
+                    format!("machine relocation r{} ABS64 requires a data symbol", index),
                 ));
             }
             (RelocationKind::Abs64, RelocationTarget::CallDirect { .. }, _) => {
                 return Err(validation_error(
                     line,
-                    format!(
-                        "machine relocation r{} ABS64 requires a data target",
-                        index
-                    ),
+                    format!("machine relocation r{} ABS64 requires a data target", index),
                 ));
             }
             (
@@ -1904,7 +1892,10 @@ fn validate_machine_linkage(
                         ),
                     ));
                 };
-                if !matches!(body.instructions.get(*instruction), Some(Instruction::CallDirect { .. })) {
+                if !matches!(
+                    body.instructions.get(*instruction),
+                    Some(Instruction::CallDirect { .. })
+                ) {
                     return Err(validation_error(
                         line,
                         format!(
@@ -1914,7 +1905,11 @@ fn validate_machine_linkage(
                     ));
                 }
             }
-            (RelocationKind::FuncIndex, RelocationTarget::CallDirect { .. }, SymbolTarget::Data { .. }) => {
+            (
+                RelocationKind::FuncIndex,
+                RelocationTarget::CallDirect { .. },
+                SymbolTarget::Data { .. },
+            ) => {
                 return Err(validation_error(
                     line,
                     format!(
@@ -2013,7 +2008,10 @@ fn validate_program_with_external_symbols_inner(
         if !native_names.insert(import.name.as_str()) {
             return Err(validation_error(
                 line,
-                format!("native import i{} duplicates native function `{}`", index, import.name),
+                format!(
+                    "native import i{} duplicates native function `{}`",
+                    index, import.name
+                ),
             ));
         }
     }
@@ -2039,10 +2037,7 @@ fn validate_program_with_external_symbols_inner(
     if program.entry != FuncId(0) {
         return Err(validation_error(
             line,
-            format!(
-                "entry must be f0, found f{}",
-                program.entry.0
-            ),
+            format!("entry must be f0, found f{}", program.entry.0),
         ));
     }
     for (index, function) in program.functions.iter().enumerate() {
@@ -2296,6 +2291,19 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::Trunc { dest, .. }
         | Instruction::ZExt { dest, .. }
         | Instruction::SExt { dest, .. }
+        | Instruction::FConst { dest, .. }
+        | Instruction::FAdd { dest, .. }
+        | Instruction::FSub { dest, .. }
+        | Instruction::FMul { dest, .. }
+        | Instruction::FDiv { dest, .. }
+        | Instruction::FNeg { dest, .. }
+        | Instruction::FCmp { dest, .. }
+        | Instruction::SIToFp { dest, .. }
+        | Instruction::UIToFp { dest, .. }
+        | Instruction::FPToSI { dest, .. }
+        | Instruction::FPToUI { dest, .. }
+        | Instruction::FPExt { dest, .. }
+        | Instruction::FPTrunc { dest, .. }
         | Instruction::IAdd { dest, .. }
         | Instruction::ISub { dest, .. }
         | Instruction::IMul { dest, .. }
@@ -2349,9 +2357,7 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         Instruction::CallNative { arguments, .. } => arguments.clone(),
         Instruction::MakeStruct { elements, .. } => elements.clone(),
         Instruction::StructGet { object, .. } => vec![*object],
-        Instruction::StructSet {
-            object, value, ..
-        } => vec![*object, *value],
+        Instruction::StructSet { object, value, .. } => vec![*object, *value],
         Instruction::MakeVariant { payload, .. } => payload.clone(),
         Instruction::IsVariant { value, .. } => vec![*value],
         Instruction::VariantGet { value, .. } => vec![*value],
@@ -2388,117 +2394,63 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         Instruction::Field { object, .. } => vec![*object],
         Instruction::AssignField { object, value, .. } => vec![*object, *value],
         Instruction::BrIf { condition, .. } => vec![*condition],
-        Instruction::Add {
-            left, right, ..
-        }
-        | Instruction::AddNum {
-            left, right, ..
-        }
-        | Instruction::ConcatStr {
-            left, right, ..
-        }
-        | Instruction::Subtract {
-            left, right, ..
-        }
-        | Instruction::SubNum {
-            left, right, ..
-        }
-        | Instruction::Multiply {
-            left, right, ..
-        }
-        | Instruction::MulNum {
-            left, right, ..
-        }
-        | Instruction::Divide {
-            left, right, ..
-        }
-        | Instruction::DivNum {
-            left, right, ..
-        }
-        | Instruction::Equal {
-            left, right, ..
-        }
-        | Instruction::NotEqual {
-            left, right, ..
-        }
-        | Instruction::Greater {
-            left, right, ..
-        }
-        | Instruction::GreaterNum {
-            left, right, ..
-        }
-        | Instruction::GreaterStr {
-            left, right, ..
-        }
-        | Instruction::GreaterEqual {
-            left, right, ..
-        }
-        | Instruction::GreaterEqualNum {
-            left, right, ..
-        }
-        | Instruction::GreaterEqualStr {
-            left, right, ..
-        }
-        | Instruction::Less {
-            left, right, ..
-        }
-        | Instruction::LessNum {
-            left, right, ..
-        }
-        | Instruction::LessStr {
-            left, right, ..
-        }
-        | Instruction::LessEqual {
-            left, right, ..
-        }
-        | Instruction::LessEqualNum {
-            left, right, ..
-        }
-        | Instruction::LessEqualStr {
-            left, right, ..
-        }
-        | Instruction::IAdd {
-            left, right, ..
-        }
-        | Instruction::ISub {
-            left, right, ..
-        }
-        | Instruction::IMul {
-            left, right, ..
-        }
-        | Instruction::SDiv {
-            left, right, ..
-        }
-        | Instruction::UDiv {
-            left, right, ..
-        }
-        | Instruction::SRem {
-            left, right, ..
-        }
-        | Instruction::URem {
-            left, right, ..
-        }
-        | Instruction::And {
-            left, right, ..
-        }
-        | Instruction::Or {
-            left, right, ..
-        }
-        | Instruction::Xor {
-            left, right, ..
-        }
-        | Instruction::ICmp {
-            left, right, ..
-        } => vec![*left, *right],
+        Instruction::Add { left, right, .. }
+        | Instruction::AddNum { left, right, .. }
+        | Instruction::ConcatStr { left, right, .. }
+        | Instruction::Subtract { left, right, .. }
+        | Instruction::SubNum { left, right, .. }
+        | Instruction::Multiply { left, right, .. }
+        | Instruction::MulNum { left, right, .. }
+        | Instruction::Divide { left, right, .. }
+        | Instruction::DivNum { left, right, .. }
+        | Instruction::Equal { left, right, .. }
+        | Instruction::NotEqual { left, right, .. }
+        | Instruction::Greater { left, right, .. }
+        | Instruction::GreaterNum { left, right, .. }
+        | Instruction::GreaterStr { left, right, .. }
+        | Instruction::GreaterEqual { left, right, .. }
+        | Instruction::GreaterEqualNum { left, right, .. }
+        | Instruction::GreaterEqualStr { left, right, .. }
+        | Instruction::Less { left, right, .. }
+        | Instruction::LessNum { left, right, .. }
+        | Instruction::LessStr { left, right, .. }
+        | Instruction::LessEqual { left, right, .. }
+        | Instruction::LessEqualNum { left, right, .. }
+        | Instruction::LessEqualStr { left, right, .. }
+        | Instruction::IAdd { left, right, .. }
+        | Instruction::ISub { left, right, .. }
+        | Instruction::IMul { left, right, .. }
+        | Instruction::SDiv { left, right, .. }
+        | Instruction::UDiv { left, right, .. }
+        | Instruction::SRem { left, right, .. }
+        | Instruction::URem { left, right, .. }
+        | Instruction::And { left, right, .. }
+        | Instruction::Or { left, right, .. }
+        | Instruction::Xor { left, right, .. }
+        | Instruction::ICmp { left, right, .. } => vec![*left, *right],
         Instruction::IntNot { value, .. } => vec![*value],
         Instruction::Trunc { value, .. }
         | Instruction::ZExt { value, .. }
-        | Instruction::SExt { value, .. } => vec![*value],
+        | Instruction::SExt { value, .. }
+        | Instruction::FNeg { value, .. }
+        | Instruction::SIToFp { value, .. }
+        | Instruction::UIToFp { value, .. }
+        | Instruction::FPToSI { value, .. }
+        | Instruction::FPToUI { value, .. }
+        | Instruction::FPExt { value, .. }
+        | Instruction::FPTrunc { value, .. } => vec![*value],
+        Instruction::FAdd { left, right, .. }
+        | Instruction::FSub { left, right, .. }
+        | Instruction::FMul { left, right, .. }
+        | Instruction::FDiv { left, right, .. }
+        | Instruction::FCmp { left, right, .. } => vec![*left, *right],
         Instruction::Shl { value, amount, .. }
         | Instruction::LShr { value, amount, .. }
         | Instruction::AShr { value, amount, .. } => vec![*value, *amount],
         Instruction::Load { address, .. } => vec![*address],
-        Instruction::Store { address, source, .. } => vec![*address, *source],
+        Instruction::Store {
+            address, source, ..
+        } => vec![*address, *source],
         Instruction::Memcpy {
             destination,
             source,
@@ -2772,10 +2724,7 @@ fn validate_block_body(
                     if *slot < local_count && !bound.contains(slot) {
                         return Err(validation_error(
                             line,
-                            format!(
-                                "{} block b{} reads unbound local l{}",
-                                context, block, slot
-                            ),
+                            format!("{} block b{} reads unbound local l{}", context, block, slot),
                         ));
                     }
                 }
@@ -3007,10 +2956,7 @@ fn validate_instruction(
             if layout.is_enum || *slot >= layout.field_names.len() {
                 return Err(validation_error(
                     line,
-                    format!(
-                        "struct_get t{} field slot {} out of range",
-                        type_id.0, slot
-                    ),
+                    format!("struct_get t{} field slot {} out of range", type_id.0, slot),
                 ));
             }
         }
@@ -3030,10 +2976,7 @@ fn validate_instruction(
             if layout.is_enum || *slot >= layout.field_names.len() {
                 return Err(validation_error(
                     line,
-                    format!(
-                        "struct_set t{} field slot {} out of range",
-                        type_id.0, slot
-                    ),
+                    format!("struct_set t{} field slot {} out of range", type_id.0, slot),
                 ));
             }
         }
@@ -3171,9 +3114,11 @@ fn validate_instruction(
                     ),
                 ));
             }
-            if target_function.upvalues.iter().any(|descriptor| {
-                !matches!(descriptor.source, UpvalueSource::Global(_))
-            }) {
+            if target_function
+                .upvalues
+                .iter()
+                .any(|descriptor| !matches!(descriptor.source, UpvalueSource::Global(_)))
+            {
                 return Err(validation_error(
                     line,
                     format!(
@@ -3398,6 +3343,83 @@ fn validate_instruction(
                 true,
             )?;
         }
+        Instruction::FConst { dest, format, bits } => {
+            register(*dest, "destination")?;
+            if matches!(format, MachineFloatFormat::F32) && *bits > u64::from(u32::MAX) {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} fconst f32 bits 0x{:x} exceed 32 bits",
+                        context, instruction_index, bits
+                    ),
+                ));
+            }
+        }
+        Instruction::FAdd {
+            dest, left, right, ..
+        }
+        | Instruction::FSub {
+            dest, left, right, ..
+        }
+        | Instruction::FMul {
+            dest, left, right, ..
+        }
+        | Instruction::FDiv {
+            dest, left, right, ..
+        }
+        | Instruction::FCmp {
+            dest, left, right, ..
+        } => {
+            register(*dest, "destination")?;
+            register(*left, "left operand")?;
+            register(*right, "right operand")?;
+        }
+        Instruction::FNeg { dest, value, .. }
+        | Instruction::SIToFp { dest, value, .. }
+        | Instruction::UIToFp { dest, value, .. }
+        | Instruction::FPToSI { dest, value, .. }
+        | Instruction::FPToUI { dest, value, .. } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+        }
+        Instruction::FPExt {
+            dest,
+            value,
+            from_format,
+            to_format,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+            validate_machine_float_conversion_formats(
+                line,
+                context,
+                instruction_index,
+                "fpext",
+                *from_format,
+                *to_format,
+                MachineFloatFormat::F32,
+                MachineFloatFormat::F64,
+            )?;
+        }
+        Instruction::FPTrunc {
+            dest,
+            value,
+            from_format,
+            to_format,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+            validate_machine_float_conversion_formats(
+                line,
+                context,
+                instruction_index,
+                "fptrunc",
+                *from_format,
+                *to_format,
+                MachineFloatFormat::F64,
+                MachineFloatFormat::F32,
+            )?;
+        }
         Instruction::IntNot { dest, value, .. } => {
             register(*dest, "destination")?;
             register(*value, "value")?;
@@ -3550,6 +3572,34 @@ fn validate_machine_int_conversion_widths(
     ))
 }
 
+fn validate_machine_float_conversion_formats(
+    line: usize,
+    context: &str,
+    instruction_index: usize,
+    opcode: &str,
+    from_format: MachineFloatFormat,
+    to_format: MachineFloatFormat,
+    expected_from: MachineFloatFormat,
+    expected_to: MachineFloatFormat,
+) -> Result<(), ParseError> {
+    if from_format == expected_from && to_format == expected_to {
+        return Ok(());
+    }
+    Err(validation_error(
+        line,
+        format!(
+            "{} instruction {} {} requires {} -> {}, found {} -> {}",
+            context,
+            instruction_index,
+            opcode,
+            expected_from.as_str(),
+            expected_to.as_str(),
+            from_format.as_str(),
+            to_format.as_str()
+        ),
+    ))
+}
+
 #[allow(dead_code)]
 pub fn parse_program(source: &str) -> Result<Program, ParseError> {
     match parse_artifact(source)? {
@@ -3641,6 +3691,16 @@ pub fn format_artifact_checked(artifact: &Artifact) -> Result<String, FormatErro
             format_program_sections(&mut out, &module.program, false);
             Ok(out)
         }
+    }
+}
+
+/// Format an artifact for the VM's human-readable `dump` command. Legacy
+/// artifacts retain the cdbc 0.2 text, while machine-aware artifacts use the
+/// cdbc 0.3 sections instead of being rejected by the legacy writer.
+pub fn format_artifact_for_dump(artifact: &Artifact) -> Result<String, FormatError> {
+    match format_artifact_checked(artifact) {
+        Ok(output) => Ok(output),
+        Err(_) => format_artifact_v03_checked(artifact),
     }
 }
 
@@ -3756,6 +3816,19 @@ fn machine_instruction_opcode(instruction: &Instruction) -> Option<&'static str>
         Instruction::Trunc { .. } => "trunc",
         Instruction::ZExt { .. } => "zext",
         Instruction::SExt { .. } => "sext",
+        Instruction::FConst { .. } => "fconst",
+        Instruction::FAdd { .. } => "fadd",
+        Instruction::FSub { .. } => "fsub",
+        Instruction::FMul { .. } => "fmul",
+        Instruction::FDiv { .. } => "fdiv",
+        Instruction::FNeg { .. } => "fneg",
+        Instruction::FCmp { .. } => "fcmp",
+        Instruction::SIToFp { .. } => "sitofp",
+        Instruction::UIToFp { .. } => "uitofp",
+        Instruction::FPToSI { .. } => "fptosi",
+        Instruction::FPToUI { .. } => "fptoui",
+        Instruction::FPExt { .. } => "fpext",
+        Instruction::FPTrunc { .. } => "fptrunc",
         Instruction::IAdd { .. } => "iadd",
         Instruction::ISub { .. } => "isub",
         Instruction::IMul { .. } => "imul",
@@ -4103,7 +4176,10 @@ fn format_program_sections(out: &mut String, program: &Program, include_machine:
         out.push_str("\ndebug_ranges:\n");
         let entry = &program.functions[program.entry.0 as usize];
         for (index, location) in entry.locations.iter().enumerate() {
-            if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
+            if let Some(range) = location
+                .as_ref()
+                .and_then(|location| location.range.as_ref())
+            {
                 out.push_str(&format_debug_range("main", index, range));
             }
         }
@@ -4113,7 +4189,10 @@ fn format_program_sections(out: &mut String, program: &Program, include_machine:
                 continue;
             }
             for (instruction, location) in function.locations.iter().enumerate() {
-                if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
+                if let Some(range) = location
+                    .as_ref()
+                    .and_then(|location| location.range.as_ref())
+                {
                     out.push_str(&format_debug_range(
                         &format!("function f{}", function_index),
                         instruction,
@@ -4251,7 +4330,12 @@ fn parse_instruction(
                 Ok(Instruction::MakeVariant {
                     dest,
                     type_id: TypeId(parse_prefixed(line, type_text, 't', "type reference")? as u32),
-                    variant_id: VariantId(parse_prefixed(line, variant_text, 'v', "variant reference")? as u32),
+                    variant_id: VariantId(parse_prefixed(
+                        line,
+                        variant_text,
+                        'v',
+                        "variant reference",
+                    )? as u32),
                     payload: parse_register_list(line, &payload_text)?,
                 })
             }
@@ -4267,7 +4351,9 @@ fn parse_instruction(
                     dest,
                     value: parse_register(line, parts[0])?,
                     type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
-                    variant_id: VariantId(parse_prefixed(line, parts[2], 'v', "variant reference")? as u32),
+                    variant_id: VariantId(
+                        parse_prefixed(line, parts[2], 'v', "variant reference")? as u32,
+                    ),
                 })
             }
             "variant_get" => {
@@ -4282,7 +4368,9 @@ fn parse_instruction(
                     dest,
                     value: parse_register(line, parts[0])?,
                     type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
-                    variant_id: VariantId(parse_prefixed(line, parts[2], 'v', "variant reference")? as u32),
+                    variant_id: VariantId(
+                        parse_prefixed(line, parts[2], 'v', "variant reference")? as u32,
+                    ),
                     index: parse_usize(line, parts[3], "payload index")?,
                 })
             }
@@ -4322,12 +4410,9 @@ fn parse_instruction(
                 let (native, args) = split_once(line, operands, " ")?;
                 Ok(Instruction::CallNative {
                     dest,
-                    native: NativeId(parse_prefixed(
-                        line,
-                        native,
-                        'i',
-                        "native import reference",
-                    )? as u32),
+                    native: NativeId(
+                        parse_prefixed(line, native, 'i', "native import reference")? as u32,
+                    ),
                     arguments: parse_register_list(line, args)?,
                 })
             }
@@ -4499,9 +4584,11 @@ fn parse_instruction(
             "less_equal" => parse_binary(line, dest, operands, "less_equal"),
             "le_num" => parse_binary(line, dest, operands, "le_num"),
             "le_str" => parse_binary(line, dest, operands, "le_str"),
-            "iconst" | "load" | "frame_addr" | "trunc" | "zext" | "sext" | "iadd"
-            | "isub" | "imul" | "sdiv" | "udiv" | "srem" | "urem" | "and" | "or"
-            | "xor" | "not_int" | "shl" | "lshr" | "ashr" | "icmp" => {
+            "iconst" | "load" | "frame_addr" | "trunc" | "zext" | "sext" | "fconst" | "fadd"
+            | "fsub" | "fmul" | "fdiv" | "fneg" | "fcmp" | "sitofp" | "uitofp" | "fptosi"
+            | "fptoui" | "fpext" | "fptrunc" | "iadd" | "isub" | "imul" | "sdiv" | "udiv"
+            | "srem" | "urem" | "and" | "or" | "xor" | "not_int" | "shl" | "lshr" | "ashr"
+            | "icmp" => {
                 parse_machine_destination_instruction(line, version, dest, opcode, operands)
             }
             unknown => Err(ParseError {
@@ -4564,7 +4651,9 @@ fn parse_instruction(
                 Ok(Instruction::BrIf {
                     condition: parse_register(line, parts[0])?,
                     if_true: BlockId(parse_prefixed(line, parts[1], 'b', "block reference")? as u32),
-                    if_false: BlockId(parse_prefixed(line, parts[2], 'b', "block reference")? as u32),
+                    if_false: BlockId(
+                        parse_prefixed(line, parts[2], 'b', "block reference")? as u32
+                    ),
                 })
             }
             "return_nil" => Ok(Instruction::ReturnNil),
@@ -4670,8 +4759,155 @@ fn parse_machine_destination_instruction(
                 }),
             }
         }
-        "iadd" | "isub" | "imul" | "sdiv" | "udiv" | "srem" | "urem" | "and" | "or"
-        | "xor" => {
+        "fconst" => {
+            let parts = split_comma_parts(operands);
+            if parts.len() != 2 {
+                return Err(ParseError {
+                    line,
+                    message: "fconst expects format and bits operands".to_string(),
+                });
+            }
+            Ok(Instruction::FConst {
+                dest,
+                format: parse_machine_float_format(line, parts[0])?,
+                bits: parse_hex_u64(line, parts[1], "floating-point constant")?,
+            })
+        }
+        "fadd" | "fsub" | "fmul" | "fdiv" => {
+            let (left, right, format) = parse_machine_float_binary_operands(line, operands)?;
+            match opcode {
+                "fadd" => Ok(Instruction::FAdd {
+                    dest,
+                    left,
+                    right,
+                    format,
+                }),
+                "fsub" => Ok(Instruction::FSub {
+                    dest,
+                    left,
+                    right,
+                    format,
+                }),
+                "fmul" => Ok(Instruction::FMul {
+                    dest,
+                    left,
+                    right,
+                    format,
+                }),
+                _ => Ok(Instruction::FDiv {
+                    dest,
+                    left,
+                    right,
+                    format,
+                }),
+            }
+        }
+        "fneg" => {
+            let (value, format) = parse_machine_float_value_format(line, operands)?;
+            Ok(Instruction::FNeg {
+                dest,
+                value,
+                format,
+            })
+        }
+        "fcmp" => {
+            let parts = split_comma_parts(operands);
+            if parts.len() != 4 {
+                return Err(ParseError {
+                    line,
+                    message: "fcmp expects left, right, format, and predicate".to_string(),
+                });
+            }
+            Ok(Instruction::FCmp {
+                dest,
+                left: parse_register(line, parts[0])?,
+                right: parse_register(line, parts[1])?,
+                format: parse_machine_float_format(line, parts[2])?,
+                predicate: parse_machine_float_predicate(line, parts[3])?,
+            })
+        }
+        "sitofp" | "uitofp" => {
+            let parts = split_comma_parts(operands);
+            if parts.len() != 3 {
+                return Err(ParseError {
+                    line,
+                    message: format!("{} expects value, integer width, and float format", opcode),
+                });
+            }
+            let value = parse_register(line, parts[0])?;
+            let int_width = parse_machine_int_width(line, parts[1])?;
+            let float_format = parse_machine_float_format(line, parts[2])?;
+            if opcode == "sitofp" {
+                Ok(Instruction::SIToFp {
+                    dest,
+                    value,
+                    int_width,
+                    float_format,
+                })
+            } else {
+                Ok(Instruction::UIToFp {
+                    dest,
+                    value,
+                    int_width,
+                    float_format,
+                })
+            }
+        }
+        "fptosi" | "fptoui" => {
+            let parts = split_comma_parts(operands);
+            if parts.len() != 3 {
+                return Err(ParseError {
+                    line,
+                    message: format!("{} expects value, float format, and integer width", opcode),
+                });
+            }
+            let value = parse_register(line, parts[0])?;
+            let float_format = parse_machine_float_format(line, parts[1])?;
+            let int_width = parse_machine_int_width(line, parts[2])?;
+            if opcode == "fptosi" {
+                Ok(Instruction::FPToSI {
+                    dest,
+                    value,
+                    float_format,
+                    int_width,
+                })
+            } else {
+                Ok(Instruction::FPToUI {
+                    dest,
+                    value,
+                    float_format,
+                    int_width,
+                })
+            }
+        }
+        "fpext" | "fptrunc" => {
+            let parts = split_comma_parts(operands);
+            if parts.len() != 3 {
+                return Err(ParseError {
+                    line,
+                    message: format!("{} expects value, source format, and target format", opcode),
+                });
+            }
+            let value = parse_register(line, parts[0])?;
+            let from_format = parse_machine_float_format(line, parts[1])?;
+            let to_format = parse_machine_float_format(line, parts[2])?;
+            if opcode == "fpext" {
+                Ok(Instruction::FPExt {
+                    dest,
+                    value,
+                    from_format,
+                    to_format,
+                })
+            } else {
+                Ok(Instruction::FPTrunc {
+                    dest,
+                    value,
+                    from_format,
+                    to_format,
+                })
+            }
+        }
+        "iadd" | "isub" | "imul" | "sdiv" | "udiv" | "srem" | "urem" | "and" | "or" | "xor" => {
             let (left, right, width) = parse_machine_binary_operands(line, operands)?;
             match opcode {
                 "iadd" => Ok(Instruction::IAdd {
@@ -4848,6 +5084,17 @@ fn parse_machine_int_width(line: usize, text: &str) -> Result<MachineIntWidth, P
     }
 }
 
+fn parse_machine_float_format(line: usize, text: &str) -> Result<MachineFloatFormat, ParseError> {
+    match text {
+        "f32" => Ok(MachineFloatFormat::F32),
+        "f64" => Ok(MachineFloatFormat::F64),
+        _ => Err(ParseError {
+            line,
+            message: "expected machine float format f32 or f64".to_string(),
+        }),
+    }
+}
+
 fn parse_machine_memory_type(line: usize, text: &str) -> Result<MachineMemoryType, ParseError> {
     match text {
         "i8" => Ok(MachineMemoryType::I8),
@@ -4899,10 +5146,7 @@ fn parse_machine_value_width(
     ))
 }
 
-fn parse_machine_int_predicate(
-    line: usize,
-    text: &str,
-) -> Result<MachineIntPredicate, ParseError> {
+fn parse_machine_int_predicate(line: usize, text: &str) -> Result<MachineIntPredicate, ParseError> {
     match text {
         "eq" => Ok(MachineIntPredicate::Eq),
         "ne" => Ok(MachineIntPredicate::Ne),
@@ -4919,6 +5163,68 @@ fn parse_machine_int_predicate(
             message: "expected machine integer predicate".to_string(),
         }),
     }
+}
+
+fn parse_machine_float_predicate(
+    line: usize,
+    text: &str,
+) -> Result<MachineFloatPredicate, ParseError> {
+    match text {
+        "oeq" => Ok(MachineFloatPredicate::OEq),
+        "one" => Ok(MachineFloatPredicate::ONe),
+        "olt" => Ok(MachineFloatPredicate::OLt),
+        "ole" => Ok(MachineFloatPredicate::OLe),
+        "ogt" => Ok(MachineFloatPredicate::OGt),
+        "oge" => Ok(MachineFloatPredicate::OGe),
+        "ueq" => Ok(MachineFloatPredicate::UEq),
+        "une" => Ok(MachineFloatPredicate::UNe),
+        "ult" => Ok(MachineFloatPredicate::ULt),
+        "ule" => Ok(MachineFloatPredicate::ULe),
+        "ugt" => Ok(MachineFloatPredicate::UGt),
+        "uge" => Ok(MachineFloatPredicate::UGe),
+        "ord" => Ok(MachineFloatPredicate::Ord),
+        "uno" => Ok(MachineFloatPredicate::Uno),
+        _ => Err(ParseError {
+            line,
+            message: "expected machine float predicate".to_string(),
+        }),
+    }
+}
+
+fn parse_machine_float_binary_operands(
+    line: usize,
+    text: &str,
+) -> Result<(usize, usize, MachineFloatFormat), ParseError> {
+    let parts = split_comma_parts(text);
+    if parts.len() != 3 {
+        return Err(ParseError {
+            line,
+            message: "machine float binary operation expects two registers and a format"
+                .to_string(),
+        });
+    }
+    Ok((
+        parse_register(line, parts[0])?,
+        parse_register(line, parts[1])?,
+        parse_machine_float_format(line, parts[2])?,
+    ))
+}
+
+fn parse_machine_float_value_format(
+    line: usize,
+    text: &str,
+) -> Result<(usize, MachineFloatFormat), ParseError> {
+    let parts = split_comma_parts(text);
+    if parts.len() != 2 {
+        return Err(ParseError {
+            line,
+            message: "machine float unary operation expects a register and a format".to_string(),
+        });
+    }
+    Ok((
+        parse_register(line, parts[0])?,
+        parse_machine_float_format(line, parts[1])?,
+    ))
 }
 
 fn parse_hex_u64(line: usize, text: &str, description: &str) -> Result<u64, ParseError> {
@@ -4938,6 +5244,27 @@ fn parse_hex_u64(line: usize, text: &str, description: &str) -> Result<u64, Pars
         line,
         message: format!("expected hexadecimal {}", description),
     })
+}
+
+fn canonical_machine_float_bits(format: MachineFloatFormat, bits: u64) -> u64 {
+    match format {
+        MachineFloatFormat::F32 if bits <= u64::from(u32::MAX) => {
+            let bits = bits as u32;
+            if f32::from_bits(bits).is_nan() {
+                u64::from(0x7fc0_0000u32)
+            } else {
+                u64::from(bits)
+            }
+        }
+        MachineFloatFormat::F32 => bits,
+        MachineFloatFormat::F64 => {
+            if f64::from_bits(bits).is_nan() {
+                0x7ff8_0000_0000_0000
+            } else {
+                bits
+            }
+        }
+    }
 }
 
 fn format_instruction(instruction: &Instruction) -> String {
@@ -4972,7 +5299,10 @@ fn format_instruction(instruction: &Instruction) -> String {
             object,
             type_id,
             slot,
-        } => format!("r{} = struct_get r{}, t{}, {}", dest, object, type_id.0, slot),
+        } => format!(
+            "r{} = struct_get r{}, t{}, {}",
+            dest, object, type_id.0, slot
+        ),
         Instruction::StructSet {
             dest,
             object,
@@ -5198,6 +5528,159 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::LessEqualStr { dest, left, right } => {
             format!("r{} = le_str r{}, r{}", dest, left, right)
         }
+        Instruction::FConst { dest, format, bits } => {
+            let width = match format {
+                MachineFloatFormat::F32 => 8,
+                MachineFloatFormat::F64 => 16,
+            };
+            let bits = canonical_machine_float_bits(*format, *bits);
+            format!(
+                "r{} = fconst {}, 0x{:0width$x}",
+                dest,
+                format.as_str(),
+                bits,
+                width = width
+            )
+        }
+        Instruction::FAdd {
+            dest,
+            left,
+            right,
+            format,
+        } => format!(
+            "r{} = fadd r{}, r{}, {}",
+            dest,
+            left,
+            right,
+            format.as_str()
+        ),
+        Instruction::FSub {
+            dest,
+            left,
+            right,
+            format,
+        } => format!(
+            "r{} = fsub r{}, r{}, {}",
+            dest,
+            left,
+            right,
+            format.as_str()
+        ),
+        Instruction::FMul {
+            dest,
+            left,
+            right,
+            format,
+        } => format!(
+            "r{} = fmul r{}, r{}, {}",
+            dest,
+            left,
+            right,
+            format.as_str()
+        ),
+        Instruction::FDiv {
+            dest,
+            left,
+            right,
+            format,
+        } => format!(
+            "r{} = fdiv r{}, r{}, {}",
+            dest,
+            left,
+            right,
+            format.as_str()
+        ),
+        Instruction::FNeg {
+            dest,
+            value,
+            format,
+        } => format!("r{} = fneg r{}, {}", dest, value, format.as_str()),
+        Instruction::FCmp {
+            dest,
+            left,
+            right,
+            format,
+            predicate,
+        } => format!(
+            "r{} = fcmp r{}, r{}, {}, {}",
+            dest,
+            left,
+            right,
+            format.as_str(),
+            predicate.as_str()
+        ),
+        Instruction::SIToFp {
+            dest,
+            value,
+            int_width,
+            float_format,
+        } => format!(
+            "r{} = sitofp r{}, {}, {}",
+            dest,
+            value,
+            int_width.as_str(),
+            float_format.as_str()
+        ),
+        Instruction::UIToFp {
+            dest,
+            value,
+            int_width,
+            float_format,
+        } => format!(
+            "r{} = uitofp r{}, {}, {}",
+            dest,
+            value,
+            int_width.as_str(),
+            float_format.as_str()
+        ),
+        Instruction::FPToSI {
+            dest,
+            value,
+            float_format,
+            int_width,
+        } => format!(
+            "r{} = fptosi r{}, {}, {}",
+            dest,
+            value,
+            float_format.as_str(),
+            int_width.as_str()
+        ),
+        Instruction::FPToUI {
+            dest,
+            value,
+            float_format,
+            int_width,
+        } => format!(
+            "r{} = fptoui r{}, {}, {}",
+            dest,
+            value,
+            float_format.as_str(),
+            int_width.as_str()
+        ),
+        Instruction::FPExt {
+            dest,
+            value,
+            from_format,
+            to_format,
+        } => format!(
+            "r{} = fpext r{}, {}, {}",
+            dest,
+            value,
+            from_format.as_str(),
+            to_format.as_str()
+        ),
+        Instruction::FPTrunc {
+            dest,
+            value,
+            from_format,
+            to_format,
+        } => format!(
+            "r{} = fptrunc r{}, {}, {}",
+            dest,
+            value,
+            from_format.as_str(),
+            to_format.as_str()
+        ),
         Instruction::IConst { dest, width, raw } => {
             format!("r{} = iconst {}, 0x{:016x}", dest, width.as_str(), raw)
         }
@@ -5205,22 +5688,12 @@ fn format_instruction(instruction: &Instruction) -> String {
             dest,
             address,
             memory_type,
-        } => format!(
-            "r{} = load r{}, {}",
-            dest,
-            address,
-            memory_type.as_str()
-        ),
+        } => format!("r{} = load r{}, {}", dest, address, memory_type.as_str()),
         Instruction::Store {
             address,
             source,
             memory_type,
-        } => format!(
-            "store r{}, r{}, {}",
-            address,
-            source,
-            memory_type.as_str()
-        ),
+        } => format!("store r{}, r{}, {}", address, source, memory_type.as_str()),
         Instruction::Memcpy {
             destination,
             source,
@@ -5343,19 +5816,37 @@ fn format_instruction(instruction: &Instruction) -> String {
             value,
             amount,
             width,
-        } => format!("r{} = shl r{}, r{}, {}", dest, value, amount, width.as_str()),
+        } => format!(
+            "r{} = shl r{}, r{}, {}",
+            dest,
+            value,
+            amount,
+            width.as_str()
+        ),
         Instruction::LShr {
             dest,
             value,
             amount,
             width,
-        } => format!("r{} = lshr r{}, r{}, {}", dest, value, amount, width.as_str()),
+        } => format!(
+            "r{} = lshr r{}, r{}, {}",
+            dest,
+            value,
+            amount,
+            width.as_str()
+        ),
         Instruction::AShr {
             dest,
             value,
             amount,
             width,
-        } => format!("r{} = ashr r{}, r{}, {}", dest, value, amount, width.as_str()),
+        } => format!(
+            "r{} = ashr r{}, r{}, {}",
+            dest,
+            value,
+            amount,
+            width.as_str()
+        ),
         Instruction::ICmp {
             dest,
             left,
@@ -5666,15 +6157,18 @@ fn parse_function_header(
     line: usize,
     text: &str,
     version: ArtifactVersion,
-) -> Result<(
-    usize,
-    String,
-    usize,
-    usize,
-    u64,
-    Vec<MachineScalarType>,
-    Option<MachineScalarType>,
-), ParseError> {
+) -> Result<
+    (
+        usize,
+        String,
+        usize,
+        usize,
+        u64,
+        Vec<MachineScalarType>,
+        Option<MachineScalarType>,
+    ),
+    ParseError,
+> {
     let Some(rest) = text.strip_prefix("function ") else {
         return Err(ParseError {
             line,
@@ -5729,10 +6223,12 @@ fn parse_main_header(
     ),
     ParseError,
 > {
-    let rest = text.strip_prefix("main registers=").ok_or_else(|| ParseError {
-        line,
-        message: "expected main section".to_string(),
-    })?;
+    let rest = text
+        .strip_prefix("main registers=")
+        .ok_or_else(|| ParseError {
+            line,
+            message: "expected main section".to_string(),
+        })?;
     let (registers, suffix) = parse_header_registers(line, rest, "main section")?;
     let metadata = parse_machine_header_fields(line, suffix, version)?;
     Ok((registers, metadata.0, metadata.1, metadata.2))
@@ -5883,8 +6379,8 @@ fn quote_string(value: &str) -> String {
 mod tests {
     use super::*;
     use crate::bytecode::{
-        DataSegment, MachineIntWidth, MachineMemoryType, MachineScalarType, Relocation,
-        RelocationKind, RelocationTarget, Symbol, SymbolTarget,
+        DataSegment, MachineFloatFormat, MachineFloatPredicate, MachineIntWidth, MachineMemoryType,
+        MachineScalarType, Relocation, RelocationKind, RelocationTarget, Symbol, SymbolTarget,
     };
     use crate::memory::MemoryRegionKind;
 
@@ -5967,6 +6463,131 @@ mod tests {
     }
 
     #[test]
+    fn parses_and_formats_machine_float_and_conversion_ops() {
+        let source = "cdbc 0.3\n\nconstants:\n\nnames:\n\nmain registers=15 frame_size=0 machine_params=[] machine_return=none:\nblock b0:\n  r0 = fconst f32, 0x3fc00000\n  r1 = fconst f64, 0xbff8000000000000\n  r2 = fadd r0, r0, f32\n  r3 = fsub r1, r1, f64\n  r4 = fmul r0, r0, f32\n  r5 = fdiv r0, r0, f32\n  r6 = fneg r1, f64\n  r7 = fcmp r0, r0, f32, oeq\n  r8 = sitofp r0, 8, f64\n  r9 = uitofp r0, 8, f32\n  r10 = fptosi r1, f64, 8\n  r11 = fptoui r0, f32, 8\n  r12 = fpext r0, f32, f64\n  r13 = fptrunc r1, f64, f32\n  r14 = move r0\n  return_nil\n";
+        let program = parse_program(source).expect("machine float program should parse");
+        assert_eq!(format_program_v03(&program), source);
+        assert!(matches!(
+            program.functions[0].instructions[2],
+            Instruction::FConst {
+                format: MachineFloatFormat::F64,
+                bits: 0xbff8_0000_0000_0000,
+                ..
+            }
+        ));
+        assert!(matches!(
+            program.functions[0].instructions[8],
+            Instruction::FCmp {
+                predicate: MachineFloatPredicate::OEq,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn canonicalizes_machine_float_nan_bits_when_formatting() {
+        let source = "cdbc 0.3\n\nconstants:\n\nnames:\n\nmain registers=2 frame_size=0 machine_params=[] machine_return=none:\nblock b0:\n  r0 = fconst f32, 0x7fa00001\n  r1 = fconst f64, 0x7ff0000000000001\n  return_nil\n";
+        let program = parse_program(source).expect("machine NaN program should parse");
+        let formatted = format_program_v03(&program);
+        assert!(formatted.contains("r0 = fconst f32, 0x7fc00000"));
+        assert!(formatted.contains("r1 = fconst f64, 0x7ff8000000000000"));
+        assert!(!formatted.contains("0x7fa00001"));
+        assert!(!formatted.contains("0x7ff0000000000001"));
+    }
+
+    #[test]
+    fn verifies_machine_float_conversion_shapes() {
+        let mut program = program_with_data_segments(Vec::new());
+        program.functions[0].registers = 2;
+        let legal = [
+            Instruction::FPExt {
+                dest: 1,
+                value: 0,
+                from_format: MachineFloatFormat::F32,
+                to_format: MachineFloatFormat::F64,
+            },
+            Instruction::FPTrunc {
+                dest: 1,
+                value: 0,
+                from_format: MachineFloatFormat::F64,
+                to_format: MachineFloatFormat::F32,
+            },
+        ];
+        for conversion in legal {
+            let source_format = match conversion {
+                Instruction::FPExt { .. } => MachineFloatFormat::F32,
+                Instruction::FPTrunc { .. } => MachineFloatFormat::F64,
+                _ => unreachable!(),
+            };
+            program.functions[0].instructions = vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FConst {
+                    dest: 0,
+                    format: source_format,
+                    bits: 0,
+                },
+                conversion,
+                Instruction::ReturnNil,
+            ];
+            program.functions[0].locations = vec![None; 4];
+            verify_program(&program).expect("legal float conversion should verify");
+        }
+
+        let illegal = [
+            (
+                Instruction::FPExt {
+                    dest: 1,
+                    value: 0,
+                    from_format: MachineFloatFormat::F64,
+                    to_format: MachineFloatFormat::F32,
+                },
+                "fpext requires f32 -> f64",
+            ),
+            (
+                Instruction::FPTrunc {
+                    dest: 1,
+                    value: 0,
+                    from_format: MachineFloatFormat::F32,
+                    to_format: MachineFloatFormat::F64,
+                },
+                "fptrunc requires f64 -> f32",
+            ),
+        ];
+        for (conversion, expected) in illegal {
+            program.functions[0].instructions = vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FConst {
+                    dest: 0,
+                    format: MachineFloatFormat::F32,
+                    bits: 0,
+                },
+                conversion,
+                Instruction::ReturnNil,
+            ];
+            program.functions[0].locations = vec![None; 4];
+            let error = verify_program(&program).expect_err("invalid float conversion should fail");
+            assert!(error.message.contains(expected), "{}", error.message);
+        }
+
+        program.functions[0].instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
+            Instruction::FConst {
+                dest: 0,
+                format: MachineFloatFormat::F32,
+                bits: 0x1_0000_0000,
+            },
+            Instruction::ReturnNil,
+        ];
+        program.functions[0].locations = vec![None; 3];
+        let error = verify_program(&program).expect_err("wide f32 bits should fail");
+        assert!(
+            error.message.contains("fconst f32 bits"),
+            "{}",
+            error.message
+        );
+    }
+
+    #[test]
     fn checked_formatter_rejects_machine_opcodes_before_0_3_serialization() {
         let program = Program {
             constants: Vec::new(),
@@ -6010,7 +6631,9 @@ mod tests {
                 opcode: "iconst",
             }
         );
-        assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
+        assert!(error
+            .to_string()
+            .contains("cdbc 0.3 serialization is deferred"));
     }
 
     #[test]
@@ -6022,7 +6645,9 @@ mod tests {
             .expect_err("0.2 formatter must reject machine ABI metadata");
         assert_eq!(error, FormatError::UnsupportedMachineAbi { function: 0 });
         assert!(error.to_string().contains("machine ABI metadata for main"));
-        assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
+        assert!(error
+            .to_string()
+            .contains("cdbc 0.3 serialization is deferred"));
     }
 
     #[test]
@@ -6056,7 +6681,9 @@ mod tests {
             initial: Some(vec![0; 4]),
         }]);
         let error = verify_program(&invalid).expect_err("BSS payload should be rejected");
-        assert!(error.message.contains("must not carry an initialization payload"));
+        assert!(error
+            .message
+            .contains("must not carry an initialization payload"));
 
         let invalid = program_with_data_segments(vec![DataSegment {
             kind: MemoryRegionKind::Data,
@@ -6095,7 +6722,9 @@ mod tests {
             error,
             FormatError::UnsupportedMachineDataSegment { segment: 0 }
         );
-        assert!(error.to_string().contains("cdbc 0.3 serialization is deferred"));
+        assert!(error
+            .to_string()
+            .contains("cdbc 0.3 serialization is deferred"));
     }
 
     #[test]
@@ -6207,7 +6836,11 @@ mod tests {
         ];
         let error = verify_program(&overlapping)
             .expect_err("overlapping eight-byte relocation targets must be rejected");
-        assert!(error.message.contains("overlaps relocation r0"), "{}", error.message);
+        assert!(
+            error.message.contains("overlaps relocation r0"),
+            "{}",
+            error.message
+        );
 
         let mut null_guard = overlapping.clone();
         null_guard.relocations.truncate(1);
@@ -6215,7 +6848,9 @@ mod tests {
         let error = verify_program(&null_guard)
             .expect_err("relocation addends must not enter the null guard");
         assert!(
-            error.message.contains("symbol address enters the null guard"),
+            error
+                .message
+                .contains("symbol address enters the null guard"),
             "{}",
             error.message
         );
@@ -6258,7 +6893,11 @@ mod tests {
         ];
         let error = verify_program(&duplicate_call)
             .expect_err("duplicate direct-call relocations must be rejected");
-        assert!(error.message.contains("duplicates a call target"), "{}", error.message);
+        assert!(
+            error.message.contains("duplicates a call target"),
+            "{}",
+            error.message
+        );
 
         let mut invalid_global = program_with_data_segments(Vec::new());
         invalid_global.names.push("global".to_string());
@@ -6272,7 +6911,11 @@ mod tests {
         invalid_global.functions[0].locations = vec![None; 3];
         let error = verify_program(&invalid_global)
             .expect_err("global instructions must stay inside the global table");
-        assert!(error.message.contains("global g1 out of range"), "{}", error.message);
+        assert!(
+            error.message.contains("global g1 out of range"),
+            "{}",
+            error.message
+        );
     }
 
     #[test]
@@ -6455,7 +7098,9 @@ mod tests {
             size: 2,
         };
         let error = verify_program(&program).expect_err("out-of-range bulk register should fail");
-        assert!(error.message.contains("destination address register r3 out of range"));
+        assert!(error
+            .message
+            .contains("destination address register r3 out of range"));
     }
 
     #[test]
@@ -6962,7 +7607,10 @@ debug_ranges:
         assert_eq!(program.debug_sources[0].path, "demo.cd");
         assert_eq!(program.debug_sources[0].text, "print 1 / 0;\n");
         assert_eq!(program.functions[0].locations[2].as_ref().unwrap().line, 1);
-        assert_eq!(program.functions[0].locations[2].as_ref().unwrap().column, 7);
+        assert_eq!(
+            program.functions[0].locations[2].as_ref().unwrap().column,
+            7
+        );
         assert_eq!(
             program.functions[0].locations[2]
                 .as_ref()
@@ -7308,7 +7956,9 @@ block b0:
 "#;
         let error = parse_program(wrong_arity).expect_err("arity must be verified");
         assert!(
-            error.message.contains("call_direct f0 expects 1 arguments, got 2"),
+            error
+                .message
+                .contains("call_direct f0 expects 1 arguments, got 2"),
             "{}",
             error.message
         );
@@ -7488,7 +8138,9 @@ block b0:
         assert!(source.starts_with("cdbc 0.3\n\n"));
         assert!(source.contains("d0 = rodata alignment=1 size=2 initial=hex:00ff"));
         assert!(source.contains("s0 = \"entry_fn\" function f0"));
-        assert!(source.contains("r0 = FUNC_INDEX symbol=\"entry_fn\" addend=0 target=call main instruction=2"));
+        assert!(source.contains(
+            "r0 = FUNC_INDEX symbol=\"entry_fn\" addend=0 target=call main instruction=2"
+        ));
         assert!(source.contains(
             "main registers=3 frame_size=16 machine_params=[] machine_return=machine_int:"
         ));
@@ -7499,15 +8151,34 @@ block b0:
         let parsed = parse_program(&source).expect("cdbc 0.3 machine artifact should parse");
         assert_eq!(parsed, program);
         assert_eq!(format_program_v03(&parsed), source);
+        assert_eq!(
+            format_artifact_for_dump(&Artifact::Program(program.clone()))
+                .expect("dump should select the machine formatter"),
+            source
+        );
         let error = format_program_checked(&program)
             .expect_err("the legacy 0.2 writer must not silently drop machine fields");
         assert!(error.to_string().contains("cdbc 0.3 serialization"));
     }
 
     #[test]
+    fn dump_formatter_preserves_legacy_cdbc_0_2_output() {
+        let source =
+            "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n";
+        let program = parse_program(source).expect("parse legacy program");
+        assert_eq!(
+            format_artifact_for_dump(&Artifact::Program(program))
+                .expect("legacy dump should use the 0.2 formatter"),
+            source
+        );
+    }
+
+    #[test]
     fn cdbc_0_3_rejects_unknown_machine_header_fields() {
         let source = "cdbc 0.3\n\nconstants:\n\nnames:\n\nmain registers=0 frame_size=0 unknown=yes:\nblock b0:\n  return_nil\n";
         let error = parse_program(source).expect_err("unknown 0.3 fields must be rejected");
-        assert!(error.message.contains("unknown machine function field `unknown=yes`"));
+        assert!(error
+            .message
+            .contains("unknown machine function field `unknown=yes`"));
     }
 }

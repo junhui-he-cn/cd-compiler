@@ -7,8 +7,9 @@ Rust runtime has a separate current-state record in
 
 ## Compatibility contracts
 
-`cdbc 0.2` emission and execution only, per-file module compilation with CLI
-entry order, O0 as the default optimizer level, source fallback for cold or
+`cdbc 0.2` compiler emission and default linked execution only, per-file module
+compilation with CLI entry order, O0 as the default optimizer level, source
+fallback for cold or
 repairable module-product builds, C++/Rust parity, and interpreter-default VM
 execution remain unchanged until an explicit decision changes them.
 
@@ -22,11 +23,17 @@ execution remain unchanged until an explicit decision changes them.
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes |
 | IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` |
 | Tools | Formatter, open/closed-workspace LSP definition and references, trace and interactive VM debugger |
-| Artifact boundary | Compiler emits validated linked and module `cdbc 0.2` products with debug metadata; the VM accepts `cdbc 0.2` only |
+| Artifact boundary | Compiler emits validated linked and module `cdbc 0.2` products with debug metadata; the Rust VM additionally accepts explicit, frozen `cdbc 0.3` machine artifacts |
 
 The authoritative implementation contracts remain in `README.md`,
-`docs/language-grammar.ebnf`, and `docs/bytecode-text-format.md`; the full
-repository verification gate lives in `AGENTS.md`.
+`docs/language-grammar.ebnf`, `docs/bytecode-text-format.md`, and the VM
+machine-foundation documents; the full repository verification gate lives in
+`AGENTS.md`.
+
+The compiler-side artifact boundary remains `cdbc 0.2`. The Rust VM's explicit
+`cdbc 0.3` Machine Foundation is a separate frozen runtime/artifact contract;
+its producer cutover is deferred to a separate decision. See
+[`cdbc-0.3-machine-abi-001`](decisions/cdbc-0.3-machine-abi-001.md).
 
 ## Active language decisions
 

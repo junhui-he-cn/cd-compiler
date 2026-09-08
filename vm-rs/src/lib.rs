@@ -22,11 +22,10 @@ pub use bytecode::{
     DataSegment, Program, Relocation, RelocationKind, RelocationTarget, Symbol, SymbolTarget,
 };
 pub use format::{
-    format_artifact, format_artifact_checked, format_program, format_program_checked,
-    format_artifact_v03, format_artifact_v03_checked, format_program_v03,
-    format_program_v03_checked,
-    parse_artifact, parse_artifact_checked, parse_program, verify_artifact, verify_artifact_checked,
-    verify_module_artifact,
+    format_artifact, format_artifact_checked, format_artifact_for_dump, format_artifact_v03,
+    format_artifact_v03_checked, format_program, format_program_checked, format_program_v03,
+    format_program_v03_checked, parse_artifact, parse_artifact_checked, parse_program,
+    verify_artifact, verify_artifact_checked, verify_module_artifact,
     verify_module_artifact_checked, verify_program, verify_program_checked, Artifact,
     ArtifactError, ArtifactErrorKind, FormatError, ModuleArtifact, ModuleDependency,
     ModuleDependencyKind, ParseError, ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION,
@@ -37,14 +36,15 @@ pub use link::{
     LinkError, LinkErrorKind, LinkReport, LinkResult,
 };
 pub use memory::{
-    LinearMemory, MemoryError, MemoryErrorKind, MemoryPermissions, MemoryRegion,
-    MemoryRegionKind, VmAddress, NULL_ADDRESS, NULL_GUARD_END,
+    LinearMemory, MemoryError, MemoryErrorKind, MemoryPermissions, MemoryRegion, MemoryRegionKind,
+    VmAddress, NULL_ADDRESS, NULL_GUARD_END,
 };
 pub use vm::{
     CancellationToken, CooperativeDebugHook, CooperativeDebugPause, CooperativeDebugState,
     CooperativeProfileReport, CooperativeRun, CooperativeStep, DebugControl, DebugHook,
-    DebugPause, DebugRun, JoinPoll, ProfileFunction, ProfileNative, ProfileReport, ProfileRun,
-    ProfileSourceRange, ResourceKind, RunConfig, RuntimeError, RuntimeErrorKind, StackFrame,
-    TaskControlError, TaskId, TaskOutcome, TaskOutputEvent, TaskProfileReport, TaskSpec, TaskState,
-    TaskTraceEvent, TraceEvent, TraceEventKind, TraceRun, VM,
+    DebugMachineState, DebugPause, DebugRun, JoinPoll, ProfileFunction, ProfileNative,
+    ProfileReport, ProfileRun, ProfileSourceRange, ResourceKind, RunConfig, RuntimeError,
+    RuntimeErrorKind, StackFrame, TaskControlError, TaskId, TaskOutcome, TaskOutputEvent,
+    TaskProfileReport, TaskSpec, TaskState, TaskTraceEvent, TraceEvent, TraceEventKind, TraceRun,
+    VM,
 };

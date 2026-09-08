@@ -331,30 +331,34 @@ impl Linker {
         }
         let mut module_remap = Vec::with_capacity(module.dependencies.len());
         for (index, dependency) in module.dependencies.iter().enumerate() {
-            let linked = *self.module_indices.get(&dependency.identity).ok_or_else(|| {
-                LinkError::dependency(
-                    LinkErrorKind::MissingDependency,
-                    module.identity.clone(),
-                    index,
-                    format!(
-                        "module `{}` dependency d{} has no merged module index",
-                        module.identity, index
-                    ),
-                )
-            })?;
+            let linked = *self
+                .module_indices
+                .get(&dependency.identity)
+                .ok_or_else(|| {
+                    LinkError::dependency(
+                        LinkErrorKind::MissingDependency,
+                        module.identity.clone(),
+                        index,
+                        format!(
+                            "module `{}` dependency d{} has no merged module index",
+                            module.identity, index
+                        ),
+                    )
+                })?;
             module_remap.push(linked);
         }
         let function_base = self.functions.len();
         let init = FuncId(
             checked_add(
-                checked_add(function_base, module.init, "linked module init index")
-                    .map_err(|error| {
+                checked_add(function_base, module.init, "linked module init index").map_err(
+                    |error| {
                         LinkError::module(
                             LinkErrorKind::Overflow,
                             module.identity.clone(),
                             error.to_string(),
                         )
-                    })?,
+                    },
+                )?,
                 1,
                 "linked module init function",
             )
@@ -386,7 +390,8 @@ impl Linker {
             return Ok(());
         }
         let module_index = self.linked_modules.len() as u32;
-        self.module_indices.insert(identity.to_string(), module_index);
+        self.module_indices
+            .insert(identity.to_string(), module_index);
         self.expansion_order.push(identity.to_string());
         self.linked_modules.push(ModuleInit { init: FuncId(0) });
 
@@ -419,10 +424,8 @@ impl Linker {
                     .iter()
                     .map(|descriptor| match &descriptor.source {
                         UpvalueSource::Global(global) => {
-                            let linked = *context
-                                .global_remap
-                                .get(global.0 as usize)
-                                .ok_or_else(|| {
+                            let linked =
+                                *context.global_remap.get(global.0 as usize).ok_or_else(|| {
                                     LinkError::new(
                                         LinkErrorKind::InvalidInstruction,
                                         format!("global g{} out of range", global.0),
@@ -542,15 +545,12 @@ impl Linker {
         }
         main.instructions.push(Instruction::ReturnNil);
         main.locations.push(None);
-        let linked_instruction_count = main
-            .instructions
-            .len()
-            .saturating_add(
-                self.functions
-                    .iter()
-                    .map(|function| function.instructions.len())
-                    .fold(0usize, usize::saturating_add),
-            );
+        let linked_instruction_count = main.instructions.len().saturating_add(
+            self.functions
+                .iter()
+                .map(|function| function.instructions.len())
+                .fold(0usize, usize::saturating_add),
+        );
 
         let report = LinkReport {
             input_module_identities: self.input_module_identities.clone(),
@@ -629,9 +629,9 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 mod tests {
     use super::{link_modules, link_modules_with_report, map_instruction, ModuleContext};
     use crate::bytecode::{
-        BlockId, DataSegment, FuncId, Function, Instruction, MachineIntWidth, MachineMemoryType,
-        MachineScalarType, Program, Relocation, RelocationKind, RelocationTarget, Symbol,
-        SymbolTarget,
+        BlockId, DataSegment, FuncId, Function, Instruction, MachineFloatFormat,
+        MachineFloatPredicate, MachineIntWidth, MachineMemoryType, MachineScalarType, Program,
+        Relocation, RelocationKind, RelocationTarget, Symbol, SymbolTarget,
     };
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
     use crate::memory::MemoryRegionKind;
@@ -898,10 +898,7 @@ mod tests {
         let function = &mut entry.program.functions[0];
         function.arity = 2;
         function.params = vec!["value".to_string(), "pointer".to_string()];
-        function.machine_params = vec![
-            MachineScalarType::MachineInt,
-            MachineScalarType::Address,
-        ];
+        function.machine_params = vec![MachineScalarType::MachineInt, MachineScalarType::Address];
         function.machine_return = Some(MachineScalarType::MachineFloat);
 
         let linked = link_modules(vec![entry]).expect("machine ABI metadata should link");
@@ -910,7 +907,10 @@ mod tests {
             function.machine_params,
             vec![MachineScalarType::MachineInt, MachineScalarType::Address]
         );
-        assert_eq!(function.machine_return, Some(MachineScalarType::MachineFloat));
+        assert_eq!(
+            function.machine_return,
+            Some(MachineScalarType::MachineFloat)
+        );
         assert_eq!(function.arity, 2);
         assert_eq!(function.params, vec!["value", "pointer"]);
     }
@@ -1118,6 +1118,132 @@ mod tests {
                 |block| Ok(block),
             )
             .expect("machine memory registers should remap");
+            assert_eq!(mapped, expected);
+        }
+    }
+
+    #[test]
+    fn remaps_machine_float_registers_with_the_function_base() {
+        let context = ModuleContext {
+            constant_base: 0,
+            data_segment_base: 0,
+            name_base: 0,
+            function_base: 0,
+            type_remap: Vec::new(),
+            native_remap: Vec::new(),
+            global_remap: Vec::new(),
+            module_remap: Vec::new(),
+            init: FuncId(0),
+            source_base: 0,
+        };
+        let cases = [
+            (
+                Instruction::FConst {
+                    dest: 1,
+                    format: MachineFloatFormat::F32,
+                    bits: 0x3f80_0000,
+                },
+                Instruction::FConst {
+                    dest: 11,
+                    format: MachineFloatFormat::F32,
+                    bits: 0x3f80_0000,
+                },
+            ),
+            (
+                Instruction::FAdd {
+                    dest: 2,
+                    left: 3,
+                    right: 4,
+                    format: MachineFloatFormat::F64,
+                },
+                Instruction::FAdd {
+                    dest: 12,
+                    left: 13,
+                    right: 14,
+                    format: MachineFloatFormat::F64,
+                },
+            ),
+            (
+                Instruction::FNeg {
+                    dest: 5,
+                    value: 6,
+                    format: MachineFloatFormat::F32,
+                },
+                Instruction::FNeg {
+                    dest: 15,
+                    value: 16,
+                    format: MachineFloatFormat::F32,
+                },
+            ),
+            (
+                Instruction::FCmp {
+                    dest: 7,
+                    left: 8,
+                    right: 9,
+                    format: MachineFloatFormat::F64,
+                    predicate: MachineFloatPredicate::UNe,
+                },
+                Instruction::FCmp {
+                    dest: 17,
+                    left: 18,
+                    right: 19,
+                    format: MachineFloatFormat::F64,
+                    predicate: MachineFloatPredicate::UNe,
+                },
+            ),
+            (
+                Instruction::SIToFp {
+                    dest: 10,
+                    value: 11,
+                    int_width: MachineIntWidth::W32,
+                    float_format: MachineFloatFormat::F64,
+                },
+                Instruction::SIToFp {
+                    dest: 20,
+                    value: 21,
+                    int_width: MachineIntWidth::W32,
+                    float_format: MachineFloatFormat::F64,
+                },
+            ),
+            (
+                Instruction::FPToUI {
+                    dest: 12,
+                    value: 13,
+                    float_format: MachineFloatFormat::F32,
+                    int_width: MachineIntWidth::W16,
+                },
+                Instruction::FPToUI {
+                    dest: 22,
+                    value: 23,
+                    float_format: MachineFloatFormat::F32,
+                    int_width: MachineIntWidth::W16,
+                },
+            ),
+            (
+                Instruction::FPExt {
+                    dest: 14,
+                    value: 15,
+                    from_format: MachineFloatFormat::F32,
+                    to_format: MachineFloatFormat::F64,
+                },
+                Instruction::FPExt {
+                    dest: 24,
+                    value: 25,
+                    from_format: MachineFloatFormat::F32,
+                    to_format: MachineFloatFormat::F64,
+                },
+            ),
+        ];
+
+        for (instruction, expected) in cases {
+            let mapped = map_instruction(
+                &instruction,
+                &context,
+                10,
+                |block| Ok(block),
+                |block| Ok(block),
+            )
+            .expect("machine float registers should remap");
             assert_eq!(mapped, expected);
         }
     }
@@ -1358,17 +1484,12 @@ fn map_instruction(
             arguments,
         } => Instruction::CallNative {
             dest: register(*dest)?,
-            native: NativeId(
-                *context
-                    .native_remap
-                    .get(native.0 as usize)
-                    .ok_or_else(|| {
-                        LinkError::new(
-                            LinkErrorKind::InvalidInstruction,
-                            format!("native import i{} out of range", native.0),
-                        )
-                    })?,
-            ),
+            native: NativeId(*context.native_remap.get(native.0 as usize).ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::InvalidInstruction,
+                    format!("native import i{} out of range", native.0),
+                )
+            })?),
             arguments: arguments
                 .iter()
                 .map(|argument| register(*argument))
@@ -1721,6 +1842,143 @@ fn map_instruction(
             from_width: *from_width,
             to_width: *to_width,
         },
+        Instruction::FConst { dest, format, bits } => Instruction::FConst {
+            dest: register(*dest)?,
+            format: *format,
+            bits: *bits,
+        },
+        Instruction::FAdd {
+            dest,
+            left,
+            right,
+            format,
+        } => Instruction::FAdd {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+            format: *format,
+        },
+        Instruction::FSub {
+            dest,
+            left,
+            right,
+            format,
+        } => Instruction::FSub {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+            format: *format,
+        },
+        Instruction::FMul {
+            dest,
+            left,
+            right,
+            format,
+        } => Instruction::FMul {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+            format: *format,
+        },
+        Instruction::FDiv {
+            dest,
+            left,
+            right,
+            format,
+        } => Instruction::FDiv {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+            format: *format,
+        },
+        Instruction::FNeg {
+            dest,
+            value,
+            format,
+        } => Instruction::FNeg {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            format: *format,
+        },
+        Instruction::FCmp {
+            dest,
+            left,
+            right,
+            format,
+            predicate,
+        } => Instruction::FCmp {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+            format: *format,
+            predicate: *predicate,
+        },
+        Instruction::SIToFp {
+            dest,
+            value,
+            int_width,
+            float_format,
+        } => Instruction::SIToFp {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            int_width: *int_width,
+            float_format: *float_format,
+        },
+        Instruction::UIToFp {
+            dest,
+            value,
+            int_width,
+            float_format,
+        } => Instruction::UIToFp {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            int_width: *int_width,
+            float_format: *float_format,
+        },
+        Instruction::FPToSI {
+            dest,
+            value,
+            float_format,
+            int_width,
+        } => Instruction::FPToSI {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            float_format: *float_format,
+            int_width: *int_width,
+        },
+        Instruction::FPToUI {
+            dest,
+            value,
+            float_format,
+            int_width,
+        } => Instruction::FPToUI {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            float_format: *float_format,
+            int_width: *int_width,
+        },
+        Instruction::FPExt {
+            dest,
+            value,
+            from_format,
+            to_format,
+        } => Instruction::FPExt {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            from_format: *from_format,
+            to_format: *to_format,
+        },
+        Instruction::FPTrunc {
+            dest,
+            value,
+            from_format,
+            to_format,
+        } => Instruction::FPTrunc {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            from_format: *from_format,
+            to_format: *to_format,
+        },
         Instruction::IAdd {
             dest,
             left,
@@ -1943,9 +2201,12 @@ fn remap_data_segment(
     context: &ModuleContext,
     module_identity: &str,
 ) -> Result<usize, LinkError> {
-    checked_add(segment, context.data_segment_base, "linked data segment index").map_err(
-        |error| LinkError::module(LinkErrorKind::Overflow, module_identity, error.message),
+    checked_add(
+        segment,
+        context.data_segment_base,
+        "linked data segment index",
     )
+    .map_err(|error| LinkError::module(LinkErrorKind::Overflow, module_identity, error.message))
 }
 
 fn checked_add(left: usize, right: usize, description: &str) -> Result<usize, LinkError> {

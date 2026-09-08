@@ -2,7 +2,7 @@ use compiler_design_vm::bytecode::{DebugLocation, DebugSource, Program};
 use compiler_design_vm::format;
 use compiler_design_vm::link;
 use compiler_design_vm::vm::{self, RunConfig};
-use compiler_design_vm::{DebugControl, DebugHook, DebugPause};
+use compiler_design_vm::{DebugControl, DebugHook, DebugMachineState, DebugPause};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -76,8 +76,8 @@ fn read_program(path: impl AsRef<Path>, config: &RunConfig) -> Result<Program, S
 
 fn dump(path: &str, config: &RunConfig) -> Result<(), String> {
     let artifact = read_artifact(path, config)?;
-    let output = format::format_artifact_checked(&artifact)
-        .map_err(|error| format!("error: {}", error))?;
+    let output =
+        format::format_artifact_for_dump(&artifact).map_err(|error| format!("error: {}", error))?;
     print!("{}", output);
     Ok(())
 }
@@ -134,7 +134,10 @@ fn source_local_name(name: &str) -> String {
     let Some((base, suffix)) = name.rsplit_once('#') else {
         return name.to_string();
     };
-    if !base.is_empty() && !suffix.is_empty() && suffix.chars().all(|character| character.is_ascii_digit()) {
+    if !base.is_empty()
+        && !suffix.is_empty()
+        && suffix.chars().all(|character| character.is_ascii_digit())
+    {
         base.to_string()
     } else {
         name.to_string()
@@ -258,8 +261,10 @@ impl InteractiveDebugger {
         }
         let mode_reason = match &self.mode {
             ResumeMode::Step(previous) if key != *previous => Some("step"),
-            ResumeMode::Next { key: previous, depth }
-                if key != *previous && pause.stack.len() <= *depth => Some("next"),
+            ResumeMode::Next {
+                key: previous,
+                depth,
+            } if key != *previous && pause.stack.len() <= *depth => Some("next"),
             _ => None,
         };
         if let Some(reason) = mode_reason {
@@ -368,11 +373,7 @@ impl InteractiveDebugger {
         self.suppressed_breakpoints = self.paused_breakpoints.clone();
     }
 
-    fn command(
-        &mut self,
-        command: &str,
-        pause: &DebugPause,
-    ) -> Option<DebugControl> {
+    fn command(&mut self, command: &str, pause: &DebugPause) -> Option<DebugControl> {
         if command == "continue" || command == "c" {
             self.mode = ResumeMode::Continue;
             self.suppress_current_breakpoints();
@@ -481,11 +482,16 @@ fn format_debug_pause(sources: &[DebugSource], pause: &DebugPause, reason: &str)
     let (module, range) = pause
         .location
         .as_ref()
-        .and_then(|location| sources.get(location.source).map(|source| (source, location)))
+        .and_then(|location| {
+            sources
+                .get(location.source)
+                .map(|source| (source, location))
+        })
         .map(|(source, location)| {
-            let range = location.range.as_ref().map(|range| {
-                format!(" range=s{}:{}:{}", range.source, range.start, range.end)
-            });
+            let range = location
+                .range
+                .as_ref()
+                .map(|range| format!(" range=s{}:{}:{}", range.source, range.start, range.end));
             (
                 source.module.as_deref().unwrap_or("none"),
                 range.unwrap_or_default(),
@@ -527,8 +533,13 @@ fn format_debug_pause(sources: &[DebugSource], pause: &DebugPause, reason: &str)
         })
         .collect::<Vec<_>>()
         .join(",");
+    let machine = pause
+        .machine
+        .as_ref()
+        .map(format_debug_machine_state)
+        .unwrap_or_default();
     format!(
-        "pause reason={} function={} instruction={} module={} location={} stack={} locals={{{}}}{}",
+        "pause reason={} function={} instruction={} module={} location={} stack={} locals={{{}}}{}{}",
         reason,
         pause.function,
         pause.instruction,
@@ -536,7 +547,25 @@ fn format_debug_pause(sources: &[DebugSource], pause: &DebugPause, reason: &str)
         source_location(sources, pause.location.as_ref()),
         stack,
         locals,
+        machine,
         range,
+    )
+}
+
+fn format_debug_machine_state(machine: &DebugMachineState) -> String {
+    let frame_base = machine
+        .frame_base
+        .map(|base| format!("0x{:016x}", base))
+        .unwrap_or_else(|| "none".to_string());
+    let registers = machine
+        .registers
+        .iter()
+        .map(|(index, value)| format!("r{}={}", index, trace_quote(value)))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        " machine_frame_base={} machine_frame_size={} registers={{{}}}",
+        frame_base, machine.frame_size, registers
     )
 }
 
@@ -594,7 +623,10 @@ fn format_trace_event(program: &Program, event: &vm::TraceEvent) -> String {
         .as_ref()
         .and_then(|location| location.range.as_ref())
     {
-        output.push_str(&format!(" range=s{}:{}:{}", range.source, range.start, range.end));
+        output.push_str(&format!(
+            " range=s{}:{}:{}",
+            range.source, range.start, range.end
+        ));
     }
     if let Some(value) = &event.value {
         output.push_str(&format!(" value={}", trace_quote(value)));
@@ -686,7 +718,10 @@ fn profile(path: &str, config: &RunConfig) -> Result<(), String> {
         .map_err(|error| format!("error: {}", error))?
         .profile();
     print_profile_report(&program, &profiled);
-    profiled.result.map(|_| ()).map_err(|error| error.to_string())
+    profiled
+        .result
+        .map(|_| ())
+        .map_err(|error| error.to_string())
 }
 
 fn debug(path: &str, config: &RunConfig) -> Result<(), String> {
@@ -705,12 +740,9 @@ fn debug(path: &str, config: &RunConfig) -> Result<(), String> {
 }
 
 fn program_instruction_count(program: &Program) -> usize {
-    program
-        .functions
-        .iter()
-        .fold(0usize, |total, function| {
-            total.saturating_add(function.instructions.len())
-        })
+    program.functions.iter().fold(0usize, |total, function| {
+        total.saturating_add(function.instructions.len())
+    })
 }
 
 fn enforce_limit(kind: &str, actual: usize, limit: Option<usize>) -> Result<(), String> {
@@ -724,10 +756,20 @@ fn enforce_limit(kind: &str, actual: usize, limit: Option<usize>) -> Result<(), 
 
 fn link(directory: &str, output_path: &str, config: &RunConfig) -> Result<(), String> {
     let mut paths = fs::read_dir(directory)
-        .map_err(|error| format!("error: failed to read module directory `{}`: {}", directory, error))?
+        .map_err(|error| {
+            format!(
+                "error: failed to read module directory `{}`: {}",
+                directory, error
+            )
+        })?
         .map(|entry| entry.map(|entry| entry.path()))
         .collect::<Result<Vec<PathBuf>, _>>()
-        .map_err(|error| format!("error: failed to read module directory `{}`: {}", directory, error))?;
+        .map_err(|error| {
+            format!(
+                "error: failed to read module directory `{}`: {}",
+                directory, error
+            )
+        })?;
     paths.retain(|path| path.extension().and_then(|extension| extension.to_str()) == Some("cdbc"));
     paths.sort();
     if paths.is_empty() {
@@ -741,9 +783,8 @@ fn link(directory: &str, output_path: &str, config: &RunConfig) -> Result<(), St
         let artifact = read_artifact(&path, config)?;
         match artifact {
             format::Artifact::Module(module) => {
-                module_instructions = module_instructions.saturating_add(
-                    program_instruction_count(&module.program),
-                );
+                module_instructions =
+                    module_instructions.saturating_add(program_instruction_count(&module.program));
                 enforce_limit(
                     "module instructions",
                     module_instructions,
@@ -766,8 +807,8 @@ fn link(directory: &str, output_path: &str, config: &RunConfig) -> Result<(), St
         program_instruction_count(&program),
         config.max_module_instructions,
     )?;
-    let output = format::format_program_checked(&program)
-        .map_err(|error| format!("error: {}", error))?;
+    let output =
+        format::format_program_checked(&program).map_err(|error| format!("error: {}", error))?;
     if let Some(limit) = config.max_artifact_bytes {
         if output.as_bytes().len() > limit {
             return Err(resource_limit_error("artifact bytes", limit));
@@ -802,7 +843,10 @@ fn set_limit(config: &mut RunConfig, option: &str, value: Option<usize>) -> Resu
     Ok(())
 }
 
-fn parse_command_args(command: &str, args: Vec<String>) -> Result<(Vec<String>, RunConfig), String> {
+fn parse_command_args(
+    command: &str,
+    args: Vec<String>,
+) -> Result<(Vec<String>, RunConfig), String> {
     let mut positionals = Vec::new();
     let mut config = RunConfig::default();
     let mut index = 0;
@@ -826,9 +870,9 @@ fn parse_command_args(command: &str, args: Vec<String>) -> Result<(Vec<String>, 
             ) {
                 return Err(format!("error: unknown option `{}`", argument));
             }
-            let value = args.get(index + 1).ok_or_else(|| {
-                format!("error: option `{}` expects a value", argument)
-            })?;
+            let value = args
+                .get(index + 1)
+                .ok_or_else(|| format!("error: option `{}` expects a value", argument))?;
             let parsed = parse_limit_value(argument, value)?;
             set_limit(&mut config, argument, parsed)?;
             index += 2;
@@ -947,7 +991,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{help_text, parse_single_path};
+    use super::{format_debug_pause, help_text, parse_single_path};
+    use compiler_design_vm::{DebugMachineState, DebugPause};
 
     #[test]
     fn help_mentions_dump_and_run_scope() {
@@ -966,6 +1011,35 @@ mod tests {
         );
         assert!(help.contains("--max-steps N"));
         assert!(help.contains("--unlimited"));
+    }
+
+    #[test]
+    fn formats_machine_debug_state_with_hex_frame_and_value_forms() {
+        let output = format_debug_pause(
+            &[],
+            &DebugPause {
+                function: "main".to_string(),
+                instruction: 1,
+                location: None,
+                stack: Vec::new(),
+                locals: Vec::new(),
+                machine: Some(DebugMachineState {
+                    registers: vec![
+                        (0, "machine_int(65261, 0x000000000000feed)".to_string()),
+                        (1, "machine_float(1.5)".to_string()),
+                        (2, "address(0x0000000000000040)".to_string()),
+                    ],
+                    frame_base: Some(0x1000),
+                    frame_size: 16,
+                }),
+            },
+            "entry",
+        );
+        assert!(output.contains("machine_frame_base=0x0000000000001000"));
+        assert!(output.contains("machine_frame_size=16"));
+        assert!(output.contains(
+            "registers={r0=\"machine_int(65261, 0x000000000000feed)\",r1=\"machine_float(1.5)\",r2=\"address(0x0000000000000040)\"}"
+        ));
     }
 
     #[test]
@@ -990,7 +1064,12 @@ mod tests {
     fn unlimited_flag_disables_all_resource_limits() {
         let (_, config) = parse_single_path(
             "trace",
-            vec!["--max-steps".to_string(), "2".to_string(), "--unlimited".to_string(), "trace.cdbc".to_string()],
+            vec![
+                "--max-steps".to_string(),
+                "2".to_string(),
+                "--unlimited".to_string(),
+                "trace.cdbc".to_string(),
+            ],
         )
         .expect("unlimited should parse");
         assert!(config.max_instruction_steps.is_none());

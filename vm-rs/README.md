@@ -36,6 +36,15 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run build/program.cdbc
 Use `-I` or `--import-path` when the source imports modules outside the
 source file's directory.
 
+## Artifact versions
+
+The C++ compiler and its default source-to-artifact path emit `cdbc 0.2`.
+The Rust VM accepts valid `cdbc 0.2` artifacts and also supports explicit
+`cdbc 0.3` machine artifacts through its machine-aware library formatters or
+hand-built integration inputs. The 0.3 machine contract does not change the
+compiler's default output; see
+[`docs/decisions/cdbc-0.3-machine-abi-001.md`](../docs/decisions/cdbc-0.3-machine-abi-001.md).
+
 ## VM Commands
 
 ```sh
@@ -49,12 +58,17 @@ cargo run --manifest-path vm-rs/Cargo.toml -- link module-directory linked.cdbc
 ```
 
 - `verify` checks an artifact without executing it.
-- `dump` prints the canonical artifact text.
+- `dump` prints canonical artifact text, including machine-aware `cdbc 0.3`
+  disassembly for verified machine artifacts.
 - `run` executes the program and writes its output to stdout.
 - `trace` prints deterministic source events.
 - `debug` starts the interactive debugger.
 - `profile` prints a machine-readable execution report.
 - `link` links independently emitted module artifacts.
+
+Machine-aware debugger pauses include rendered machine registers and the active
+VM frame base and size; machine integers show decimal and hexadecimal forms,
+addresses show hexadecimal forms, and machine floats show decimal forms.
 
 Show all available options with:
 

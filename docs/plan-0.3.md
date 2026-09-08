@@ -107,7 +107,10 @@ Writer:
     cdbc 0.3
 ```
 
-不得在仍标记为 `0.2` 的 artifact 中偷偷改变 wire semantics。
+这里的 `Writer: cdbc 0.3` 指 Rust VM 的显式 machine-artifact writer，不是
+C++ 编译器的默认发射端。C++ 编译器、`--emit-bytecode` 和
+`--emit-module-bytecode` 继续发射 `cdbc 0.2`；不得在仍标记为 `0.2` 的
+artifact 中偷偷改变 wire semantics。
 
 ---
 
@@ -905,6 +908,11 @@ address_pass
 ---
 
 ## 22. VM03-16 — ABI Freeze / LLVM-Ready Gate
+
+Status: accepted on 2026-09-08 for the Rust VM machine-artifact line. The
+formal decision is recorded in
+[`docs/decisions/cdbc-0.3-machine-abi-001.md`](decisions/cdbc-0.3-machine-abi-001.md).
+This status does not switch the C++ compiler from `cdbc 0.2`.
 
 只有满足以下条件才冻结 ABI：
 

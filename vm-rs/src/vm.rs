@@ -2,15 +2,15 @@
 
 use crate::bytecode::{
     Constant, DataSegment, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction,
-    MachineIntPredicate, MachineIntWidth, MachineMemoryType, MachineScalarType, Program,
-    RelocationKind, RelocationTarget, SymbolTarget, TypeId, UpvalueSource, VariantId,
-    MACHINE_ABI_MAX_PARAMS,
-};
-use crate::jit::{
-    JitCallContext, JitFrameMaterialization, JitExecutionMode, JitHelperAbi, JitSafepoint,
-    JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
+    MachineFloatFormat, MachineFloatPredicate, MachineIntPredicate, MachineIntWidth,
+    MachineMemoryType, MachineScalarType, Program, RelocationKind, RelocationTarget, SymbolTarget,
+    TypeId, UpvalueSource, VariantId, MACHINE_ABI_MAX_PARAMS,
 };
 use crate::format::ParseError;
+use crate::jit::{
+    JitCallContext, JitExecutionMode, JitFrameMaterialization, JitHelperAbi, JitSafepoint,
+    JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
+};
 use crate::memory::{
     LinearMemory, MemoryError, MemoryErrorKind, MemoryRegion, MemoryRegionKind, VmAddress,
 };
@@ -19,11 +19,11 @@ use crate::runtime::HeapObjectKind;
 use crate::runtime::{
     Cell, FunctionValue, Heap, HeapStats, IteratorSource, IteratorValue, SharedEnvironment,
 };
-pub use crate::scheduler::{TaskId, TaskState};
 use crate::scheduler::{
     CooperativeScheduler, DispatchContext, FrameStack, JoinStatus, ResumableFrame as Frame,
     ReturnTarget, SchedulerError, TaskStep, VariablePlan,
 };
+pub use crate::scheduler::{TaskId, TaskState};
 use crate::value::Value;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -85,6 +85,19 @@ pub struct DebugPause {
     pub location: Option<DebugLocation>,
     pub stack: Vec<StackFrame>,
     pub locals: Vec<(String, String)>,
+    /// Machine registers and frame metadata when this pause observes machine
+    /// state. Dynamic-only pauses leave this field unset.
+    pub machine: Option<DebugMachineState>,
+}
+
+/// Rendered machine state captured at a debugger pause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DebugMachineState {
+    /// Register index -> stable `Value` display text.
+    pub registers: Vec<(usize, String)>,
+    /// VM address of the active machine frame, if one is allocated.
+    pub frame_base: Option<VmAddress>,
+    pub frame_size: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -120,6 +133,7 @@ pub struct CooperativeDebugPause {
     pub location: Option<DebugLocation>,
     pub stack: Vec<StackFrame>,
     pub locals: Vec<(String, String)>,
+    pub machine: Option<DebugMachineState>,
     pub scheduler: CooperativeDebugState,
 }
 
@@ -129,11 +143,7 @@ pub struct CooperativeDebugPause {
 pub trait CooperativeDebugHook {
     fn on_instruction(&mut self, pause: CooperativeDebugPause) -> DebugControl;
 
-    fn on_error(
-        &mut self,
-        pause: CooperativeDebugPause,
-        _error: &RuntimeError,
-    ) -> DebugControl {
+    fn on_error(&mut self, pause: CooperativeDebugPause, _error: &RuntimeError) -> DebugControl {
         let _ = pause;
         DebugControl::Continue
     }
@@ -840,7 +850,10 @@ fn initialize_machine_segments(
                     )));
                 };
                 let initial_size = u64::try_from(initial.len()).map_err(|_| {
-                    RuntimeError::invalid_instruction(format!("data segment d{} initialization is too large", index))
+                    RuntimeError::invalid_instruction(format!(
+                        "data segment d{} initialization is too large",
+                        index
+                    ))
                 })?;
                 if initial_size != segment.size {
                     return Err(RuntimeError::invalid_instruction(format!(
@@ -1087,13 +1100,19 @@ fn resolve_machine_relocations(
                         index, function.0
                     )));
                 };
-                if !matches!(body.instructions.get(*instruction), Some(Instruction::CallDirect { .. })) {
+                if !matches!(
+                    body.instructions.get(*instruction),
+                    Some(Instruction::CallDirect { .. })
+                ) {
                     return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} target is not a call_direct operand",
                         index
                     )));
                 }
-                if direct_calls.insert((function.0 as usize, *instruction), *target).is_some() {
+                if direct_calls
+                    .insert((function.0 as usize, *instruction), *target)
+                    .is_some()
+                {
                     return Err(RuntimeError::invalid_instruction(format!(
                         "machine relocation r{} duplicates a call target",
                         index
@@ -1116,7 +1135,9 @@ fn resolve_machine_relocations(
     }
 
     for (address, bytes) in patches {
-        memory.patch_bytes(address, &bytes).map_err(RuntimeError::from)?;
+        memory
+            .patch_bytes(address, &bytes)
+            .map_err(RuntimeError::from)?;
     }
     Ok(direct_calls)
 }
@@ -1157,6 +1178,56 @@ fn signed_machine_int(raw: u64, width: MachineIntWidth) -> i128 {
         raw as i128
     } else {
         raw as i128 - (1i128 << width.bits())
+    }
+}
+
+fn canonical_machine_float(value: f64, format: MachineFloatFormat) -> f64 {
+    match format {
+        MachineFloatFormat::F32 => {
+            if value.is_nan() {
+                f32::from_bits(0x7fc0_0000) as f64
+            } else {
+                (value as f32) as f64
+            }
+        }
+        MachineFloatFormat::F64 => {
+            if value.is_nan() {
+                f64::from_bits(0x7ff8_0000_0000_0000)
+            } else {
+                value
+            }
+        }
+    }
+}
+
+fn machine_float_from_bits(format: MachineFloatFormat, bits: u64) -> Result<f64, String> {
+    match format {
+        MachineFloatFormat::F32 => {
+            let bits =
+                u32::try_from(bits).map_err(|_| "fconst f32 bits exceed 32 bits".to_string())?;
+            Ok(canonical_machine_float(f32::from_bits(bits) as f64, format))
+        }
+        MachineFloatFormat::F64 => Ok(canonical_machine_float(f64::from_bits(bits), format)),
+    }
+}
+
+fn apply_machine_float_predicate(left: f64, right: f64, predicate: MachineFloatPredicate) -> bool {
+    let unordered = left.is_nan() || right.is_nan();
+    match predicate {
+        MachineFloatPredicate::OEq => !unordered && left == right,
+        MachineFloatPredicate::ONe => !unordered && left != right,
+        MachineFloatPredicate::OLt => !unordered && left < right,
+        MachineFloatPredicate::OLe => !unordered && left <= right,
+        MachineFloatPredicate::OGt => !unordered && left > right,
+        MachineFloatPredicate::OGe => !unordered && left >= right,
+        MachineFloatPredicate::UEq => unordered || left == right,
+        MachineFloatPredicate::UNe => unordered || left != right,
+        MachineFloatPredicate::ULt => unordered || left < right,
+        MachineFloatPredicate::ULe => unordered || left <= right,
+        MachineFloatPredicate::UGt => unordered || left > right,
+        MachineFloatPredicate::UGe => unordered || left >= right,
+        MachineFloatPredicate::Ord => !unordered,
+        MachineFloatPredicate::Uno => unordered,
     }
 }
 
@@ -1692,6 +1763,62 @@ mod tests {
         program
     }
 
+    struct RecordingDebugger {
+        pauses: Rc<RefCell<Vec<DebugPause>>>,
+    }
+
+    impl DebugHook for RecordingDebugger {
+        fn on_instruction(&mut self, pause: DebugPause) -> DebugControl {
+            self.pauses.borrow_mut().push(pause);
+            DebugControl::Continue
+        }
+    }
+
+    #[test]
+    fn debugger_pauses_expose_machine_registers_and_frame_metadata() {
+        let program = machine_program_with_frame(
+            16,
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::IConst {
+                    dest: 0,
+                    width: MachineIntWidth::W64,
+                    raw: 0xfeed,
+                },
+                Instruction::FrameAddr { dest: 1, offset: 8 },
+                Instruction::ReturnNil,
+            ],
+            2,
+        );
+        let pauses = Rc::new(RefCell::new(Vec::new()));
+        let debug = VM::with_config_verified(&program, RunConfig::unlimited())
+            .expect("machine debugger program should verify")
+            .debug(Box::new(RecordingDebugger {
+                pauses: Rc::clone(&pauses),
+            }));
+        assert_eq!(
+            debug.result.expect("debugged machine program should run"),
+            ""
+        );
+
+        let pauses = pauses.borrow();
+        let machine = pauses
+            .iter()
+            .filter_map(|pause| pause.machine.as_ref())
+            .find(|machine| {
+                machine.registers.iter().any(|(index, value)| {
+                    *index == 0 && value == "machine_int(65261, 0x000000000000feed)"
+                })
+            })
+            .expect("a pause after iconst should expose machine state");
+        assert_eq!(machine.frame_size, 16);
+        assert!(machine.frame_base.is_some());
+        assert!(machine
+            .registers
+            .iter()
+            .any(|(index, value)| *index == 1 && value == "nil"));
+    }
+
     #[test]
     fn unverified_loader_rejects_overlapping_machine_relocations() {
         let mut program = machine_program_with_data_segments(vec![DataSegment {
@@ -1917,7 +2044,8 @@ mod tests {
                 Instruction::Return { value: 0 },
             ],
         );
-        let program = machine_program_with_functions(vec![main, machine_int, machine_float, address]);
+        let program =
+            machine_program_with_functions(vec![main, machine_int, machine_float, address]);
         let mut vm = VM::new(&program);
         let registers = run_machine_body(
             &mut vm,
@@ -1933,7 +2061,9 @@ mod tests {
         .expect("direct machine ABI calls should execute");
 
         assert!(matches!(registers[0], Value::MachineInt(value) if value == u64::MAX));
-        assert!(matches!(registers[1], Value::MachineFloat(value) if value.to_bits() == (-0.0f64).to_bits()));
+        assert!(
+            matches!(registers[1], Value::MachineFloat(value) if value.to_bits() == (-0.0f64).to_bits())
+        );
         assert!(matches!(registers[2], Value::Address(value) if value == 0x40));
     }
 
@@ -2003,7 +2133,10 @@ mod tests {
                 0,
                 &[],
                 0,
-                vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::ReturnNil,
+                ],
             ),
             machine_abi_function(
                 1,
@@ -2013,7 +2146,10 @@ mod tests {
                 MACHINE_ABI_MAX_PARAMS + 1,
                 &too_many_names,
                 1,
-                vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::ReturnNil,
+                ],
             ),
         ]);
         let error = crate::format::verify_program(&invalid)
@@ -2096,7 +2232,10 @@ mod tests {
             0,
             &[],
             0,
-            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::ReturnNil,
+            ],
         );
         let program = machine_program_with_functions(vec![returning_main, wrong_return]);
         let mut vm = VM::new(&program);
@@ -2132,7 +2271,10 @@ mod tests {
             1,
             &["value"],
             0,
-            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::ReturnNil,
+            ],
         );
         let program = machine_program_with_functions(vec![void_main, void]);
         let mut vm = VM::new(&program);
@@ -2151,7 +2293,10 @@ mod tests {
             0,
             &[],
             0,
-            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::ReturnNil,
+            ],
         );
         let callee = machine_abi_function(
             1,
@@ -2248,7 +2393,10 @@ mod tests {
             .task_outcome(task)
             .expect("machine ABI task outcome should be readable")
             .expect("machine ABI task should be terminal");
-        assert!(matches!(outcome, TaskOutcome::Completed(Value::MachineInt(91))));
+        assert!(matches!(
+            outcome,
+            TaskOutcome::Completed(Value::MachineInt(91))
+        ));
     }
 
     #[test]
@@ -2259,7 +2407,10 @@ mod tests {
                 Instruction::BlockStart { id: BlockId(0) },
                 Instruction::FrameAddr { dest: 0, offset: 0 },
                 Instruction::FrameAddr { dest: 1, offset: 8 },
-                Instruction::FrameAddr { dest: 2, offset: 16 },
+                Instruction::FrameAddr {
+                    dest: 2,
+                    offset: 16,
+                },
                 Instruction::ReturnNil,
             ],
             3,
@@ -2319,7 +2470,10 @@ mod tests {
         assert_eq!(regions[2].base, 0x1010);
         let rodata_base = regions[0].base;
         assert_eq!(vm.memory().read_bytes(rodata_base, 6).unwrap(), b"hello\0");
-        assert_eq!(vm.memory().read_bytes(regions[1].base, 4).unwrap(), &[1, 2, 3, 4]);
+        assert_eq!(
+            vm.memory().read_bytes(regions[1].base, 4).unwrap(),
+            &[1, 2, 3, 4]
+        );
         assert_eq!(vm.memory().read_bytes(regions[2].base, 8).unwrap(), &[0; 8]);
         assert_eq!(
             vm.memory_mut()
@@ -2353,24 +2507,26 @@ mod tests {
                 offset: 2,
             },
         }];
-        program.relocations = vec![Relocation {
-            kind: RelocationKind::Abs64,
-            symbol: "global_bytes".to_string(),
-            addend: 3,
-            target: RelocationTarget::Data {
-                segment: 1,
-                offset: 0,
+        program.relocations = vec![
+            Relocation {
+                kind: RelocationKind::Abs64,
+                symbol: "global_bytes".to_string(),
+                addend: 3,
+                target: RelocationTarget::Data {
+                    segment: 1,
+                    offset: 0,
+                },
             },
-        },
-        Relocation {
-            kind: RelocationKind::Abs64,
-            symbol: "global_bytes".to_string(),
-            addend: 3,
-            target: RelocationTarget::Data {
-                segment: 0,
-                offset: 8,
+            Relocation {
+                kind: RelocationKind::Abs64,
+                symbol: "global_bytes".to_string(),
+                addend: 3,
+                target: RelocationTarget::Data {
+                    segment: 0,
+                    offset: 8,
+                },
             },
-        }];
+        ];
 
         let mut vm = VM::new(&program);
         let regions = vm.memory().regions();
@@ -2378,14 +2534,23 @@ mod tests {
         let data_base = regions[1].base;
         let rodata_address = rodata_base + 5;
         let patched = vm.memory().read_bytes(data_base, 8).unwrap();
-        assert_eq!(u64::from_le_bytes(patched.try_into().unwrap()), rodata_address);
+        assert_eq!(
+            u64::from_le_bytes(patched.try_into().unwrap()),
+            rodata_address
+        );
         let rodata_patch = vm.memory().read_bytes(rodata_base + 8, 8).unwrap();
-        assert_eq!(u64::from_le_bytes(rodata_patch.try_into().unwrap()), rodata_address);
-        assert_eq!(vm.memory_mut().write_bytes(rodata_base, &[1]), Err(MemoryError::WriteToReadOnlyMemory {
-            address: rodata_base,
-            size: 1,
-            region: MemoryRegionKind::Rodata,
-        }));
+        assert_eq!(
+            u64::from_le_bytes(rodata_patch.try_into().unwrap()),
+            rodata_address
+        );
+        assert_eq!(
+            vm.memory_mut().write_bytes(rodata_base, &[1]),
+            Err(MemoryError::WriteToReadOnlyMemory {
+                address: rodata_base,
+                size: 1,
+                region: MemoryRegionKind::Rodata,
+            })
+        );
     }
 
     #[test]
@@ -2416,7 +2581,10 @@ mod tests {
             0,
             &[],
             0,
-            vec![Instruction::BlockStart { id: BlockId(0) }, Instruction::ReturnNil],
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::ReturnNil,
+            ],
         );
         let mut program = machine_program_with_functions(vec![main, callee]);
         program.symbols = vec![Symbol {
@@ -2532,7 +2700,10 @@ mod tests {
             registers[3],
             Value::MachineInt(value) if value == 0xab01_abab
         ));
-        assert_eq!(vm.memory().read_bytes(region.base, 4).unwrap(), &[0xab, 0xab, 1, 0xab]);
+        assert_eq!(
+            vm.memory().read_bytes(region.base, 4).unwrap(),
+            &[0xab, 0xab, 1, 0xab]
+        );
         assert_eq!(
             vm.memory().read_bytes(region.base + 8, 4).unwrap(),
             &[0xab, 1, 0xab, 0xab]
@@ -2568,7 +2739,10 @@ mod tests {
         )
         .expect_err("overlapping memcpy should trap");
         assert_eq!(error.kind, RuntimeErrorKind::InvalidMemoryOperation);
-        assert_eq!(vm.memory().read_bytes(region.base, 8).unwrap(), &[1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(
+            vm.memory().read_bytes(region.base, 8).unwrap(),
+            &[1, 2, 3, 4, 5, 6, 7, 8]
+        );
     }
 
     #[test]
@@ -2989,12 +3163,9 @@ mod tests {
     #[test]
     fn failed_cooperative_frame_creation_does_not_reserve_a_stack() {
         let program = cooperative_machine_frame_program();
-        let mut run = VM::with_config(
-            &program,
-            RunConfig::unlimited().with_machine_stack_bytes(4),
-        )
-        .start_cooperative(1)
-        .expect("cooperative session should start");
+        let mut run = VM::with_config(&program, RunConfig::unlimited().with_machine_stack_bytes(4))
+            .start_cooperative(1)
+            .expect("cooperative session should start");
         let error = run
             .spawn(TaskSpec::function(1, Vec::new()))
             .expect_err("an oversized initial frame should be rejected");
@@ -3021,7 +3192,10 @@ mod tests {
                 Instruction::FrameAddr { dest: 0, offset: 0 },
                 Instruction::FrameAddr { dest: 1, offset: 4 },
                 Instruction::FrameAddr { dest: 2, offset: 8 },
-                Instruction::FrameAddr { dest: 3, offset: 12 },
+                Instruction::FrameAddr {
+                    dest: 3,
+                    offset: 12,
+                },
                 Instruction::IConst {
                     dest: 4,
                     width: MachineIntWidth::W32,
@@ -3067,7 +3241,10 @@ mod tests {
                     function: FuncId(1),
                     arguments: vec![0, 1, 2, 3],
                 },
-                Instruction::FrameAddr { dest: 9, offset: 16 },
+                Instruction::FrameAddr {
+                    dest: 9,
+                    offset: 16,
+                },
                 Instruction::Store {
                     address: 9,
                     source: 8,
@@ -3078,19 +3255,28 @@ mod tests {
                     width: MachineIntWidth::W32,
                     raw: 2,
                 },
-                Instruction::FrameAddr { dest: 11, offset: 20 },
+                Instruction::FrameAddr {
+                    dest: 11,
+                    offset: 20,
+                },
                 Instruction::Store {
                     address: 11,
                     source: 10,
                     memory_type: MachineMemoryType::I32,
                 },
-                Instruction::FrameAddr { dest: 12, offset: 16 },
+                Instruction::FrameAddr {
+                    dest: 12,
+                    offset: 16,
+                },
                 Instruction::Load {
                     dest: 13,
                     address: 12,
                     memory_type: MachineMemoryType::I32,
                 },
-                Instruction::FrameAddr { dest: 14, offset: 20 },
+                Instruction::FrameAddr {
+                    dest: 14,
+                    offset: 20,
+                },
                 Instruction::Load {
                     dest: 15,
                     address: 14,
@@ -3166,7 +3352,13 @@ mod tests {
     #[test]
     fn hand_built_machine_program_returns_twelve() {
         let program = machine_integration_program();
-        let mut run = VM::new(&program)
+        let source = crate::format::format_program_v03(&program);
+        assert!(source.starts_with("cdbc 0.3\n"));
+        let parsed = crate::format::parse_program(&source)
+            .expect("hand-built machine program should round-trip through cdbc 0.3");
+        let vm = VM::with_config_verified(&parsed, RunConfig::unlimited())
+            .expect("hand-built machine program should pass verification");
+        let mut run = vm
             .start_cooperative(1)
             .expect("cooperative session should start");
         let task = run
@@ -3225,7 +3417,10 @@ mod tests {
             .start_cooperative(1)
             .expect("cooperative session should start");
         assert_eq!(cooperative.memory().regions(), &[region]);
-        assert_eq!(cooperative.memory().read_bytes(region.base, 4).unwrap(), &[1, 2, 3, 4]);
+        assert_eq!(
+            cooperative.memory().read_bytes(region.base, 4).unwrap(),
+            &[1, 2, 3, 4]
+        );
         cooperative
             .memory_mut()
             .write_bytes(region.base + 1, &[9])
@@ -3397,7 +3592,10 @@ mod tests {
         assert!(matches!(&registers[18], Value::MachineFloat(value) if *value == -2.25));
         assert!(matches!(&registers[19], Value::Address(value) if *value == loaded_address));
 
-        assert_eq!(vm.memory().read_bytes(region.base + 48, 1).unwrap(), &[0x88]);
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 48, 1).unwrap(),
+            &[0x88]
+        );
         assert_eq!(
             vm.memory().read_bytes(region.base + 49, 2).unwrap(),
             &[0x88, 0x77]
@@ -3421,6 +3619,72 @@ mod tests {
         assert_eq!(
             vm.memory().read_bytes(region.base + 75, 8).unwrap(),
             &0x0123_4567_89ab_cdefu64.to_le_bytes()
+        );
+    }
+
+    #[test]
+    fn typed_machine_float_memory_canonicalizes_nan_bits() {
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Load {
+                    dest: 1,
+                    address: 0,
+                    memory_type: MachineMemoryType::F32,
+                },
+                Instruction::Load {
+                    dest: 2,
+                    address: 2,
+                    memory_type: MachineMemoryType::F64,
+                },
+                Instruction::Store {
+                    address: 3,
+                    source: 1,
+                    memory_type: MachineMemoryType::F32,
+                },
+                Instruction::Store {
+                    address: 4,
+                    source: 2,
+                    memory_type: MachineMemoryType::F64,
+                },
+                Instruction::ReturnNil,
+            ],
+            5,
+        );
+        let mut vm = VM::new(&program);
+        let region = vm
+            .memory_mut()
+            .allocate_region(crate::memory::MemoryRegionKind::Data, 32, 1)
+            .expect("NaN memory test region should allocate");
+        vm.memory_mut()
+            .write_bytes(region.base, &0x7fc0_0001u32.to_le_bytes())
+            .expect("f32 NaN bits should initialize");
+        vm.memory_mut()
+            .write_bytes(region.base + 8, &0x7ff0_0000_0000_0001u64.to_le_bytes())
+            .expect("f64 NaN bits should initialize");
+
+        let registers = run_machine_body(
+            &mut vm,
+            vec![
+                Value::address(region.base),
+                Value::Nil,
+                Value::address(region.base + 8),
+                Value::address(region.base + 16),
+                Value::address(region.base + 24),
+            ],
+        )
+        .expect("NaN memory operations should execute");
+        assert!(matches!(registers[1], Value::MachineFloat(value) if value.is_nan()));
+        assert!(
+            matches!(registers[2], Value::MachineFloat(value) if value.to_bits() == 0x7ff8_0000_0000_0000)
+        );
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 16, 4).unwrap(),
+            &0x7fc0_0000u32.to_le_bytes()
+        );
+        assert_eq!(
+            vm.memory().read_bytes(region.base + 24, 8).unwrap(),
+            &0x7ff8_0000_0000_0000u64.to_le_bytes()
         );
     }
 
@@ -3528,10 +3792,22 @@ mod tests {
                 params: Vec::new(),
                 registers: 11,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Constant { dest: 2, constant: 2 },
-                    Instruction::Constant { dest: 3, constant: 3 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::Constant {
+                        dest: 2,
+                        constant: 2,
+                    },
+                    Instruction::Constant {
+                        dest: 3,
+                        constant: 3,
+                    },
                     Instruction::Less {
                         dest: 4,
                         left: 0,
@@ -3600,7 +3876,9 @@ mod tests {
         };
 
         assert_eq!(
-            VM::new(&program).run().expect("primitive comparisons should run"),
+            VM::new(&program)
+                .run()
+                .expect("primitive comparisons should run"),
             "true\ntrue\ntrue\ntrue\ntrue\ntrue\n"
         );
     }
@@ -3637,30 +3915,118 @@ mod tests {
                 params: Vec::new(),
                 registers: 16,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::AddNum { dest: 2, left: 0, right: 1 },
-                    Instruction::SubNum { dest: 3, left: 0, right: 1 },
-                    Instruction::MulNum { dest: 4, left: 0, right: 1 },
-                    Instruction::DivNum { dest: 5, left: 0, right: 1 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::AddNum {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::SubNum {
+                        dest: 3,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::MulNum {
+                        dest: 4,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::DivNum {
+                        dest: 5,
+                        left: 0,
+                        right: 1,
+                    },
                     Instruction::NegNum { dest: 6, value: 0 },
-                    Instruction::Constant { dest: 7, constant: 2 },
-                    Instruction::Constant { dest: 8, constant: 3 },
-                    Instruction::ConcatStr { dest: 9, left: 7, right: 8 },
-                    Instruction::LessNum { dest: 10, left: 1, right: 0 },
-                    Instruction::GreaterEqualNum { dest: 11, left: 0, right: 1 },
-                    Instruction::LessStr { dest: 12, left: 7, right: 8 },
-                    Instruction::GreaterEqualStr { dest: 13, left: 8, right: 7 },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![2] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![3] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![4] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![5] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![6] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![9] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![10] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![11] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![12] },
-                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![13] },
+                    Instruction::Constant {
+                        dest: 7,
+                        constant: 2,
+                    },
+                    Instruction::Constant {
+                        dest: 8,
+                        constant: 3,
+                    },
+                    Instruction::ConcatStr {
+                        dest: 9,
+                        left: 7,
+                        right: 8,
+                    },
+                    Instruction::LessNum {
+                        dest: 10,
+                        left: 1,
+                        right: 0,
+                    },
+                    Instruction::GreaterEqualNum {
+                        dest: 11,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::LessStr {
+                        dest: 12,
+                        left: 7,
+                        right: 8,
+                    },
+                    Instruction::GreaterEqualStr {
+                        dest: 13,
+                        left: 8,
+                        right: 7,
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![2],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![3],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![4],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![5],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![6],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![9],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![10],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![11],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![12],
+                    },
+                    Instruction::CallNative {
+                        dest: 14,
+                        native: NativeId(0),
+                        arguments: vec![13],
+                    },
                     Instruction::ReturnNil,
                 ],
                 locations: vec![None; 25],
@@ -4006,15 +4372,26 @@ true\ntrue\nfalse\nfalse\n"
             }
 
             for value in [
-                0, maximum, product, 2, maximum, 0, maximum, 0, logical_shift,
-                arithmetic_shift, minimum, 0, minimum, 0,
+                0,
+                maximum,
+                product,
+                2,
+                maximum,
+                0,
+                maximum,
+                0,
+                logical_shift,
+                arithmetic_shift,
+                minimum,
+                0,
+                minimum,
+                0,
             ] {
-                expected.push_str(&format!(
-                    "machine_int({}, 0x{:016x})\n",
-                    value, value
-                ));
+                expected.push_str(&format!("machine_int({}, 0x{:016x})\n", value, value));
             }
-            for value in [false, true, true, true, false, false, false, false, true, true] {
+            for value in [
+                false, true, true, true, false, false, false, false, true, true,
+            ] {
                 expected.push_str(&format!("{}\n", value));
             }
         }
@@ -4114,6 +4491,219 @@ machine_int(65408, 0x000000000000ff80)\n\
 machine_int(4294967168, 0x00000000ffffff80)\n\
 machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         );
+    }
+
+    #[test]
+    fn machine_float_arithmetic_comparison_and_conversions_follow_abi() {
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FConst {
+                    dest: 0,
+                    format: MachineFloatFormat::F32,
+                    bits: 0x3f80_0000,
+                },
+                Instruction::FConst {
+                    dest: 1,
+                    format: MachineFloatFormat::F32,
+                    bits: 0x3f80_0000,
+                },
+                Instruction::FAdd {
+                    dest: 2,
+                    left: 0,
+                    right: 1,
+                    format: MachineFloatFormat::F32,
+                },
+                Instruction::FConst {
+                    dest: 3,
+                    format: MachineFloatFormat::F64,
+                    bits: 0x3ff8_0000_0000_0000,
+                },
+                Instruction::FConst {
+                    dest: 4,
+                    format: MachineFloatFormat::F64,
+                    bits: 0,
+                },
+                Instruction::FDiv {
+                    dest: 5,
+                    left: 3,
+                    right: 4,
+                    format: MachineFloatFormat::F64,
+                },
+                Instruction::FConst {
+                    dest: 6,
+                    format: MachineFloatFormat::F64,
+                    bits: 0x7ff8_0000_0000_0001,
+                },
+                Instruction::FCmp {
+                    dest: 7,
+                    left: 6,
+                    right: 3,
+                    format: MachineFloatFormat::F64,
+                    predicate: MachineFloatPredicate::OEq,
+                },
+                Instruction::FCmp {
+                    dest: 8,
+                    left: 6,
+                    right: 3,
+                    format: MachineFloatFormat::F64,
+                    predicate: MachineFloatPredicate::UNe,
+                },
+                Instruction::FCmp {
+                    dest: 9,
+                    left: 6,
+                    right: 3,
+                    format: MachineFloatFormat::F64,
+                    predicate: MachineFloatPredicate::Uno,
+                },
+                Instruction::FCmp {
+                    dest: 10,
+                    left: 6,
+                    right: 3,
+                    format: MachineFloatFormat::F64,
+                    predicate: MachineFloatPredicate::Ord,
+                },
+                Instruction::IConst {
+                    dest: 11,
+                    width: MachineIntWidth::W8,
+                    raw: 0xff,
+                },
+                Instruction::SIToFp {
+                    dest: 12,
+                    value: 11,
+                    int_width: MachineIntWidth::W8,
+                    float_format: MachineFloatFormat::F64,
+                },
+                Instruction::UIToFp {
+                    dest: 13,
+                    value: 11,
+                    int_width: MachineIntWidth::W8,
+                    float_format: MachineFloatFormat::F32,
+                },
+                Instruction::FPToSI {
+                    dest: 14,
+                    value: 3,
+                    float_format: MachineFloatFormat::F64,
+                    int_width: MachineIntWidth::W8,
+                },
+                Instruction::FPToUI {
+                    dest: 15,
+                    value: 3,
+                    float_format: MachineFloatFormat::F64,
+                    int_width: MachineIntWidth::W8,
+                },
+                Instruction::FPExt {
+                    dest: 16,
+                    value: 0,
+                    from_format: MachineFloatFormat::F32,
+                    to_format: MachineFloatFormat::F64,
+                },
+                Instruction::FPTrunc {
+                    dest: 17,
+                    value: 3,
+                    from_format: MachineFloatFormat::F64,
+                    to_format: MachineFloatFormat::F32,
+                },
+                Instruction::FConst {
+                    dest: 18,
+                    format: MachineFloatFormat::F64,
+                    bits: 0x8000_0000_0000_0000,
+                },
+                Instruction::FNeg {
+                    dest: 19,
+                    value: 18,
+                    format: MachineFloatFormat::F64,
+                },
+                Instruction::ReturnNil,
+            ],
+            20,
+        );
+        let registers = run_machine_body(
+            &mut VM::with_config_verified(&program, RunConfig::unlimited())
+                .expect("machine float program should verify"),
+            vec![Value::Nil; 20],
+        )
+        .expect("machine float program should execute");
+
+        assert!(matches!(registers[2], Value::MachineFloat(value) if value == 2.0));
+        assert!(
+            matches!(registers[5], Value::MachineFloat(value) if value.is_infinite() && value.is_sign_positive())
+        );
+        assert!(matches!(registers[7], Value::Bool(false)));
+        assert!(matches!(registers[8], Value::Bool(true)));
+        assert!(matches!(registers[9], Value::Bool(true)));
+        assert!(matches!(registers[10], Value::Bool(false)));
+        assert!(matches!(registers[12], Value::MachineFloat(value) if value == -1.0));
+        assert!(matches!(registers[13], Value::MachineFloat(value) if value == 255.0));
+        assert!(matches!(registers[14], Value::MachineInt(1)));
+        assert!(matches!(registers[15], Value::MachineInt(1)));
+        assert!(
+            matches!(registers[16], Value::MachineFloat(value) if value.to_bits() == 1.0f64.to_bits())
+        );
+        assert!(
+            matches!(registers[17], Value::MachineFloat(value) if value.to_bits() == 1.5f64.to_bits())
+        );
+        assert!(matches!(registers[19], Value::MachineFloat(value) if value.to_bits() == 0));
+    }
+
+    #[test]
+    fn machine_float_to_int_rejects_non_finite_and_out_of_range_values() {
+        let cases = [
+            (0x7ff8_0000_0000_0000, MachineFloatFormat::F64, "non-finite"),
+            (0x7ff0_0000_0000_0000, MachineFloatFormat::F64, "non-finite"),
+            (0xbff0_0000_0000_0000, MachineFloatFormat::F64, "outside"),
+            (0x43f0_0000_0000_0000, MachineFloatFormat::F64, "outside"),
+        ];
+        for (bits, format, expected) in cases {
+            let program = machine_program(
+                vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::FConst {
+                        dest: 0,
+                        format,
+                        bits,
+                    },
+                    Instruction::FPToUI {
+                        dest: 1,
+                        value: 0,
+                        float_format: format,
+                        int_width: MachineIntWidth::W8,
+                    },
+                    Instruction::ReturnNil,
+                ],
+                2,
+            );
+            let error = VM::with_config_verified(&program, RunConfig::unlimited())
+                .expect("conversion trap program should verify")
+                .run()
+                .expect_err("invalid float conversion should trap");
+            assert_eq!(error.kind, RuntimeErrorKind::InvalidConversion);
+            assert!(error.message.contains(expected), "{}", error.message);
+        }
+
+        let program = machine_program(
+            vec![
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::FConst {
+                    dest: 0,
+                    format: MachineFloatFormat::F64,
+                    bits: 0x3ff8_0000_0000_0000,
+                },
+                Instruction::FPExt {
+                    dest: 1,
+                    value: 0,
+                    from_format: MachineFloatFormat::F64,
+                    to_format: MachineFloatFormat::F32,
+                },
+                Instruction::ReturnNil,
+            ],
+            2,
+        );
+        let error = VM::new(&program)
+            .run()
+            .expect_err("unverified invalid float direction should trap");
+        assert_eq!(error.kind, RuntimeErrorKind::InvalidConversion);
+        assert!(error.message.contains("fpext requires f32 -> f64"));
     }
 
     #[test]
@@ -4347,7 +4937,9 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             ],
             3,
         );
-        wrong_domain.constants.push(Constant::Number("1".to_string()));
+        wrong_domain
+            .constants
+            .push(Constant::Number("1".to_string()));
         let error = VM::with_config_verified(&wrong_domain, RunConfig::unlimited())
             .expect("wrong-domain operands are a runtime condition")
             .run()
@@ -4427,8 +5019,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 13,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
                     Instruction::Array {
                         dest: 2,
                         elements: vec![0, 1],
@@ -4444,10 +5042,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                         index: 0,
                         value: 1,
                     },
-                    Instruction::LenArray {
-                        dest: 5,
-                        value: 2,
-                    },
+                    Instruction::LenArray { dest: 5, value: 2 },
                     Instruction::Map {
                         dest: 6,
                         entries: vec![(0, 1)],
@@ -4463,22 +5058,50 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                         index: 1,
                         value: 0,
                     },
-                    Instruction::LenMap {
-                        dest: 9,
-                        value: 6,
+                    Instruction::LenMap { dest: 9, value: 6 },
+                    Instruction::Constant {
+                        dest: 10,
+                        constant: 2,
                     },
-                    Instruction::Constant { dest: 10, constant: 2 },
                     Instruction::LenStr {
                         dest: 11,
                         value: 10,
                     },
-                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![3] },
-                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![4] },
-                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![5] },
-                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![7] },
-                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![8] },
-                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![9] },
-                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![11] },
+                    Instruction::CallNative {
+                        dest: 12,
+                        native: NativeId(0),
+                        arguments: vec![3],
+                    },
+                    Instruction::CallNative {
+                        dest: 12,
+                        native: NativeId(0),
+                        arguments: vec![4],
+                    },
+                    Instruction::CallNative {
+                        dest: 12,
+                        native: NativeId(0),
+                        arguments: vec![5],
+                    },
+                    Instruction::CallNative {
+                        dest: 12,
+                        native: NativeId(0),
+                        arguments: vec![7],
+                    },
+                    Instruction::CallNative {
+                        dest: 12,
+                        native: NativeId(0),
+                        arguments: vec![8],
+                    },
+                    Instruction::CallNative {
+                        dest: 12,
+                        native: NativeId(0),
+                        arguments: vec![9],
+                    },
+                    Instruction::CallNative {
+                        dest: 12,
+                        native: NativeId(0),
+                        arguments: vec![11],
+                    },
                     Instruction::ReturnNil,
                 ],
                 locations: vec![None; 20],
@@ -4488,7 +5111,9 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         };
 
         assert_eq!(
-            VM::new(&program).run().expect("typed collection ops should run"),
+            VM::new(&program)
+                .run()
+                .expect("typed collection ops should run"),
             "2\n2\n2\n2\n1\n2\n5\n"
         );
     }
@@ -4530,9 +5155,18 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 17,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Constant { dest: 2, constant: 2 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::Constant {
+                        dest: 2,
+                        constant: 2,
+                    },
                     Instruction::Array {
                         dest: 3,
                         elements: vec![0, 1],
@@ -4552,21 +5186,54 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                         dest: 11,
                         entries: vec![(0, 1)],
                     },
-                    Instruction::IterInit { dest: 12, value: 11 },
+                    Instruction::IterInit {
+                        dest: 12,
+                        value: 11,
+                    },
                     Instruction::MapSet {
                         dest: 13,
                         collection: 11,
                         index: 2,
                         value: 0,
                     },
-                    Instruction::IterNext { dest: 14, value: 12 },
-                    Instruction::IterHas { dest: 15, value: 12 },
-                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![7] },
-                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![8] },
-                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![9] },
-                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![10] },
-                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![14] },
-                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![15] },
+                    Instruction::IterNext {
+                        dest: 14,
+                        value: 12,
+                    },
+                    Instruction::IterHas {
+                        dest: 15,
+                        value: 12,
+                    },
+                    Instruction::CallNative {
+                        dest: 16,
+                        native: NativeId(1),
+                        arguments: vec![7],
+                    },
+                    Instruction::CallNative {
+                        dest: 16,
+                        native: NativeId(1),
+                        arguments: vec![8],
+                    },
+                    Instruction::CallNative {
+                        dest: 16,
+                        native: NativeId(1),
+                        arguments: vec![9],
+                    },
+                    Instruction::CallNative {
+                        dest: 16,
+                        native: NativeId(1),
+                        arguments: vec![10],
+                    },
+                    Instruction::CallNative {
+                        dest: 16,
+                        native: NativeId(1),
+                        arguments: vec![14],
+                    },
+                    Instruction::CallNative {
+                        dest: 16,
+                        native: NativeId(1),
+                        arguments: vec![15],
+                    },
                     Instruction::ReturnNil,
                 ],
                 locations: vec![None; 23],
@@ -4576,7 +5243,9 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         };
 
         assert_eq!(
-            VM::new(&program).run().expect("iterator snapshots should run"),
+            VM::new(&program)
+                .run()
+                .expect("iterator snapshots should run"),
             "1\n2\nfalse\n3\n1\nfalse\n"
         );
     }
@@ -4635,7 +5304,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     params: Vec::new(),
                     registers: 1,
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None; 2],
@@ -4692,13 +5364,34 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 12,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Constant { dest: 2, constant: 2 },
-                    Instruction::Constant { dest: 3, constant: 3 },
-                    Instruction::Constant { dest: 4, constant: 4 },
-                    Instruction::Constant { dest: 5, constant: 5 },
-                    Instruction::Constant { dest: 6, constant: 6 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::Constant {
+                        dest: 2,
+                        constant: 2,
+                    },
+                    Instruction::Constant {
+                        dest: 3,
+                        constant: 3,
+                    },
+                    Instruction::Constant {
+                        dest: 4,
+                        constant: 4,
+                    },
+                    Instruction::Constant {
+                        dest: 5,
+                        constant: 5,
+                    },
+                    Instruction::Constant {
+                        dest: 6,
+                        constant: 6,
+                    },
                     Instruction::Map {
                         dest: 7,
                         entries: vec![(0, 3), (1, 4), (0, 5)],
@@ -4718,7 +5411,11 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                         native: NativeId(0),
                         arguments: vec![7, 9],
                     },
-                    Instruction::CallNative { dest: 11, native: NativeId(1), arguments: vec![10] },
+                    Instruction::CallNative {
+                        dest: 11,
+                        native: NativeId(1),
+                        arguments: vec![10],
+                    },
                     Instruction::ReturnNil,
                 ],
                 locations: vec![None; 13],
@@ -4786,7 +5483,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 2,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
                     Instruction::CallNative {
                         dest: 1,
                         native: NativeId(0),
@@ -4815,50 +5515,58 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             }],
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 4,
-                instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
-                    Instruction::Call {
-                        dest: 1,
-                        callee: 0,
-                        arguments: Vec::new(),
-                    },
-                    Instruction::CallNative {
-                        dest: 3,
-                        native: NativeId(0),
-                        arguments: vec![1],
-                    },
-                    Instruction::Return { value: 1 },
-                ],
-                locations: vec![None; 4],
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "answer".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 1,
-                params: Vec::new(),
-                instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Return { value: 0 },
-                ],
-                locations: vec![None; 2],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 4,
+                    instructions: vec![
+                        Instruction::MakeFunction {
+                            dest: 0,
+                            function: FuncId(1),
+                        },
+                        Instruction::Call {
+                            dest: 1,
+                            callee: 0,
+                            arguments: Vec::new(),
+                        },
+                        Instruction::CallNative {
+                            dest: 3,
+                            native: NativeId(0),
+                            arguments: vec![1],
+                        },
+                        Instruction::Return { value: 1 },
+                    ],
+                    locations: vec![None; 4],
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "answer".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 1,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None; 2],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         }
@@ -4878,37 +5586,39 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             }],
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 4,
-                instructions: vec![
-                    Instruction::MakeFunction {
-                        dest: 0,
-                        function: FuncId(1),
-                    },
-                    Instruction::Call {
-                        dest: 1,
-                        callee: 0,
-                        arguments: Vec::new(),
-                    },
-                    Instruction::CallNative {
-                        dest: 3,
-                        native: NativeId(0),
-                        arguments: vec![1],
-                    },
-                    Instruction::Return { value: 1 },
-                ],
-                locations: vec![None; 4],
-            },
-                function],
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 4,
+                    instructions: vec![
+                        Instruction::MakeFunction {
+                            dest: 0,
+                            function: FuncId(1),
+                        },
+                        Instruction::Call {
+                            dest: 1,
+                            callee: 0,
+                            arguments: Vec::new(),
+                        },
+                        Instruction::CallNative {
+                            dest: 3,
+                            native: NativeId(0),
+                            arguments: vec![1],
+                        },
+                        Instruction::Return { value: 1 },
+                    ],
+                    locations: vec![None; 4],
+                },
+                function,
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         }
@@ -4950,7 +5660,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 1,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
                     Instruction::BlockStart { id: BlockId(0) },
                     Instruction::Br { target: BlockId(0) },
                 ],
@@ -4963,7 +5676,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
 
     fn cooperative_native_callback_program() -> Program {
         Program {
-            constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+            ],
             data_segments: Vec::new(),
             symbols: Vec::new(),
             relocations: Vec::new(),
@@ -4981,56 +5697,67 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             ],
             modules: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 6,
-                instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Array {
-                        dest: 2,
-                        elements: vec![0, 1],
-                    },
-                    Instruction::MakeFunction { dest: 3, function: FuncId(1) },
-                    Instruction::CallNative {
-                        dest: 4,
-                        native: NativeId(0),
-                        arguments: vec![2, 3],
-                    },
-                    Instruction::CallNative {
-                        dest: 5,
-                        native: NativeId(1),
-                        arguments: vec![4],
-                    },
-                    Instruction::Return { value: 4 },
-                ],
-                locations: vec![None; 7],
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "identity".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 1,
-                params: vec!["item".to_string()],
-                instructions: vec![
-                    Instruction::LoadLocal { dest: 0, slot: 0 },
-                    Instruction::Return { value: 0 },
-                ],
-                locations: vec![None; 2],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 6,
+                    instructions: vec![
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 1,
+                        },
+                        Instruction::Array {
+                            dest: 2,
+                            elements: vec![0, 1],
+                        },
+                        Instruction::MakeFunction {
+                            dest: 3,
+                            function: FuncId(1),
+                        },
+                        Instruction::CallNative {
+                            dest: 4,
+                            native: NativeId(0),
+                            arguments: vec![2, 3],
+                        },
+                        Instruction::CallNative {
+                            dest: 5,
+                            native: NativeId(1),
+                            arguments: vec![4],
+                        },
+                        Instruction::Return { value: 4 },
+                    ],
+                    locations: vec![None; 7],
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "identity".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 1,
+                    params: vec!["item".to_string()],
+                    instructions: vec![
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None; 2],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         }
@@ -5038,7 +5765,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
 
     fn cooperative_nested_native_callback_program() -> Program {
         Program {
-            constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+            ],
             data_segments: Vec::new(),
             symbols: Vec::new(),
             relocations: Vec::new(),
@@ -5050,28 +5780,32 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             }],
             modules: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 2,
-                instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
-                    Instruction::Call {
-                        dest: 1,
-                        callee: 0,
-                        arguments: Vec::new(),
-                    },
-                    Instruction::Return { value: 1 },
-                ],
-                locations: vec![None; 3],
-            },
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 2,
+                    instructions: vec![
+                        Instruction::MakeFunction {
+                            dest: 0,
+                            function: FuncId(1),
+                        },
+                        Instruction::Call {
+                            dest: 1,
+                            callee: 0,
+                            arguments: Vec::new(),
+                        },
+                        Instruction::Return { value: 1 },
+                    ],
+                    locations: vec![None; 3],
+                },
                 Function {
                     id: FuncId(1),
                     local_count: 0,
@@ -5084,13 +5818,22 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 5,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
-                        Instruction::Constant { dest: 1, constant: 1 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 1,
+                        },
                         Instruction::Array {
                             dest: 2,
                             elements: vec![0, 1],
                         },
-                        Instruction::MakeFunction { dest: 3, function: FuncId(2) },
+                        Instruction::MakeFunction {
+                            dest: 3,
+                            function: FuncId(2),
+                        },
                         Instruction::CallNative {
                             dest: 4,
                             native: NativeId(0),
@@ -5146,8 +5889,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 4,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
                     Instruction::Array {
                         dest: 2,
                         elements: vec![0],
@@ -5183,20 +5932,21 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
                 Function {
                     id: FuncId(1),
                     local_count: 0,
@@ -5209,7 +5959,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None; 2],
@@ -5226,7 +5979,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 1 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 1,
+                        },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None; 2],
@@ -5243,8 +5999,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 2 },
-                        Instruction::Constant { dest: 1, constant: 3 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 2,
+                        },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 3,
+                        },
                         Instruction::Divide {
                             dest: 2,
                             left: 0,
@@ -5266,7 +6028,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 1,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
                         Instruction::BlockStart { id: BlockId(0) },
                         Instruction::Br { target: BlockId(0) },
                     ],
@@ -5297,20 +6062,21 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             }],
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
                 Function {
                     id: FuncId(1),
                     local_count: 0,
@@ -5323,13 +6089,19 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
                         Instruction::CallNative {
                             dest: 2,
                             native: NativeId(0),
                             arguments: vec![0],
                         },
-                        Instruction::Constant { dest: 1, constant: 2 },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 2,
+                        },
                         Instruction::CallNative {
                             dest: 2,
                             native: NativeId(0),
@@ -5351,13 +6123,19 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 3,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 1 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 1,
+                        },
                         Instruction::CallNative {
                             dest: 2,
                             native: NativeId(0),
                             arguments: vec![0],
                         },
-                        Instruction::Constant { dest: 1, constant: 3 },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 3,
+                        },
                         Instruction::CallNative {
                             dest: 2,
                             native: NativeId(0),
@@ -5419,13 +6197,19 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 2,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
                         Instruction::CallNative {
                             dest: 1,
                             native: NativeId(0),
                             arguments: vec![0],
                         },
-                        Instruction::Constant { dest: 0, constant: 2 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 2,
+                        },
                         Instruction::CallNative {
                             dest: 1,
                             native: NativeId(0),
@@ -5447,13 +6231,19 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 2,
                     params: Vec::new(),
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 1 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 1,
+                        },
                         Instruction::CallNative {
                             dest: 1,
                             native: NativeId(0),
                             arguments: vec![0],
                         },
-                        Instruction::Constant { dest: 0, constant: 3 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 3,
+                        },
                         Instruction::CallNative {
                             dest: 1,
                             native: NativeId(0),
@@ -5633,7 +6423,9 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             .expect("remaining tasks should complete");
         assert!(run.is_complete());
 
-        let outcomes = run.outcomes().expect("terminal outcomes should be readable");
+        let outcomes = run
+            .outcomes()
+            .expect("terminal outcomes should be readable");
         assert_eq!(outcomes.len(), 2);
         assert_eq!(outcomes[0].0, first);
         assert_eq!(outcomes[1].0, second);
@@ -5774,7 +6566,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(run.take_output(), "1\n");
 
         assert_eq!(
-            run.step().expect("even output should hit the shared budget"),
+            run.step()
+                .expect("even output should hit the shared budget"),
             CooperativeStep::Dispatched {
                 task_id: even,
                 state: TaskState::Failed,
@@ -5940,9 +6733,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let mut run = VM::new(&program)
             .start_cooperative_trace(1)
             .expect("positive quantum should start a traced session");
-        let task = run
-            .spawn(TaskSpec::main())
-            .expect("main task should spawn");
+        let task = run.spawn(TaskSpec::main()).expect("main task should spawn");
 
         run.run_until_waiting()
             .expect("nested traced task should complete");
@@ -5969,9 +6760,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 && event.function == "answer"
         }));
         assert!(run.trace_events().iter().any(|event| {
-            event.task_id == task
-                && event.kind == TraceEventKind::Exit
-                && event.function == "main"
+            event.task_id == task && event.kind == TraceEventKind::Exit && event.function == "main"
         }));
     }
 
@@ -6071,12 +6860,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(error.task_id, failure);
         assert_eq!(error.function, "failure");
         assert_eq!(error.value.as_deref(), Some("division by zero"));
-        assert!(run.trace_events().iter().any(|event| {
-            event.task_id == failure && event.kind == TraceEventKind::Exit
-        }));
-        assert!(!run.trace_events().iter().any(|event| {
-            event.task_id == pending && event.kind == TraceEventKind::Error
-        }));
+        assert!(run
+            .trace_events()
+            .iter()
+            .any(|event| { event.task_id == failure && event.kind == TraceEventKind::Exit }));
+        assert!(!run
+            .trace_events()
+            .iter()
+            .any(|event| { event.task_id == pending && event.kind == TraceEventKind::Error }));
     }
 
     #[test]
@@ -6262,11 +7053,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             }
         }
 
-        fn on_error(
-            &mut self,
-            pause: CooperativeDebugPause,
-            error: &RuntimeError,
-        ) -> DebugControl {
+        fn on_error(&mut self, pause: CooperativeDebugPause, error: &RuntimeError) -> DebugControl {
             self.errors.borrow_mut().push((pause, error.clone()));
             DebugControl::Continue
         }
@@ -6335,10 +7122,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(pauses[1].scheduler.running, even);
         assert_eq!(pauses[1].scheduler.ready, vec![odd]);
         assert_eq!(
-            pauses
-                .iter()
-                .map(|pause| pause.task_id)
-                .collect::<Vec<_>>(),
+            pauses.iter().map(|pause| pause.task_id).collect::<Vec<_>>(),
             vec![odd, even, odd, even, odd, even, odd, even, odd, even]
         );
     }
@@ -6463,7 +7247,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             Some(TaskOutcome::Failed(error)) if error.message == "division by zero"
         ));
         assert!(matches!(
-            run.task_outcome(pending).expect("pending outcome should exist"),
+            run.task_outcome(pending)
+                .expect("pending outcome should exist"),
             Some(TaskOutcome::Cancelled)
         ));
     }
@@ -6511,8 +7296,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
 
         run.wake(waiter)
             .expect_err("a ready waiter must not be woken twice");
-        run.run_until_waiting()
-            .expect("woken waiter should finish");
+        run.run_until_waiting().expect("woken waiter should finish");
         assert!(run.is_complete());
     }
 
@@ -6537,7 +7321,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             Some(TaskOutcome::Failed(error)) if error.message == "division by zero"
         ));
         assert!(matches!(
-            run.task_outcome(pending).expect("cancelled outcome should exist"),
+            run.task_outcome(pending)
+                .expect("cancelled outcome should exist"),
             Some(TaskOutcome::Cancelled)
         ));
     }
@@ -6556,7 +7341,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             text: "fun fail() { return 1 / 0; }\nfail();\n".to_string(),
         };
         Program {
-            constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("0".to_string()),
+            ],
             data_segments: Vec::new(),
             symbols: Vec::new(),
             relocations: Vec::new(),
@@ -6565,54 +7353,99 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 2,
-                instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
-                    Instruction::Call {
-                        dest: 1,
-                        callee: 0,
-                        arguments: Vec::new(),
-                    },
-                ],
-                locations: vec![
-                    Some(DebugLocation { source: 0, line: 2, column: 1, range: None }),
-                    Some(DebugLocation { source: 0, line: 2, column: 1, range: None }),
-                ],
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "fail".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 4,
-                params: Vec::new(),
-                instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Divide { dest: 2, left: 0, right: 1 },
-                    Instruction::Return { value: 2 },
-                ],
-                locations: vec![
-                    Some(DebugLocation { source: 0, line: 1, column: 21, range: None }),
-                    Some(DebugLocation { source: 0, line: 1, column: 25, range: None }),
-                    Some(DebugLocation { source: 0, line: 1, column: 21, range: None }),
-                    Some(DebugLocation { source: 0, line: 1, column: 14, range: None }),
-                ],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 2,
+                    instructions: vec![
+                        Instruction::MakeFunction {
+                            dest: 0,
+                            function: FuncId(1),
+                        },
+                        Instruction::Call {
+                            dest: 1,
+                            callee: 0,
+                            arguments: Vec::new(),
+                        },
+                    ],
+                    locations: vec![
+                        Some(DebugLocation {
+                            source: 0,
+                            line: 2,
+                            column: 1,
+                            range: None,
+                        }),
+                        Some(DebugLocation {
+                            source: 0,
+                            line: 2,
+                            column: 1,
+                            range: None,
+                        }),
+                    ],
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "fail".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 4,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 1,
+                        },
+                        Instruction::Divide {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::Return { value: 2 },
+                    ],
+                    locations: vec![
+                        Some(DebugLocation {
+                            source: 0,
+                            line: 1,
+                            column: 21,
+                            range: None,
+                        }),
+                        Some(DebugLocation {
+                            source: 0,
+                            line: 1,
+                            column: 25,
+                            range: None,
+                        }),
+                        Some(DebugLocation {
+                            source: 0,
+                            line: 1,
+                            column: 21,
+                            range: None,
+                        }),
+                        Some(DebugLocation {
+                            source: 0,
+                            line: 1,
+                            column: 14,
+                            range: None,
+                        }),
+                    ],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: vec![source],
         }
@@ -6646,9 +7479,18 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 registers: 5,
                 instructions: vec![
                     Instruction::BlockStart { id: BlockId(0) },
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Constant { dest: 2, constant: 2 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::Constant {
+                        dest: 2,
+                        constant: 2,
+                    },
                     Instruction::Br { target: BlockId(1) },
                     Instruction::BlockStart { id: BlockId(1) },
                     Instruction::Less {
@@ -6770,72 +7612,89 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["n".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 3,
-                instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
-                    Instruction::Constant { dest: 1, constant: 2 },
-                    Instruction::Call {
-                        dest: 2,
-                        callee: 0,
-                        arguments: vec![1],
-                    },
-                ],
-                locations: vec![None; 3],
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "recurse".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 7,
-                params: vec!["n".to_string()],
-                instructions: vec![
-                    Instruction::BlockStart { id: BlockId(0) },
-                    Instruction::LoadLocal { dest: 0, slot: 0 },
-                    Instruction::Constant { dest: 1, constant: 0 },
-                    Instruction::LessEqual {
-                        dest: 2,
-                        left: 0,
-                        right: 1,
-                    },
-                    Instruction::BrIf {
-                        condition: 2,
-                        if_true: BlockId(1),
-                        if_false: BlockId(2),
-                    },
-                    Instruction::BlockStart { id: BlockId(1) },
-                    Instruction::Return { value: 0 },
-                    Instruction::BlockStart { id: BlockId(2) },
-                    Instruction::MakeFunction { dest: 3, function: FuncId(1) },
-                    Instruction::Constant { dest: 4, constant: 1 },
-                    Instruction::Subtract {
-                        dest: 5,
-                        left: 0,
-                        right: 4,
-                    },
-                    Instruction::Call {
-                        dest: 6,
-                        callee: 3,
-                        arguments: vec![5],
-                    },
-                    Instruction::Return { value: 6 },
-                ],
-                locations: vec![None; 13],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 3,
+                    instructions: vec![
+                        Instruction::MakeFunction {
+                            dest: 0,
+                            function: FuncId(1),
+                        },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 2,
+                        },
+                        Instruction::Call {
+                            dest: 2,
+                            callee: 0,
+                            arguments: vec![1],
+                        },
+                    ],
+                    locations: vec![None; 3],
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "recurse".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 7,
+                    params: vec!["n".to_string()],
+                    instructions: vec![
+                        Instruction::BlockStart { id: BlockId(0) },
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 0,
+                        },
+                        Instruction::LessEqual {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::BrIf {
+                            condition: 2,
+                            if_true: BlockId(1),
+                            if_false: BlockId(2),
+                        },
+                        Instruction::BlockStart { id: BlockId(1) },
+                        Instruction::Return { value: 0 },
+                        Instruction::BlockStart { id: BlockId(2) },
+                        Instruction::MakeFunction {
+                            dest: 3,
+                            function: FuncId(1),
+                        },
+                        Instruction::Constant {
+                            dest: 4,
+                            constant: 1,
+                        },
+                        Instruction::Subtract {
+                            dest: 5,
+                            left: 0,
+                            right: 4,
+                        },
+                        Instruction::Call {
+                            dest: 6,
+                            callee: 3,
+                            arguments: vec![5],
+                        },
+                        Instruction::Return { value: 6 },
+                    ],
+                    locations: vec![None; 13],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         }
@@ -6887,40 +7746,42 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             types: Vec::new(),
             native_imports: Vec::new(),
             modules: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
-            Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "eligible".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 1,
-                params: Vec::new(),
-                instructions: vec![
-                    Instruction::Constant {
-                        dest: 0,
-                        constant: 0,
-                    },
-                    Instruction::Return { value: 0 },
-                ],
-                locations: vec![None; 2],
-            }],
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "eligible".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 1,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None; 2],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -6942,14 +7803,12 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
 
         first.jit = JitState::enabled_for_tests([1], 1024);
         assert!(matches!(
-            first
-                .jit
-                .admit(
-                    &program,
-                    Some(1),
-                    crate::jit::JitExecutionMode::Ordinary,
-                    1024,
-                ),
+            first.jit.admit(
+                &program,
+                Some(1),
+                crate::jit::JitExecutionMode::Ordinary,
+                1024,
+            ),
             crate::jit::JitAdmission::Reserved {
                 function_index: 1,
                 bytes: 1024,
@@ -6997,7 +7856,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let mut program = empty_program();
         program.constants = vec![Constant::Nil];
         program.functions[0].registers = 1;
-        program.functions[0].instructions = vec![Instruction::Constant { dest: 3, constant: 0 }];
+        program.functions[0].instructions = vec![Instruction::Constant {
+            dest: 3,
+            constant: 0,
+        }];
         program.functions[0].locations = vec![None];
 
         let verified_error = match VM::with_config_verified(&program, RunConfig::unlimited()) {
@@ -7141,7 +8003,12 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).live, 0);
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).dead, ITERATIONS);
         assert_eq!(snapshot.peak_live, 4);
-        assert!(snapshot.for_kind(HeapObjectKind::Array).peak_estimated_bytes > 0);
+        assert!(
+            snapshot
+                .for_kind(HeapObjectKind::Array)
+                .peak_estimated_bytes
+                > 0
+        );
         assert!(snapshot.estimated_peak_live_bytes > 0);
         assert_eq!(snapshot.total_live, 0);
     }
@@ -7227,37 +8094,39 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "identity".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 1,
-                params: vec!["item".to_string()],
-                instructions: vec![
-                    Instruction::LoadLocal { dest: 0, slot: 0 },
-                    Instruction::Return { value: 0 },
-                ],
-                locations: vec![None, None],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "identity".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 1,
+                    params: vec!["item".to_string()],
+                    instructions: vec![
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None, None],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -7295,20 +8164,21 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
                 Function {
                     id: FuncId(1),
                     local_count: 0,
@@ -7322,7 +8192,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     params: vec!["item".to_string()],
                     instructions: vec![
                         Instruction::LoadLocal { dest: 0, slot: 0 },
-                        Instruction::Constant { dest: 1, constant: 0 },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 0,
+                        },
                         Instruction::Add {
                             dest: 2,
                             left: 0,
@@ -7380,10 +8253,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(elements.len(), 6);
         assert!(matches!(elements[0], Value::Number(value) if value == 1.0));
         assert!(matches!(elements[1], Value::Number(value) if value == 11.0));
-        assert!(matches!(&elements[2], Value::Array(nested) if nested.elements.borrow().len() == 1));
+        assert!(
+            matches!(&elements[2], Value::Array(nested) if nested.elements.borrow().len() == 1)
+        );
         assert!(matches!(elements[3], Value::Number(value) if value == 2.0));
         assert!(matches!(elements[4], Value::Number(value) if value == 12.0));
-        assert!(matches!(&elements[5], Value::Array(nested) if nested.elements.borrow().len() == 1));
+        assert!(
+            matches!(&elements[5], Value::Array(nested) if nested.elements.borrow().len() == 1)
+        );
         assert!(!source.runtime_equals(&flattened));
 
         let invalid_callback = Value::function(FunctionValue {
@@ -7414,48 +8291,57 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "greater_than_one".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 3,
-                params: vec!["item".to_string()],
-                instructions: vec![
-                    Instruction::LoadLocal { dest: 0, slot: 0 },
-                    Instruction::Constant { dest: 1, constant: 0 },
-                    Instruction::Greater {
-                        dest: 2,
-                        left: 0,
-                        right: 1,
-                    },
-                    Instruction::Return { value: 2 },
-                ],
-                locations: vec![None, None, None, None],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "greater_than_one".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 3,
+                    params: vec!["item".to_string()],
+                    instructions: vec![
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 0,
+                        },
+                        Instruction::Greater {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::Return { value: 2 },
+                    ],
+                    locations: vec![None, None, None, None],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
-        let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0), Value::number(3.0)]);
+        let source = vm.make_array(vec![
+            Value::number(1.0),
+            Value::number(2.0),
+            Value::number(3.0),
+        ]);
         let predicate = Value::function(FunctionValue {
             name: "greater_than_one".to_string(),
             function_index: 1,
@@ -7488,20 +8374,21 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
                 Function {
                     id: FuncId(1),
                     local_count: 0,
@@ -7528,7 +8415,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None, None],
@@ -7600,43 +8490,48 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "is_two".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 3,
-                params: vec!["item".to_string()],
-                instructions: vec![
-                    Instruction::LoadLocal { dest: 0, slot: 0 },
-                    Instruction::Constant { dest: 1, constant: 0 },
-                    Instruction::Equal {
-                        dest: 2,
-                        left: 0,
-                        right: 1,
-                    },
-                    Instruction::Return { value: 2 },
-                ],
-                locations: vec![None, None, None, None],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "is_two".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 3,
+                    params: vec!["item".to_string()],
+                    instructions: vec![
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 0,
+                        },
+                        Instruction::Equal {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::Return { value: 2 },
+                    ],
+                    locations: vec![None, None, None, None],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -7657,12 +8552,12 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
 
         assert!(matches!(
             vm.execute_native_call("any", vec![any_source, predicate.clone()])
-            .unwrap(),
+                .unwrap(),
             Value::Bool(true)
         ));
         assert!(matches!(
             vm.execute_native_call("all", vec![all_source, predicate.clone()])
-            .unwrap(),
+                .unwrap(),
             Value::Bool(true)
         ));
         assert!(matches!(
@@ -7718,20 +8613,21 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
                 Function {
                     id: FuncId(1),
                     local_count: 0,
@@ -7758,7 +8654,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None, None],
@@ -7830,48 +8729,54 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["acc".to_string(), "item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "add".to_string(),
-                arity: 2,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 3,
-                params: vec!["acc".to_string(), "item".to_string()],
-                instructions: vec![
-                    Instruction::LoadLocal { dest: 0, slot: 0 },
-                    Instruction::LoadLocal { dest: 1, slot: 1 },
-                    Instruction::Add {
-                        dest: 2,
-                        left: 0,
-                        right: 1,
-                    },
-                    Instruction::Return { value: 2 },
-                ],
-                locations: vec![None, None, None, None],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "add".to_string(),
+                    arity: 2,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 3,
+                    params: vec!["acc".to_string(), "item".to_string()],
+                    instructions: vec![
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
+                        Instruction::LoadLocal { dest: 1, slot: 1 },
+                        Instruction::Add {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::Return { value: 2 },
+                    ],
+                    locations: vec![None, None, None, None],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
-        let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0), Value::number(3.0)]);
+        let source = vm.make_array(vec![
+            Value::number(1.0),
+            Value::number(2.0),
+            Value::number(3.0),
+        ]);
         let empty = vm.make_array(Vec::new());
         let callback = Value::function(FunctionValue {
             name: "add".to_string(),
@@ -7883,10 +8788,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         });
 
         let total = vm
-            .execute_native_call(
-                "reduce",
-                vec![source, Value::number(0.0), callback.clone()],
-            )
+            .execute_native_call("reduce", vec![source, Value::number(0.0), callback.clone()])
             .expect("reduce succeeds");
         assert!(matches!(total, Value::Number(value) if value == 6.0));
 
@@ -7909,34 +8811,36 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "one_arg".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 0,
-                params: vec!["item".to_string()],
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "one_arg".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 0,
+                    params: vec!["item".to_string()],
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -8000,7 +8904,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         ));
         assert!(matches!(vm.execute_len(&map).unwrap(), Value::Number(value) if value == 2.0));
         assert!(matches!(
-            vm.execute_native_call("contains", vec![map.clone(), Value::string("a")]).unwrap(),
+            vm.execute_native_call("contains", vec![map.clone(), Value::string("a")])
+                .unwrap(),
             Value::Bool(true)
         ));
         assert!(vm.execute_index(&map, &Value::string("missing")).is_err());
@@ -8068,10 +8973,22 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 10,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Constant { dest: 2, constant: 2 },
-                    Instruction::Constant { dest: 3, constant: 3 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::Constant {
+                        dest: 2,
+                        constant: 2,
+                    },
+                    Instruction::Constant {
+                        dest: 3,
+                        constant: 3,
+                    },
                     Instruction::Map {
                         dest: 4,
                         entries: vec![(0, 1), (2, 3)],
@@ -8096,7 +9013,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             debug_sources: Vec::new(),
         };
 
-        assert_eq!(VM::new(&program).run().expect("map iteration succeeds"), "[a, b]\n");
+        assert_eq!(
+            VM::new(&program).run().expect("map iteration succeeds"),
+            "[a, b]\n"
+        );
     }
 
     #[test]
@@ -8245,7 +9165,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let error = vm
             .execute_assign_index(map, key, Value::number(1.0))
             .expect_err("array key should fail");
-        assert_eq!(error.message, "map key must be nil, number, bool, or string");
+        assert_eq!(
+            error.message,
+            "map key must be nil, number, bool, or string"
+        );
     }
 
     #[test]
@@ -8256,12 +9179,8 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let alias = key.clone();
         let before = key.runtime_hash();
 
-        vm.execute_assign_index(
-            alias.clone(),
-            Value::number(0.0),
-            Value::number(2.0),
-        )
-        .expect("reference key mutation succeeds");
+        vm.execute_assign_index(alias.clone(), Value::number(0.0), Value::number(2.0))
+            .expect("reference key mutation succeeds");
 
         assert!(key.runtime_equals(&alias));
         assert_eq!(key.runtime_hash(), before);
@@ -8317,11 +9236,13 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             Value::Number(value) if value == 3.0
         ));
         assert!(matches!(
-            vm.execute_native_call("contains", vec![ascending.clone(), Value::number(5.0)]).unwrap(),
+            vm.execute_native_call("contains", vec![ascending.clone(), Value::number(5.0)])
+                .unwrap(),
             Value::Bool(true)
         ));
         assert!(matches!(
-            vm.execute_native_call("contains", vec![ascending.clone(), Value::number(5.5)]).unwrap(),
+            vm.execute_native_call("contains", vec![ascending.clone(), Value::number(5.5)])
+                .unwrap(),
             Value::Bool(false)
         ));
 
@@ -8363,9 +9284,15 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(zero_step.message, "range step must not be zero");
 
         let fractional = vm
-            .execute_native_call("range", vec![Value::number(0.0), Value::number(3.0), Value::number(1.5)])
+            .execute_native_call(
+                "range",
+                vec![Value::number(0.0), Value::number(3.0), Value::number(1.5)],
+            )
             .expect_err("fractional step should fail");
-        assert_eq!(fractional.message, "range expects integer as third argument");
+        assert_eq!(
+            fractional.message,
+            "range expects integer as third argument"
+        );
 
         let range = vm
             .execute_native_call("range", vec![Value::number(3.0)])
@@ -8526,7 +9453,9 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(error.stack[0].function, "fail");
         assert_eq!(error.stack[1].function, "main");
         assert!(error.to_string().contains("Call stack:\n"));
-        assert!(error.to_string().contains("  fun fail() { return 1 / 0; }\n"));
+        assert!(error
+            .to_string()
+            .contains("  fun fail() { return 1 / 0; }\n"));
     }
 
     #[test]
@@ -8556,7 +9485,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 2,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
                     Instruction::CallNative {
                         dest: 1,
                         native: NativeId(0),
@@ -8564,8 +9496,18 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     },
                 ],
                 locations: vec![
-                    Some(DebugLocation { source: 0, line: 1, column: 7, range: None }),
-                    Some(DebugLocation { source: 0, line: 1, column: 1, range: None }),
+                    Some(DebugLocation {
+                        source: 0,
+                        line: 1,
+                        column: 7,
+                        range: None,
+                    }),
+                    Some(DebugLocation {
+                        source: 0,
+                        line: 1,
+                        column: 1,
+                        range: None,
+                    }),
                 ],
             }],
             entry: FuncId(0),
@@ -8582,14 +9524,21 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
 
     #[test]
     fn metadata_free_runtime_errors_keep_legacy_format() {
-        let error = VM::new(&empty_program()).execute_native_call("sqrt", vec![Value::Nil]).unwrap_err();
+        let error = VM::new(&empty_program())
+            .execute_native_call("sqrt", vec![Value::Nil])
+            .unwrap_err();
         assert_eq!(error.to_string(), "Runtime error: sqrt expects number");
     }
 
     #[test]
     fn invalid_debug_source_lookup_does_not_panic() {
         let mut program = debug_failure_program();
-        program.functions[1].locations[2] = Some(DebugLocation { source: 99, line: 1, column: 1, range: None });
+        program.functions[1].locations[2] = Some(DebugLocation {
+            source: 99,
+            line: 1,
+            column: 1,
+            range: None,
+        });
         let error = VM::new(&program).run().unwrap_err();
         assert!(error.to_string().starts_with("Runtime error: "));
     }
@@ -8651,7 +9600,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let stats = vm.heap_stats();
         let debug = vm.debug(Box::new(QuitAtInstruction { instruction: 2 }));
         assert!(debug.quit);
-        assert_eq!(debug.result.expect("debugger quit is a successful stop"), "");
+        assert_eq!(
+            debug.result.expect("debugger quit is a successful stop"),
+            ""
+        );
         let quit = stats.snapshot();
         assert_eq!(quit.total_live, 0);
         assert!(quit.peak_live > 0);
@@ -8681,7 +9633,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 1,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
                     Instruction::BlockStart { id: BlockId(0) },
                     Instruction::Br { target: BlockId(0) },
                 ],
@@ -8694,17 +9649,23 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         config.max_instruction_steps = Some(3);
         let first = VM::with_config(&program, config.clone()).run().unwrap_err();
         let second = VM::with_config(&program, config).run().unwrap_err();
-        assert_eq!(first.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+        assert_eq!(
+            first.kind,
+            RuntimeErrorKind::Resource(ResourceKind::InstructionSteps)
+        );
         assert_eq!(first.resource_limit, Some(3));
-        assert_eq!(first.message, "resource limit exceeded: instruction steps (limit 3)");
+        assert_eq!(
+            first.message,
+            "resource limit exceeded: instruction steps (limit 3)"
+        );
         assert_eq!(first.message, second.message);
         assert!(VM::with_config(
             &Program {
                 constants: vec![Constant::Number("1".to_string())],
                 names: Vec::new(),
                 data_segments: Vec::new(),
-            symbols: Vec::new(),
-            relocations: Vec::new(),
+                symbols: Vec::new(),
+                relocations: Vec::new(),
                 globals: Vec::new(),
                 types: Vec::new(),
                 native_imports: Vec::new(),
@@ -8721,7 +9682,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                     params: Vec::new(),
                     registers: 1,
                     instructions: vec![
-                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0
+                        },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None, None],
@@ -8749,7 +9713,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             registers: 2,
             params: Vec::new(),
             instructions: vec![
-                Instruction::MakeFunction { dest: 0, function: FuncId(1) },
+                Instruction::MakeFunction {
+                    dest: 0,
+                    function: FuncId(1),
+                },
                 Instruction::Call {
                     dest: 1,
                     callee: 0,
@@ -8769,37 +9736,48 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 2,
-                instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
-                    Instruction::Call {
-                        dest: 1,
-                        callee: 0,
-                        arguments: Vec::new(),
-                    },
-                ],
-                locations: vec![None, None],
-            },
-                function],
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 2,
+                    instructions: vec![
+                        Instruction::MakeFunction {
+                            dest: 0,
+                            function: FuncId(1),
+                        },
+                        Instruction::Call {
+                            dest: 1,
+                            callee: 0,
+                            arguments: Vec::new(),
+                        },
+                    ],
+                    locations: vec![None, None],
+                },
+                function,
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut config = RunConfig::unlimited();
         config.max_call_depth = Some(1);
         let error = VM::with_config(&program, config).run().unwrap_err();
-        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::CallDepth));
+        assert_eq!(
+            error.kind,
+            RuntimeErrorKind::Resource(ResourceKind::CallDepth)
+        );
         assert_eq!(error.resource_limit, Some(1));
-        assert_eq!(error.message, "resource limit exceeded: call depth (limit 1)");
+        assert_eq!(
+            error.message,
+            "resource limit exceeded: call depth (limit 1)"
+        );
     }
 
     #[test]
@@ -8814,34 +9792,36 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["item".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
                 crate::bytecode::Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "identity".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 0,
-                params: vec!["item".to_string()],
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            }],
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "identity".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 0,
+                    params: vec!["item".to_string()],
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -8860,9 +9840,15 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let error = vm
             .execute_native_call("map", vec![source, callback])
             .expect_err("native iteration should consume the step budget");
-        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+        assert_eq!(
+            error.kind,
+            RuntimeErrorKind::Resource(ResourceKind::InstructionSteps)
+        );
         assert_eq!(error.resource_limit, Some(1));
-        assert_eq!(error.message, "resource limit exceeded: instruction steps (limit 1)");
+        assert_eq!(
+            error.message,
+            "resource limit exceeded: instruction steps (limit 1)"
+        );
     }
 
     #[test]
@@ -8889,7 +9875,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 2,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
                     Instruction::Array {
                         dest: 1,
                         elements: vec![0],
@@ -8903,9 +9892,15 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let mut config = RunConfig::unlimited();
         config.max_runtime_elements = Some(1);
         let error = VM::with_config(&program, config).run().unwrap_err();
-        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::RuntimeElements));
+        assert_eq!(
+            error.kind,
+            RuntimeErrorKind::Resource(ResourceKind::RuntimeElements)
+        );
         assert_eq!(error.resource_limit, Some(1));
-        assert_eq!(error.message, "resource limit exceeded: runtime elements (limit 1)");
+        assert_eq!(
+            error.message,
+            "resource limit exceeded: runtime elements (limit 1)"
+        );
     }
 
     #[test]
@@ -8935,7 +9930,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 params: Vec::new(),
                 registers: 2,
                 instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
                     Instruction::CallNative {
                         dest: 1,
                         native: NativeId(0),
@@ -8950,18 +9948,27 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let mut config = RunConfig::unlimited();
         config.max_output_bytes = Some(2);
         let error = VM::with_config(&program, config).run().unwrap_err();
-        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::OutputBytes));
+        assert_eq!(
+            error.kind,
+            RuntimeErrorKind::Resource(ResourceKind::OutputBytes)
+        );
         assert_eq!(error.resource_limit, Some(2));
-        assert_eq!(error.message, "resource limit exceeded: output bytes (limit 2)");
+        assert_eq!(
+            error.message,
+            "resource limit exceeded: output bytes (limit 2)"
+        );
     }
 
     #[test]
     fn cancellation_is_checked_before_execution_and_does_not_change_other_vms() {
         let token = CancellationToken::new();
         token.cancel();
-        let error = VM::with_config(&empty_program(), RunConfig::unlimited().with_cancellation(token))
-            .run()
-            .unwrap_err();
+        let error = VM::with_config(
+            &empty_program(),
+            RunConfig::unlimited().with_cancellation(token),
+        )
+        .run()
+        .unwrap_err();
         assert_eq!(error.kind, RuntimeErrorKind::Cancelled);
         assert_eq!(error.resource_limit, None);
         assert_eq!(error.message, "execution cancelled");
@@ -8979,7 +9986,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let limited = vm
             .checkpoint_instruction()
             .expect_err("zero step limit should reject an active checkpoint");
-        assert_eq!(limited.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+        assert_eq!(
+            limited.kind,
+            RuntimeErrorKind::Resource(ResourceKind::InstructionSteps)
+        );
 
         token.cancel();
         let cancelled = vm
@@ -8998,14 +10008,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let mut frame = Frame::callee(
             Rc::new(Function {
                 id: FuncId(0),
-                    name: String::new(),
-                    arity: 0,
-                    machine_frame_size: 0,
-                    machine_params: Vec::new(),
-                    machine_return: None,
-                    local_count: 0,
-                    upvalues: Vec::new(),
-                    params: Vec::new(),
+                name: String::new(),
+                arity: 0,
+                machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
 
                 registers: 1,
                 instructions: vec![Instruction::Return { value: 0 }],
@@ -9065,14 +10075,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let frame = Frame::main(
             Rc::new(Function {
                 id: FuncId(0),
-                    name: String::new(),
-                    arity: 0,
-                    machine_frame_size: 0,
-                    machine_params: Vec::new(),
-                    machine_return: None,
-                    local_count: 0,
-                    upvalues: Vec::new(),
-                    params: Vec::new(),
+                name: String::new(),
+                arity: 0,
+                machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
 
                 registers: 0,
                 instructions: Vec::new(),
@@ -9164,6 +10174,63 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         assert_eq!(second_cache, first_cache);
     }
 
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn jit_falls_back_to_interpreter_for_machine_instructions() {
+        let program = ordinary_jit_call_program(
+            Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
+                name: "machine_sum".to_string(),
+                arity: 0,
+                machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
+                registers: 3,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::IConst {
+                        dest: 0,
+                        width: MachineIntWidth::W32,
+                        raw: 40,
+                    },
+                    Instruction::IConst {
+                        dest: 1,
+                        width: MachineIntWidth::W32,
+                        raw: 2,
+                    },
+                    Instruction::IAdd {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                        width: MachineIntWidth::W32,
+                    },
+                    Instruction::Return { value: 2 },
+                ],
+                locations: vec![None; 4],
+            },
+            Vec::new(),
+        );
+
+        let mut interpreter = VM::with_config(&program, RunConfig::unlimited());
+        let interpreter_output = interpreter
+            .run_inner()
+            .expect("interpreter machine program should succeed");
+        let interpreter_steps = interpreter.instruction_steps;
+
+        let mut jit = VM::with_config(&program, RunConfig::unlimited());
+        jit.jit = JitState::enabled_for_tests([1], 4096);
+        let jit_output = jit
+            .run_inner()
+            .expect("machine program should fall back to the interpreter");
+
+        assert_eq!(interpreter_output, "machine_int(42, 0x000000000000002a)\n");
+        assert_eq!(jit_output, interpreter_output);
+        assert_eq!(jit.instruction_steps, interpreter_steps);
+        assert_eq!(jit.jit.cache_stats().entries, 0);
+    }
+
     fn wide_scalar_call_program() -> Program {
         let main_instructions = vec![
             Instruction::BlockStart { id: BlockId(0) },
@@ -9183,7 +10250,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 dest: 3,
                 constant: 3,
             },
-            Instruction::MakeFunction { dest: 4, function: FuncId(1) },
+            Instruction::MakeFunction {
+                dest: 4,
+                function: FuncId(1),
+            },
             Instruction::Br { target: BlockId(1) },
             Instruction::BlockStart { id: BlockId(1) },
             Instruction::Less {
@@ -9219,8 +10289,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             Instruction::Return { value: 2 },
         ];
 
-        let mut function_instructions =
-            vec![Instruction::LoadLocal { dest: 0, slot: 0 }];
+        let mut function_instructions = vec![Instruction::LoadLocal { dest: 0, slot: 0 }];
         for index in 1..=32 {
             function_instructions.push(Instruction::Add {
                 dest: index,
@@ -9248,34 +10317,36 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             }],
             modules: Vec::new(),
             names: vec!["value".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 9,
-                instructions: main_instructions,
-                locations: vec![None; 19],
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "wide_add".to_string(),
-                arity: 1,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 33,
-                params: vec!["value".to_string()],
-                instructions: function_instructions,
-                locations: vec![None; 34],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 9,
+                    instructions: main_instructions,
+                    locations: vec![None; 19],
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "wide_add".to_string(),
+                    arity: 1,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 33,
+                    params: vec!["value".to_string()],
+                    instructions: function_instructions,
+                    locations: vec![None; 34],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         }
@@ -9293,11 +10364,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             sorted[sorted.len() / 2]
         }
 
-        fn measure(
-            program: &Program,
-            jit: bool,
-            repeats: usize,
-        ) -> (f64, f64, usize) {
+        fn measure(program: &Program, jit: bool, repeats: usize) -> (f64, f64, usize) {
             let mut cold_samples = Vec::new();
             let mut warm_samples = Vec::new();
             let mut steps = None;
@@ -9309,8 +10376,7 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
                 }
                 let before = vm.instruction_steps;
                 let start = Instant::now();
-                let cold_output =
-                    vm.run_inner().expect("cold run should succeed");
+                let cold_output = vm.run_inner().expect("cold run should succeed");
                 cold_samples.push(start.elapsed().as_secs_f64() * 1e3);
                 let cold_steps = vm.instruction_steps - before;
                 if let Some(expected) = &expected {
@@ -9326,13 +10392,16 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
 
                 let before = vm.instruction_steps;
                 let start = Instant::now();
-                let warm_output =
-                    vm.run_inner().expect("warm run should succeed");
+                let warm_output = vm.run_inner().expect("warm run should succeed");
                 warm_samples.push(start.elapsed().as_secs_f64() * 1e3);
                 assert_eq!(&warm_output, expected.as_ref().expect("expected output"));
                 assert_eq!(vm.instruction_steps - before, cold_steps);
             }
-            (median(&cold_samples), median(&warm_samples), steps.expect("steps"))
+            (
+                median(&cold_samples),
+                median(&warm_samples),
+                steps.expect("steps"),
+            )
         }
 
         let programs: Vec<(&str, Program)> = vec![
@@ -9460,43 +10529,45 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: vec!["left".to_string(), "right".to_string()],
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "add".to_string(),
-                arity: 2,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 3,
-                params: vec!["left".to_string(), "right".to_string()],
-                instructions: vec![
-                    Instruction::LoadLocal { dest: 0, slot: 0 },
-                    Instruction::LoadLocal { dest: 1, slot: 1 },
-                    Instruction::Add {
-                        dest: 2,
-                        left: 0,
-                        right: 1,
-                    },
-                    Instruction::Return { value: 2 },
-                ],
-                locations: vec![None; 4],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "add".to_string(),
+                    arity: 2,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 3,
+                    params: vec!["left".to_string(), "right".to_string()],
+                    instructions: vec![
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
+                        Instruction::LoadLocal { dest: 1, slot: 1 },
+                        Instruction::Add {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::Return { value: 2 },
+                    ],
+                    locations: vec![None; 4],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -9539,8 +10610,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     #[test]
     fn jit_protocol_failure_restores_the_entry_snapshot_for_interpreter_fallback() {
         let instructions = vec![
-            Instruction::Constant { dest: 0, constant: 0 },
-            Instruction::Constant { dest: 1, constant: 1 },
+            Instruction::Constant {
+                dest: 0,
+                constant: 0,
+            },
+            Instruction::Constant {
+                dest: 1,
+                constant: 1,
+            },
             Instruction::Add {
                 dest: 2,
                 left: 0,
@@ -9549,7 +10626,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             Instruction::Return { value: 2 },
         ];
         let program = Program {
-            constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+            ],
             data_segments: Vec::new(),
             symbols: Vec::new(),
             relocations: Vec::new(),
@@ -9558,34 +10638,36 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "protocol_failure".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 3,
-                params: Vec::new(),
-                instructions: instructions.clone(),
-                locations: vec![None; instructions.len()],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "protocol_failure".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 3,
+                    params: Vec::new(),
+                    instructions: instructions.clone(),
+                    locations: vec![None; instructions.len()],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -9594,14 +10676,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let mut frame = Frame::callee(
             Rc::new(Function {
                 id: FuncId(0),
-                    name: String::new(),
-                    arity: 0,
-                    machine_frame_size: 0,
-                    machine_params: Vec::new(),
-                    machine_return: None,
-                    local_count: 0,
-                    upvalues: Vec::new(),
-                    params: Vec::new(),
+                name: String::new(),
+                arity: 0,
+                machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
 
                 registers: 3,
                 instructions,
@@ -9634,7 +10716,10 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
     #[test]
     fn jit_entry_transports_checkpoint_and_runtime_errors_like_the_interpreter() {
         let program = Program {
-            constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("0".to_string()),
+            ],
             data_segments: Vec::new(),
             symbols: Vec::new(),
             relocations: Vec::new(),
@@ -9643,43 +10728,51 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
             native_imports: Vec::new(),
             modules: Vec::new(),
             names: Vec::new(),
-            functions: vec![Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            functions: vec![
                 Function {
-                id: FuncId(1),
-                local_count: 0,
-                upvalues: Vec::new(),
-                name: "divide".to_string(),
-                arity: 0,
-                machine_frame_size: 0,
-                machine_params: Vec::new(),
-                machine_return: None,
-                registers: 3,
-                params: Vec::new(),
-                instructions: vec![
-                    Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Constant { dest: 1, constant: 1 },
-                    Instruction::Divide {
-                        dest: 2,
-                        left: 0,
-                        right: 1,
-                    },
-                    Instruction::Return { value: 2 },
-                ],
-                locations: vec![None; 4],
-            }],
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "divide".to_string(),
+                    arity: 0,
+                    machine_frame_size: 0,
+                    machine_params: Vec::new(),
+                    machine_return: None,
+                    registers: 3,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant {
+                            dest: 0,
+                            constant: 0,
+                        },
+                        Instruction::Constant {
+                            dest: 1,
+                            constant: 1,
+                        },
+                        Instruction::Divide {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::Return { value: 2 },
+                    ],
+                    locations: vec![None; 4],
+                },
+            ],
             entry: FuncId(0),
             debug_sources: Vec::new(),
         };
@@ -9753,20 +10846,20 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         };
         let mut vm = VM::new(&program);
         let locals = vm.heap.new_local_slots();
-        locals.borrow_mut().push(Some(
-            vm.heap.new_cell(Value::number(4.0)),
-        ));
+        locals
+            .borrow_mut()
+            .push(Some(vm.heap.new_cell(Value::number(4.0))));
         let mut frame = Frame::callee(
             Rc::new(Function {
                 id: FuncId(0),
-                    name: String::new(),
-                    arity: 0,
-                    machine_frame_size: 0,
-                    machine_params: Vec::new(),
-                    machine_return: None,
-                    local_count: 0,
-                    upvalues: Vec::new(),
-                    params: Vec::new(),
+                name: String::new(),
+                arity: 0,
+                machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
 
                 registers: 0,
                 instructions: Vec::new(),
@@ -9856,14 +10949,14 @@ machine_int(18446744073709551488, 0xffffffffffffff80)\n"
         let mut frame = Frame::main(
             Rc::new(Function {
                 id: FuncId(0),
-                    name: String::new(),
-                    arity: 0,
-                    machine_frame_size: 0,
-                    machine_params: Vec::new(),
-                    machine_return: None,
-                    local_count: 0,
-                    upvalues: Vec::new(),
-                    params: Vec::new(),
+                name: String::new(),
+                arity: 0,
+                machine_frame_size: 0,
+                machine_params: Vec::new(),
+                machine_return: None,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
 
                 registers: 0,
                 instructions: Vec::new(),
@@ -10111,10 +11204,7 @@ impl fmt::Display for RuntimeError {
 #[derive(Clone, Debug)]
 pub enum TaskSpec {
     Main,
-    Function {
-        index: usize,
-        arguments: Vec<Value>,
-    },
+    Function { index: usize, arguments: Vec<Value> },
 }
 
 impl TaskSpec {
@@ -10150,9 +11240,13 @@ impl fmt::Display for TaskControlError {
             Self::TaskNotJoinable(task_id) => {
                 write!(formatter, "{} cannot wait for a join", task_id)
             }
-            Self::TaskAlreadyWaiting(task_id) => write!(formatter, "{} is already waiting", task_id),
+            Self::TaskAlreadyWaiting(task_id) => {
+                write!(formatter, "{} is already waiting", task_id)
+            }
             Self::SelfJoin(task_id) => write!(formatter, "{} cannot join itself", task_id),
-            Self::MissingOutcome(task_id) => write!(formatter, "{} has no terminal outcome", task_id),
+            Self::MissingOutcome(task_id) => {
+                write!(formatter, "{} has no terminal outcome", task_id)
+            }
         }
     }
 }
@@ -10245,6 +11339,14 @@ enum MachineShiftKind {
     Left,
     LogicalRight,
     ArithmeticRight,
+}
+
+#[derive(Clone, Copy)]
+enum MachineFloatBinaryKind {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
 }
 
 impl Comparison {
@@ -10815,11 +11917,7 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
         (self.error.take(), self.fallback)
     }
 
-    fn dispatch(
-        &mut self,
-        helper: RuntimeHelper,
-        operands: &[u64],
-    ) -> Result<u64, RuntimeError> {
+    fn dispatch(&mut self, helper: RuntimeHelper, operands: &[u64]) -> Result<u64, RuntimeError> {
         let abi = JitHelperAbi::for_helper(helper);
         if operands.len() != abi.value_arguments {
             return Err(RuntimeError::new(format!(
@@ -10831,13 +11929,10 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
         }
 
         let result = match helper {
-            RuntimeHelper::Constant => {
-                self.vm.constant_value(Self::operand_index(operands[0])?)?
-            }
-            RuntimeHelper::LoadLocal => {
-                self.vm
-                    .read_local(self.frame, Self::operand_index(operands[0])?)?
-            }
+            RuntimeHelper::Constant => self.vm.constant_value(Self::operand_index(operands[0])?)?,
+            RuntimeHelper::LoadLocal => self
+                .vm
+                .read_local(self.frame, Self::operand_index(operands[0])?)?,
             RuntimeHelper::LoadUpvalue => {
                 let cell = self
                     .frame
@@ -10860,9 +11955,7 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
             }
             RuntimeHelper::Not => Value::boolean(!self.value(operands[0])?.is_truthy()),
             RuntimeHelper::Checkpoint => self.checkpoint(operands[0])?,
-            RuntimeHelper::StoreRegister => {
-                self.store_register(operands[0], operands[1])?
-            }
+            RuntimeHelper::StoreRegister => self.store_register(operands[0], operands[1])?,
             RuntimeHelper::Add => {
                 let left = self.value(operands[0])?;
                 let right = self.value(operands[1])?;
@@ -10954,9 +12047,7 @@ unsafe extern "C" fn jit_helper_dispatch(
     if data.is_null() {
         return JIT_ERROR_HANDLE;
     }
-    let bridge = unsafe {
-        &mut *(data as *mut JitHelperBridge<'static, 'static, 'static>)
-    };
+    let bridge = unsafe { &mut *(data as *mut JitHelperBridge<'static, 'static, 'static>) };
     let operands = if operand_count == 0 {
         &[]
     } else if operands.is_null() {
@@ -11083,10 +12174,7 @@ impl<'a> CooperativeRun<'a> {
 
     /// Return a task's terminal value, failure, or cancellation state.
     /// Non-terminal tasks return `Ok(None)`.
-    pub fn task_outcome(
-        &self,
-        task_id: TaskId,
-    ) -> Result<Option<TaskOutcome>, TaskControlError> {
+    pub fn task_outcome(&self, task_id: TaskId) -> Result<Option<TaskOutcome>, TaskControlError> {
         let state = self.scheduler.task_state(task_id)?;
         if !state.is_terminal() {
             return Ok(None);
@@ -11119,11 +12207,7 @@ impl<'a> CooperativeRun<'a> {
     /// Register `waiter` for `target` and return the target outcome if it is
     /// already terminal. A pending join blocks the waiter and wakes it in FIFO
     /// registration order when the target terminates.
-    pub fn join(
-        &mut self,
-        waiter: TaskId,
-        target: TaskId,
-    ) -> Result<JoinPoll, TaskControlError> {
+    pub fn join(&mut self, waiter: TaskId, target: TaskId) -> Result<JoinPoll, TaskControlError> {
         match self.scheduler.join(waiter, target)? {
             JoinStatus::Waiting => Ok(JoinPoll::Waiting),
             JoinStatus::Ready => Ok(JoinPoll::Ready(
@@ -11136,14 +12220,18 @@ impl<'a> CooperativeRun<'a> {
     /// Explicitly wake a blocked task. A joined task may be woken early and
     /// can register the join again if it still needs the target outcome.
     pub fn wake(&mut self, task_id: TaskId) -> Result<(), TaskControlError> {
-        self.scheduler.wake(task_id).map_err(TaskControlError::from)?;
+        self.scheduler
+            .wake(task_id)
+            .map_err(TaskControlError::from)?;
         self.release_terminal_frames();
         self.vm.heap.collect_garbage();
         Ok(())
     }
 
     pub fn cancel(&mut self, task_id: TaskId) -> Result<(), TaskControlError> {
-        self.scheduler.cancel(task_id).map_err(TaskControlError::from)?;
+        self.scheduler
+            .cancel(task_id)
+            .map_err(TaskControlError::from)?;
         self.release_terminal_frames();
         self.vm.heap.collect_garbage();
         Ok(())
@@ -11323,11 +12411,13 @@ impl<'a> CooperativeRun<'a> {
                 )
             }
         };
-        self.vm.ensure_machine_frame_fits(frame.machine_frame_size)?;
+        self.vm
+            .ensure_machine_frame_fits(frame.machine_frame_size)?;
         let mut machine_stack = self.vm.new_machine_stack()?;
         self.vm
             .allocate_task_machine_frame(&mut machine_stack, &mut frame)?;
-        let frames = FrameStack::new(frame).map_err(|error| RuntimeError::new(error.to_string()))?;
+        let frames =
+            FrameStack::new(frame).map_err(|error| RuntimeError::new(error.to_string()))?;
         Ok(ScheduledVmTask {
             frames,
             machine_stack: Some(machine_stack),
@@ -11392,13 +12482,7 @@ impl<'a> VM<'a> {
         let global_names = program
             .globals
             .iter()
-            .map(|name_index| {
-                program
-                    .names
-                    .get(*name_index)
-                    .cloned()
-                    .unwrap_or_default()
-            })
+            .map(|name_index| program.names.get(*name_index).cloned().unwrap_or_default())
             .collect();
         let block_maps = program
             .functions
@@ -11500,9 +12584,7 @@ impl<'a> VM<'a> {
     }
 
     fn check_machine_memory_initialization(&self) -> Result<(), RuntimeError> {
-        self.initialization_error
-            .clone()
-            .map_or(Ok(()), Err)
+        self.initialization_error.clone().map_or(Ok(()), Err)
     }
 
     fn machine_stack_capacity(&self) -> usize {
@@ -11579,12 +12661,12 @@ impl<'a> VM<'a> {
 
     /// Start a host-controlled cooperative session without changing the
     /// existing single-task `run`, trace, debug, or profile APIs.
-    pub fn start_cooperative(
-        self,
-        quantum: usize,
-    ) -> Result<CooperativeRun<'a>, TaskControlError> {
+    pub fn start_cooperative(self, quantum: usize) -> Result<CooperativeRun<'a>, TaskControlError> {
         let scheduler = CooperativeScheduler::new(quantum).map_err(TaskControlError::from)?;
-        Ok(CooperativeRun { vm: self, scheduler })
+        Ok(CooperativeRun {
+            vm: self,
+            scheduler,
+        })
     }
 
     /// Start a cooperative session with task-attributed trace collection.
@@ -11849,12 +12931,11 @@ impl<'a> VM<'a> {
         );
         let mut machine_stack = self.new_machine_stack()?;
         self.allocate_task_machine_frame(&mut machine_stack, &mut root)?;
-        let frames = FrameStack::new(root)
-            .map_err(|error| RuntimeError::new(error.to_string()))?;
+        let frames = FrameStack::new(root).map_err(|error| RuntimeError::new(error.to_string()))?;
         let task_id = scheduler
             .spawn(ScheduledVmTask {
-            frames,
-            machine_stack: Some(machine_stack),
+                frames,
+                machine_stack: Some(machine_stack),
                 result: None,
                 error: None,
                 trace: TaskTraceState::default(),
@@ -11917,11 +12998,7 @@ impl<'a> VM<'a> {
     ) -> TaskStep {
         for _ in 0..context.quantum {
             if context.cancellation_requested {
-                return self.stop_scheduled_task(
-                    context.task_id,
-                    task,
-                    RuntimeError::cancelled(),
-                );
+                return self.stop_scheduled_task(context.task_id, task, RuntimeError::cancelled());
             }
 
             let (body, instruction_index) = match task.frames.current() {
@@ -11965,9 +13042,7 @@ impl<'a> VM<'a> {
                 let trace_result = {
                     let ScheduledVmTask { frames, trace, .. } = task;
                     match frames.current() {
-                        Ok(frame) => {
-                            self.task_trace_enter(context.task_id, trace, frame, location)
-                        }
+                        Ok(frame) => self.task_trace_enter(context.task_id, trace, frame, location),
                         Err(error) => Err(RuntimeError::new(error.to_string())),
                     }
                 };
@@ -11979,12 +13054,8 @@ impl<'a> VM<'a> {
 
             if instruction_index >= body.instructions.len() {
                 if let Err(error) = self.validate_machine_return(&body, None) {
-                    let error = self.decorate_scheduled_error(
-                        error,
-                        task,
-                        &body,
-                        instruction_index,
-                    );
+                    let error =
+                        self.decorate_scheduled_error(error, task, &body, instruction_index);
                     return self.stop_scheduled_task(context.task_id, task, error);
                 }
                 if self.task_trace_enabled {
@@ -12025,11 +13096,7 @@ impl<'a> VM<'a> {
                 }
             }
 
-            let location = body
-                .locations
-                .get(instruction_index)
-                .cloned()
-                .flatten();
+            let location = body.locations.get(instruction_index).cloned().flatten();
             if self.task_trace_enabled {
                 let trace_result = {
                     let ScheduledVmTask { frames, trace, .. } = task;
@@ -12068,8 +13135,7 @@ impl<'a> VM<'a> {
                 }
             }
             if let Err(error) = self.checkpoint_instruction() {
-                let error =
-                    self.decorate_scheduled_error(error, task, &body, instruction_index);
+                let error = self.decorate_scheduled_error(error, task, &body, instruction_index);
                 return self.stop_scheduled_task(context.task_id, task, error);
             }
             let previous_call_depth = self.call_depth;
@@ -12160,12 +13226,8 @@ impl<'a> VM<'a> {
                 Ok(InstructionAction::Jumped) => {}
                 Ok(InstructionAction::Return(value)) => {
                     if let Err(error) = self.validate_machine_return(&body, Some(&value)) {
-                        let error = self.decorate_scheduled_error(
-                            error,
-                            task,
-                            &body,
-                            instruction_index,
-                        );
+                        let error =
+                            self.decorate_scheduled_error(error, task, &body, instruction_index);
                         return self.stop_scheduled_task(context.task_id, task, error);
                     }
                     if self.task_trace_enabled {
@@ -12219,15 +13281,9 @@ impl<'a> VM<'a> {
                     }
                 }
                 Ok(InstructionAction::Call(request)) => {
-                    if let Err(error) =
-                        self.push_scheduled_call(context.task_id, task, request)
-                    {
-                        let error = self.decorate_scheduled_error(
-                            error,
-                            task,
-                            &body,
-                            instruction_index,
-                        );
+                    if let Err(error) = self.push_scheduled_call(context.task_id, task, request) {
+                        let error =
+                            self.decorate_scheduled_error(error, task, &body, instruction_index);
                         return self.stop_scheduled_task(context.task_id, task, error);
                     }
                 }
@@ -12359,9 +13415,7 @@ impl<'a> VM<'a> {
         task: &mut ScheduledVmTask,
         error: RuntimeError,
     ) -> TaskStep {
-        if error.kind == RuntimeErrorKind::DebuggerQuit
-            && self.cooperative_debug_hook.is_some()
-        {
+        if error.kind == RuntimeErrorKind::DebuggerQuit && self.cooperative_debug_hook.is_some() {
             task.error = None;
             self.release_task_frames(task);
             return TaskStep::Cancel;
@@ -12569,9 +13623,10 @@ impl<'a> VM<'a> {
                 .flatten();
             self.trace_recursive_instruction(frame, instruction_index, location.clone())?;
             if self.cooperative_debug_hook.is_some() {
-                let active = self.active_task_trace.as_ref().map(|active| {
-                    (active.task_id, active.state.stack.clone())
-                });
+                let active = self
+                    .active_task_trace
+                    .as_ref()
+                    .map(|active| (active.task_id, active.state.stack.clone()));
                 if let Some((task_id, stack)) = active {
                     self.cooperative_debug_instruction(
                         task_id,
@@ -12594,133 +13649,128 @@ impl<'a> VM<'a> {
                 }
                 let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                 match instruction {
-                Instruction::Call {
-                    dest,
-                    callee,
-                    arguments,
-                } => {
-                    let Value::Function(function) = self.read_register_ref(frame, *callee)? else {
-                        return Err(RuntimeError::new("can only call functions"));
-                    };
-                    let values = match arguments.as_slice() {
-                        [] => CallArguments::Empty,
-                        [argument] => {
-                            CallArguments::One(self.read_register(frame, *argument)?)
-                        }
-                        [left, right] => {
-                            let left = self.read_register(frame, *left)?;
-                            let right = self.read_register(frame, *right)?;
-                            CallArguments::Two(left, right)
-                        }
-                        arguments => {
-                            let mut values = Vec::with_capacity(arguments.len());
-                            for argument in arguments {
-                                values.push(self.read_register(frame, *argument)?);
+                    Instruction::Call {
+                        dest,
+                        callee,
+                        arguments,
+                    } => {
+                        let Value::Function(function) = self.read_register_ref(frame, *callee)?
+                        else {
+                            return Err(RuntimeError::new("can only call functions"));
+                        };
+                        let values = match arguments.as_slice() {
+                            [] => CallArguments::Empty,
+                            [argument] => CallArguments::One(self.read_register(frame, *argument)?),
+                            [left, right] => {
+                                let left = self.read_register(frame, *left)?;
+                                let right = self.read_register(frame, *right)?;
+                                CallArguments::Two(left, right)
                             }
-                            CallArguments::Many(values)
-                        }
-                    };
-                    let result = self.call_function(
+                            arguments => {
+                                let mut values = Vec::with_capacity(arguments.len());
+                                for argument in arguments {
+                                    values.push(self.read_register(frame, *argument)?);
+                                }
+                                CallArguments::Many(values)
+                            }
+                        };
+                        let result = self.call_function(
+                            function,
+                            values,
+                            false,
+                            frame.function.as_ref(),
+                            call_site,
+                        )?;
+                        self.write_register(frame, *dest, result)?;
+                    }
+                    Instruction::CallDirect {
+                        dest,
                         function,
-                        values,
-                        false,
-                        frame.function.as_ref(),
-                        call_site,
-                    )?;
-                    self.write_register(frame, *dest, result)?;
-                }
-                Instruction::CallDirect {
-                    dest,
-                    function,
-                    arguments,
-                } => {
-                    let target = self.resolved_direct_call_target(frame, instruction_index, *function);
-                    let function = self.direct_call_function_value(target.0 as usize, frame)?;
-                    let values = match arguments.as_slice() {
-                        [] => CallArguments::Empty,
-                        [argument] => {
-                            CallArguments::One(self.read_register(frame, *argument)?)
-                        }
-                        [left, right] => {
-                            let left = self.read_register(frame, *left)?;
-                            let right = self.read_register(frame, *right)?;
-                            CallArguments::Two(left, right)
-                        }
-                        arguments => {
-                            let mut values = Vec::with_capacity(arguments.len());
-                            for argument in arguments {
-                                values.push(self.read_register(frame, *argument)?);
+                        arguments,
+                    } => {
+                        let target =
+                            self.resolved_direct_call_target(frame, instruction_index, *function);
+                        let function = self.direct_call_function_value(target.0 as usize, frame)?;
+                        let values = match arguments.as_slice() {
+                            [] => CallArguments::Empty,
+                            [argument] => CallArguments::One(self.read_register(frame, *argument)?),
+                            [left, right] => {
+                                let left = self.read_register(frame, *left)?;
+                                let right = self.read_register(frame, *right)?;
+                                CallArguments::Two(left, right)
                             }
-                            CallArguments::Many(values)
-                        }
-                    };
-                    let result = self.call_function(
-                        &function,
-                        values,
-                        true,
-                        frame.function.as_ref(),
-                        call_site,
-                    )?;
-                    self.write_register(frame, *dest, result)?;
-                }
-                Instruction::BlockStart { .. } => {}
-                Instruction::Br { target } => {
-                    let block_map = frame
-                        .function_index
-                        .and_then(|index| self.block_maps.get(index));
-                    let block_map = block_map
-                        .or_else(|| self.block_maps.first())
-                        .ok_or_else(|| {
-                            RuntimeError::invalid_instruction("branch has no function body")
-                        })?;
-                    let next = block_map
-                        .get(&target.0)
-                        .copied()
-                        .ok_or_else(|| {
+                            arguments => {
+                                let mut values = Vec::with_capacity(arguments.len());
+                                for argument in arguments {
+                                    values.push(self.read_register(frame, *argument)?);
+                                }
+                                CallArguments::Many(values)
+                            }
+                        };
+                        let result = self.call_function(
+                            &function,
+                            values,
+                            true,
+                            frame.function.as_ref(),
+                            call_site,
+                        )?;
+                        self.write_register(frame, *dest, result)?;
+                    }
+                    Instruction::BlockStart { .. } => {}
+                    Instruction::Br { target } => {
+                        let block_map = frame
+                            .function_index
+                            .and_then(|index| self.block_maps.get(index));
+                        let block_map =
+                            block_map
+                                .or_else(|| self.block_maps.first())
+                                .ok_or_else(|| {
+                                    RuntimeError::invalid_instruction("branch has no function body")
+                                })?;
+                        let next = block_map.get(&target.0).copied().ok_or_else(|| {
                             RuntimeError::invalid_instruction("branch target out of range")
                         })?;
-                    frame.ip = next;
-                    jumped = true;
-                    return Ok(None);
-                }
-                Instruction::BrIf {
-                    condition,
-                    if_true,
-                    if_false,
-                } => {
-                    let block_map = frame
-                        .function_index
-                        .and_then(|index| self.block_maps.get(index));
-                    let block_map = block_map
-                        .or_else(|| self.block_maps.first())
-                        .ok_or_else(|| {
-                            RuntimeError::invalid_instruction("branch has no function body")
-                        })?;
-                    let taken = self.read_register_ref(frame, *condition)?.is_truthy();
-                    let next = block_map
-                        .get(if taken { &if_true.0 } else { &if_false.0 })
-                        .copied()
-                        .ok_or_else(|| {
-                            RuntimeError::invalid_instruction("branch target out of range")
-                        })?;
-                    frame.ip = next;
-                    jumped = true;
-                    return Ok(None);
-                }
-                Instruction::ReturnNil => {
-                    return Ok(Some(Value::Nil))
-                }
-                Instruction::Return { value } => {
-                    return Ok(Some(self.take_register(frame, *value)?))
-                }
-                _ => {
-                    self.execute_common_instruction(
-                        body,
-                        frame,
-                        instruction_index,
-                        instruction,
-                    )?;
-                }
+                        frame.ip = next;
+                        jumped = true;
+                        return Ok(None);
+                    }
+                    Instruction::BrIf {
+                        condition,
+                        if_true,
+                        if_false,
+                    } => {
+                        let block_map = frame
+                            .function_index
+                            .and_then(|index| self.block_maps.get(index));
+                        let block_map =
+                            block_map
+                                .or_else(|| self.block_maps.first())
+                                .ok_or_else(|| {
+                                    RuntimeError::invalid_instruction("branch has no function body")
+                                })?;
+                        let taken = self.read_register_ref(frame, *condition)?.is_truthy();
+                        let next = block_map
+                            .get(if taken { &if_true.0 } else { &if_false.0 })
+                            .copied()
+                            .ok_or_else(|| {
+                                RuntimeError::invalid_instruction("branch target out of range")
+                            })?;
+                        frame.ip = next;
+                        jumped = true;
+                        return Ok(None);
+                    }
+                    Instruction::ReturnNil => return Ok(Some(Value::Nil)),
+                    Instruction::Return { value } => {
+                        return Ok(Some(self.take_register(frame, *value)?))
+                    }
+                    _ => {
+                        self.execute_common_instruction(
+                            body,
+                            frame,
+                            instruction_index,
+                            instruction,
+                        )?;
+                    }
                 }
                 Ok(None)
             })();
@@ -12744,9 +13794,10 @@ impl<'a> VM<'a> {
                         error.push_frame(frame.function.to_string(), location);
                     }
                     if error.kind != RuntimeErrorKind::DebuggerQuit {
-                        let active = self.active_task_trace.as_ref().map(|active| {
-                            (active.task_id, active.state.stack.clone())
-                        });
+                        let active = self
+                            .active_task_trace
+                            .as_ref()
+                            .map(|active| (active.task_id, active.state.stack.clone()));
                         if let Some((task_id, stack)) = active {
                             self.cooperative_debug_error(
                                 task_id,
@@ -12763,6 +13814,7 @@ impl<'a> VM<'a> {
                             location: body.locations.get(instruction_index).cloned().flatten(),
                             stack: self.trace_stack.clone(),
                             locals: self.trace_locals(frame),
+                            machine: self.machine_debug_state(frame),
                         };
                         let control = self
                             .debug_hook
@@ -12792,7 +13844,10 @@ impl<'a> VM<'a> {
         instruction_index: usize,
         instruction: &Instruction,
     ) -> Result<(), RuntimeError> {
-        let call_site = body.locations.get(instruction_index).and_then(Option::as_ref);
+        let call_site = body
+            .locations
+            .get(instruction_index)
+            .and_then(Option::as_ref);
         match instruction {
             Instruction::Constant { dest, constant } => {
                 let value = self.constant_value(*constant)?;
@@ -12936,11 +13991,10 @@ impl<'a> VM<'a> {
                 if variant.type_id != *type_id || variant.variant_id != *variant_id {
                     return Err(RuntimeError::new("enum variant identity mismatch"));
                 }
-                let field = variant
-                    .fields
-                    .get(*index)
-                    .cloned()
-                    .ok_or_else(|| RuntimeError::new("enum variant field index out of bounds"))?;
+                let field =
+                    variant.fields.get(*index).cloned().ok_or_else(|| {
+                        RuntimeError::new("enum variant field index out of bounds")
+                    })?;
                 self.write_register(frame, *dest, field)
             }
             Instruction::Move { dest, source } => {
@@ -13018,12 +14072,7 @@ impl<'a> VM<'a> {
                         return Err(RuntimeError::new(spec.arity_error));
                     }
                     self.write_register(frame, *dest, Value::Nil)?;
-                    self.execute_recursive_print(
-                        body,
-                        frame,
-                        instruction_index,
-                        *value_register,
-                    )?;
+                    self.execute_recursive_print(body, frame, instruction_index, *value_register)?;
                     return Ok(());
                 }
                 let values = match arguments.as_slice() {
@@ -13126,6 +14175,166 @@ impl<'a> VM<'a> {
                 true,
                 true,
             ),
+            Instruction::FConst { dest, format, bits } => {
+                let value = machine_float_from_bits(*format, *bits)
+                    .map_err(RuntimeError::invalid_instruction)?;
+                self.write_register(frame, *dest, Value::machine_float(value))
+            }
+            Instruction::FAdd {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fadd",
+                MachineFloatBinaryKind::Add,
+            ),
+            Instruction::FSub {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fsub",
+                MachineFloatBinaryKind::Subtract,
+            ),
+            Instruction::FMul {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fmul",
+                MachineFloatBinaryKind::Multiply,
+            ),
+            Instruction::FDiv {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fdiv",
+                MachineFloatBinaryKind::Divide,
+            ),
+            Instruction::FNeg {
+                dest,
+                value,
+                format,
+            } => {
+                let value = self.expect_machine_float_format(frame, *value, *format, "fneg")?;
+                self.write_register(
+                    frame,
+                    *dest,
+                    Value::machine_float(canonical_machine_float(-value, *format)),
+                )
+            }
+            Instruction::FCmp {
+                dest,
+                left,
+                right,
+                format,
+                predicate,
+            } => {
+                self.execute_machine_float_compare(frame, *dest, *left, *right, *format, *predicate)
+            }
+            Instruction::SIToFp {
+                dest,
+                value,
+                int_width,
+                float_format,
+            } => self.execute_machine_int_to_float(
+                frame,
+                *dest,
+                *value,
+                *int_width,
+                *float_format,
+                true,
+            ),
+            Instruction::UIToFp {
+                dest,
+                value,
+                int_width,
+                float_format,
+            } => self.execute_machine_int_to_float(
+                frame,
+                *dest,
+                *value,
+                *int_width,
+                *float_format,
+                false,
+            ),
+            Instruction::FPToSI {
+                dest,
+                value,
+                float_format,
+                int_width,
+            } => self.execute_machine_float_to_int(
+                frame,
+                *dest,
+                *value,
+                *float_format,
+                *int_width,
+                true,
+            ),
+            Instruction::FPToUI {
+                dest,
+                value,
+                float_format,
+                int_width,
+            } => self.execute_machine_float_to_int(
+                frame,
+                *dest,
+                *value,
+                *float_format,
+                *int_width,
+                false,
+            ),
+            Instruction::FPExt {
+                dest,
+                value,
+                from_format,
+                to_format,
+            } => self.execute_machine_float_width_conversion(
+                frame,
+                *dest,
+                *value,
+                *from_format,
+                *to_format,
+                "fpext",
+            ),
+            Instruction::FPTrunc {
+                dest,
+                value,
+                from_format,
+                to_format,
+            } => self.execute_machine_float_width_conversion(
+                frame,
+                *dest,
+                *value,
+                *from_format,
+                *to_format,
+                "fptrunc",
+            ),
             Instruction::IAdd {
                 dest,
                 left,
@@ -13173,33 +14382,31 @@ impl<'a> VM<'a> {
                 left,
                 right,
                 width,
-            } => self.execute_machine_int_division(
-                frame, *dest, *left, *right, *width, true, false,
-            ),
+            } => {
+                self.execute_machine_int_division(frame, *dest, *left, *right, *width, true, false)
+            }
             Instruction::UDiv {
                 dest,
                 left,
                 right,
                 width,
-            } => self.execute_machine_int_division(
-                frame, *dest, *left, *right, *width, false, false,
-            ),
+            } => {
+                self.execute_machine_int_division(frame, *dest, *left, *right, *width, false, false)
+            }
             Instruction::SRem {
                 dest,
                 left,
                 right,
                 width,
-            } => self.execute_machine_int_division(
-                frame, *dest, *left, *right, *width, true, true,
-            ),
+            } => self.execute_machine_int_division(frame, *dest, *left, *right, *width, true, true),
             Instruction::URem {
                 dest,
                 left,
                 right,
                 width,
-            } => self.execute_machine_int_division(
-                frame, *dest, *left, *right, *width, false, true,
-            ),
+            } => {
+                self.execute_machine_int_division(frame, *dest, *left, *right, *width, false, true)
+            }
             Instruction::And {
                 dest,
                 left,
@@ -13244,11 +14451,7 @@ impl<'a> VM<'a> {
             ),
             Instruction::IntNot { dest, value, width } => {
                 let value = self.expect_machine_int(frame, *value, "not_int")?;
-                self.write_register(
-                    frame,
-                    *dest,
-                    Value::machine_int((!value) & width.mask()),
-                )
+                self.write_register(frame, *dest, Value::machine_int((!value) & width.mask()))
             }
             Instruction::Shl {
                 dest,
@@ -13295,9 +14498,7 @@ impl<'a> VM<'a> {
                 right,
                 width,
                 predicate,
-            } => self.execute_machine_int_compare(
-                frame, *dest, *left, *right, *width, *predicate,
-            ),
+            } => self.execute_machine_int_compare(frame, *dest, *left, *right, *width, *predicate),
             Instruction::Negate { dest, value } => {
                 let input = self.expect_number(frame, *value, "negate")?;
                 self.write_register(frame, *dest, Value::number(-input))
@@ -13393,16 +14594,14 @@ impl<'a> VM<'a> {
                     ordering.is_gt()
                 })
             }
-            Instruction::GreaterEqual { dest, left, right } => {
-                self.compare(
-                    frame,
-                    *dest,
-                    *left,
-                    *right,
-                    Comparison::GreaterEqual,
-                    call_site,
-                )
-            }
+            Instruction::GreaterEqual { dest, left, right } => self.compare(
+                frame,
+                *dest,
+                *left,
+                *right,
+                Comparison::GreaterEqual,
+                call_site,
+            ),
             Instruction::GreaterEqualNum { dest, left, right } => {
                 self.compare_numbers(frame, *dest, *left, *right, "ge_num", |left, right| {
                     left >= right
@@ -13426,16 +14625,14 @@ impl<'a> VM<'a> {
                     ordering.is_lt()
                 })
             }
-            Instruction::LessEqual { dest, left, right } => {
-                self.compare(
-                    frame,
-                    *dest,
-                    *left,
-                    *right,
-                    Comparison::LessEqual,
-                    call_site,
-                )
-            }
+            Instruction::LessEqual { dest, left, right } => self.compare(
+                frame,
+                *dest,
+                *left,
+                *right,
+                Comparison::LessEqual,
+                call_site,
+            ),
             Instruction::LessEqualNum { dest, left, right } => {
                 self.compare_numbers(frame, *dest, *left, *right, "le_num", |left, right| {
                     left <= right
@@ -13596,10 +14793,7 @@ impl<'a> VM<'a> {
                 let input = self.read_register_ref(frame, *value)?;
                 let iterator = match input {
                     Value::Array(array) => IteratorValue {
-                        source: IteratorSource::Array(
-                            array.clone(),
-                            array.elements.borrow().len(),
-                        ),
+                        source: IteratorSource::Array(array.clone(), array.elements.borrow().len()),
                         position: Rc::new(std::cell::Cell::new(0)),
                     },
                     Value::Map(map) => {
@@ -13624,13 +14818,17 @@ impl<'a> VM<'a> {
                     },
                     Value::String(text) => IteratorValue {
                         source: IteratorSource::StringScalars(
-                            text.chars().map(|character| character.to_string()).collect(),
+                            text.chars()
+                                .map(|character| character.to_string())
+                                .collect(),
                         ),
                         position: Rc::new(std::cell::Cell::new(0)),
                     },
-                    _ => return Err(RuntimeError::new(
-                        "for-in expects array, range, map, or string",
-                    )),
+                    _ => {
+                        return Err(RuntimeError::new(
+                            "for-in expects array, range, map, or string",
+                        ))
+                    }
                 };
                 self.write_register(frame, *dest, Value::iterator(iterator))
             }
@@ -13642,9 +14840,7 @@ impl<'a> VM<'a> {
                 let position = iterator.position.get();
                 let has = match &iterator.source {
                     IteratorSource::Array(_, length) => position < *length,
-                    IteratorSource::MapKeys(array) => {
-                        position < array.elements.borrow().len()
-                    }
+                    IteratorSource::MapKeys(array) => position < array.elements.borrow().len(),
                     IteratorSource::Range(range) => position < range.length,
                     IteratorSource::StringScalars(values) => position < values.len(),
                 };
@@ -13715,11 +14911,9 @@ impl<'a> VM<'a> {
             | Instruction::Br { .. }
             | Instruction::BrIf { .. }
             | Instruction::ReturnNil
-            | Instruction::Return { .. } => {
-                Err(RuntimeError::invalid_instruction(
-                    "instruction is specific to one dispatch path",
-                ))
-            }
+            | Instruction::Return { .. } => Err(RuntimeError::invalid_instruction(
+                "instruction is specific to one dispatch path",
+            )),
         }
     }
 
@@ -13746,12 +14940,9 @@ impl<'a> VM<'a> {
                     .ok_or_else(|| {
                         RuntimeError::invalid_instruction("branch has no function body")
                     })?;
-                let next = block_map
-                    .get(&target.0)
-                    .copied()
-                    .ok_or_else(|| {
-                        RuntimeError::invalid_instruction("branch target out of range")
-                    })?;
+                let next = block_map.get(&target.0).copied().ok_or_else(|| {
+                    RuntimeError::invalid_instruction("branch target out of range")
+                })?;
                 frame.ip = next;
                 return Ok(InstructionAction::Jumped);
             }
@@ -13844,7 +15035,9 @@ impl<'a> VM<'a> {
                 }));
             }
             Instruction::Return { value } => {
-                return Ok(InstructionAction::Return(self.take_register(frame, *value)?));
+                return Ok(InstructionAction::Return(
+                    self.take_register(frame, *value)?,
+                ));
             }
             Instruction::ReturnNil => {
                 return Ok(InstructionAction::Return(Value::Nil));
@@ -13905,10 +15098,7 @@ impl<'a> VM<'a> {
         JitHelperBridge::new(self, frame, call_site)
     }
 
-    fn checkpoint_safepoint(
-        &mut self,
-        safepoint: JitSafepointKind,
-    ) -> Result<(), RuntimeError> {
+    fn checkpoint_safepoint(&mut self, safepoint: JitSafepointKind) -> Result<(), RuntimeError> {
         debug_assert!(safepoint.uses_instruction_budget());
         match &self.instruction_checkpoint {
             InstructionCheckpoint::Limited(limit) => {
@@ -13921,10 +15111,10 @@ impl<'a> VM<'a> {
                 self.instruction_steps += 1;
             }
             InstructionCheckpoint::Unlimited => {
-                self.instruction_steps = self
-                    .instruction_steps
-                    .checked_add(1)
-                    .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
+                self.instruction_steps =
+                    self.instruction_steps.checked_add(1).ok_or_else(|| {
+                        RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX)
+                    })?;
             }
             InstructionCheckpoint::CancelledLimited { limit, token } => {
                 if token.is_cancelled() {
@@ -13936,19 +15126,19 @@ impl<'a> VM<'a> {
                         *limit,
                     ));
                 }
-                self.instruction_steps = self
-                    .instruction_steps
-                    .checked_add(1)
-                    .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
+                self.instruction_steps =
+                    self.instruction_steps.checked_add(1).ok_or_else(|| {
+                        RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX)
+                    })?;
             }
             InstructionCheckpoint::CancelledUnlimited { token } => {
                 if token.is_cancelled() {
                     return Err(RuntimeError::cancelled());
                 }
-                self.instruction_steps = self
-                    .instruction_steps
-                    .checked_add(1)
-                    .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
+                self.instruction_steps =
+                    self.instruction_steps.checked_add(1).ok_or_else(|| {
+                        RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX)
+                    })?;
             }
         }
         Ok(())
@@ -14170,7 +15360,10 @@ impl<'a> VM<'a> {
         instruction: Option<usize>,
         value: Option<String>,
     ) -> Result<(), RuntimeError> {
-        let location = trace.stack.last().and_then(|active| active.location.clone());
+        let location = trace
+            .stack
+            .last()
+            .and_then(|active| active.location.clone());
         self.task_trace_event(
             task_id,
             trace,
@@ -14221,7 +15414,12 @@ impl<'a> VM<'a> {
                 task.trace = TaskTraceState::default();
                 break;
             }
-            let frame_index = task.trace.stack.len().saturating_sub(1).min(frame_count - 1);
+            let frame_index = task
+                .trace
+                .stack
+                .len()
+                .saturating_sub(1)
+                .min(frame_count - 1);
             let is_current = frame_index + 1 == frame_count;
             let instruction = {
                 let frame = &task.frames.frames()[frame_index];
@@ -14344,13 +15542,8 @@ impl<'a> VM<'a> {
         let Some(mut active) = self.active_task_trace.take() else {
             return Err(RuntimeError::new("missing cooperative task trace state"));
         };
-        let result = self.task_trace_leave(
-            active.task_id,
-            &mut active.state,
-            frame,
-            instruction,
-            value,
-        );
+        let result =
+            self.task_trace_leave(active.task_id, &mut active.state, frame, instruction, value);
         self.active_task_trace = Some(active);
         result
     }
@@ -14364,13 +15557,7 @@ impl<'a> VM<'a> {
             location: location.clone(),
         });
         self.trace_last_locations.push(location.clone());
-        self.emit_trace(
-            TraceEventKind::Enter,
-            frame,
-            Some(0),
-            location,
-            None,
-        );
+        self.emit_trace(TraceEventKind::Enter, frame, Some(0), location, None);
     }
 
     fn debug_instruction(
@@ -14388,6 +15575,7 @@ impl<'a> VM<'a> {
             location,
             stack: self.trace_stack.clone(),
             locals: self.trace_locals(frame),
+            machine: self.machine_debug_state(frame),
         };
         let control = self
             .debug_hook
@@ -14411,13 +15599,7 @@ impl<'a> VM<'a> {
         if self.cooperative_debug_hook.is_none() {
             return Ok(());
         }
-        let pause = self.cooperative_debug_pause(
-            task_id,
-            stack,
-            frame,
-            instruction,
-            location,
-        );
+        let pause = self.cooperative_debug_pause(task_id, stack, frame, instruction, location);
         let control = self
             .cooperative_debug_hook
             .as_mut()
@@ -14442,13 +15624,7 @@ impl<'a> VM<'a> {
         if self.cooperative_debug_hook.is_none() {
             return Ok(());
         }
-        let pause = self.cooperative_debug_pause(
-            task_id,
-            stack,
-            frame,
-            instruction,
-            location,
-        );
+        let pause = self.cooperative_debug_pause(task_id, stack, frame, instruction, location);
         let control = self
             .cooperative_debug_hook
             .as_mut()
@@ -14481,6 +15657,7 @@ impl<'a> VM<'a> {
             location,
             stack,
             locals: self.trace_locals(frame),
+            machine: self.machine_debug_state(frame),
             scheduler,
         }
     }
@@ -14520,14 +15697,11 @@ impl<'a> VM<'a> {
         if !self.trace_enabled {
             return;
         }
-        let location = self.trace_stack.last().and_then(|active| active.location.clone());
-        self.emit_trace(
-            TraceEventKind::Exit,
-            frame,
-            instruction,
-            location,
-            value,
-        );
+        let location = self
+            .trace_stack
+            .last()
+            .and_then(|active| active.location.clone());
+        self.emit_trace(TraceEventKind::Exit, frame, instruction, location, value);
         self.trace_stack.pop();
         self.trace_last_locations.pop();
     }
@@ -14579,6 +15753,28 @@ impl<'a> VM<'a> {
             }
         }
         locals.into_iter().collect()
+    }
+
+    fn machine_debug_state(&self, frame: &Frame) -> Option<DebugMachineState> {
+        let has_machine_value = frame.registers.iter().any(|value| {
+            matches!(
+                value,
+                Value::MachineInt(_) | Value::MachineFloat(_) | Value::Address(_)
+            )
+        });
+        if frame.machine_frame_size == 0 && !has_machine_value {
+            return None;
+        }
+        Some(DebugMachineState {
+            registers: frame
+                .registers
+                .iter()
+                .enumerate()
+                .map(|(index, value)| (index, value.to_string()))
+                .collect(),
+            frame_base: frame.machine_frame_base,
+            frame_size: frame.machine_frame_size,
+        })
     }
 
     fn capture_environment(&self, frame: &Frame) -> SharedEnvironment {
@@ -14776,13 +15972,8 @@ impl<'a> VM<'a> {
                 self.module_states[module] = ModuleState::Initializing;
                 let function = self.direct_call_function_value(init, frame)?;
                 let caller = frame.function.to_string();
-                let result = self.call_function(
-                    &function,
-                    CallArguments::Empty,
-                    true,
-                    &caller,
-                    None,
-                );
+                let result =
+                    self.call_function(&function, CallArguments::Empty, true, &caller, None);
                 match result {
                     Ok(_) => {
                         self.module_states[module] = ModuleState::Initialized;
@@ -15211,10 +16402,15 @@ impl<'a> VM<'a> {
     }
 
     fn validate_map_key(&self, key: &Value) -> Result<(), RuntimeError> {
-        if matches!(key, Value::Nil | Value::Number(_) | Value::Bool(_) | Value::String(_)) {
+        if matches!(
+            key,
+            Value::Nil | Value::Number(_) | Value::Bool(_) | Value::String(_)
+        ) {
             Ok(())
         } else {
-            Err(RuntimeError::new("map key must be nil, number, bool, or string"))
+            Err(RuntimeError::new(
+                "map key must be nil, number, bool, or string",
+            ))
         }
     }
 
@@ -15227,7 +16423,9 @@ impl<'a> VM<'a> {
         fields: Vec<Value>,
     ) -> Result<Value, RuntimeError> {
         self.charge_runtime_elements(1usize.saturating_add(fields.len()))?;
-        Ok(self.heap.allocate_variant(type_id, variant_id, enum_name, variant_name, fields))
+        Ok(self
+            .heap
+            .allocate_variant(type_id, variant_id, enum_name, variant_name, fields))
     }
 
     fn checked_array_index(&self, index_value: &Value) -> Result<usize, RuntimeError> {
@@ -15321,7 +16519,9 @@ impl<'a> VM<'a> {
                 Ok(value)
             }
             Value::Range(_) => Err(RuntimeError::new("cannot assign range elements")),
-            _ => Err(RuntimeError::new("can only assign array elements, map entries, or range elements")),
+            _ => Err(RuntimeError::new(
+                "can only assign array elements, map entries, or range elements",
+            )),
         }
     }
 
@@ -15362,7 +16562,9 @@ impl<'a> VM<'a> {
             Value::Map(map) => Ok(Value::number(map.entries.borrow().len() as f64)),
             Value::Range(range) => Ok(Value::number(range.length as f64)),
             Value::String(value) => Ok(Value::number(value.chars().count() as f64)),
-            _ => Err(RuntimeError::new("len expects array, string, map, or range")),
+            _ => Err(RuntimeError::new(
+                "len expects array, string, map, or range",
+            )),
         }
     }
 
@@ -15371,12 +16573,7 @@ impl<'a> VM<'a> {
         name: &str,
         arguments: Vec<Value>,
     ) -> Result<Value, RuntimeError> {
-        self.execute_native_call_at(
-            name,
-            NativeArguments::from_vec(arguments),
-            "<native>",
-            None,
-        )
+        self.execute_native_call_at(name, NativeArguments::from_vec(arguments), "<native>", None)
     }
 
     fn execute_native_call_at(
@@ -15504,7 +16701,9 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("filter expects array as first argument"));
         };
         let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new("filter expects function as second argument"));
+            return Err(RuntimeError::new(
+                "filter expects function as second argument",
+            ));
         };
         if predicate.arity != 1 {
             return Err(RuntimeError::new("filter expects callback with 1 argument"));
@@ -15540,10 +16739,14 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("flatMap expects array as first argument"));
         };
         let Value::Function(callback) = &arguments[1] else {
-            return Err(RuntimeError::new("flatMap expects function as second argument"));
+            return Err(RuntimeError::new(
+                "flatMap expects function as second argument",
+            ));
         };
         if callback.arity != 1 {
-            return Err(RuntimeError::new("flatMap expects callback with 1 argument"));
+            return Err(RuntimeError::new(
+                "flatMap expects callback with 1 argument",
+            ));
         }
 
         let elements = array.elements.borrow().clone();
@@ -15558,7 +16761,9 @@ impl<'a> VM<'a> {
                 call_site,
             )?;
             let Value::Array(mapped) = result else {
-                return Err(RuntimeError::new("flatMap expects callback to return array"));
+                return Err(RuntimeError::new(
+                    "flatMap expects callback to return array",
+                ));
             };
             for value in mapped.elements.borrow().iter().cloned() {
                 self.checkpoint_native()?;
@@ -15628,7 +16833,9 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("count expects array as first argument"));
         };
         let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new("count expects function as second argument"));
+            return Err(RuntimeError::new(
+                "count expects function as second argument",
+            ));
         };
         if predicate.arity != 1 {
             return Err(RuntimeError::new("count expects callback with 1 argument"));
@@ -15664,7 +16871,9 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("find expects array as first argument"));
         };
         let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new("find expects function as second argument"));
+            return Err(RuntimeError::new(
+                "find expects function as second argument",
+            ));
         };
         if predicate.arity != 1 {
             return Err(RuntimeError::new("find expects callback with 1 argument"));
@@ -15696,13 +16905,19 @@ impl<'a> VM<'a> {
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new("findIndex expects array as first argument"));
+            return Err(RuntimeError::new(
+                "findIndex expects array as first argument",
+            ));
         };
         let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new("findIndex expects function as second argument"));
+            return Err(RuntimeError::new(
+                "findIndex expects function as second argument",
+            ));
         };
         if predicate.arity != 1 {
-            return Err(RuntimeError::new("findIndex expects callback with 1 argument"));
+            return Err(RuntimeError::new(
+                "findIndex expects callback with 1 argument",
+            ));
         }
 
         let elements = array.elements.borrow().clone();
@@ -15718,7 +16933,11 @@ impl<'a> VM<'a> {
             match result {
                 Value::Bool(true) => return Ok(Value::number(index as f64)),
                 Value::Bool(false) => {}
-                _ => return Err(RuntimeError::new("findIndex expects callback to return bool")),
+                _ => {
+                    return Err(RuntimeError::new(
+                        "findIndex expects callback to return bool",
+                    ))
+                }
             }
         }
         Ok(Value::number(-1.0))
@@ -15734,10 +16953,14 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("reduce expects array as first argument"));
         };
         let Value::Function(callback) = &arguments[2] else {
-            return Err(RuntimeError::new("reduce expects function as third argument"));
+            return Err(RuntimeError::new(
+                "reduce expects function as third argument",
+            ));
         };
         if callback.arity != 2 {
-            return Err(RuntimeError::new("reduce expects callback with 2 arguments"));
+            return Err(RuntimeError::new(
+                "reduce expects callback with 2 arguments",
+            ));
         }
 
         let elements = array.elements.borrow().clone();
@@ -15959,7 +17182,10 @@ impl<'a> VM<'a> {
         Ok(Value::number(arguments[0].runtime_hash()))
     }
 
-    fn execute_native_contains(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
+    fn execute_native_contains(
+        &mut self,
+        arguments: NativeArguments,
+    ) -> Result<Value, RuntimeError> {
         match &arguments[0] {
             Value::Array(array) => {
                 let elements = array.elements.borrow().clone();
@@ -16005,7 +17231,9 @@ impl<'a> VM<'a> {
                     candidate <= range.start && candidate > range.stop
                 };
                 let offset = candidate as i128 - range.start as i128;
-                Ok(Value::boolean(in_bounds && offset % range.step as i128 == 0))
+                Ok(Value::boolean(
+                    in_bounds && offset % range.step as i128 == 0,
+                ))
             }
             _ => Err(RuntimeError::new(
                 "contains expects array, map, or range as first argument",
@@ -16054,9 +17282,7 @@ impl<'a> VM<'a> {
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("copy expects array as first argument"));
         };
-        self.ensure_runtime_elements(
-            1usize.saturating_add(array.elements.borrow().len()),
-        )?;
+        self.ensure_runtime_elements(1usize.saturating_add(array.elements.borrow().len()))?;
         let borrowed = array.elements.borrow();
         let mut elements = Vec::with_capacity(borrowed.len());
         for element in borrowed.iter() {
@@ -16315,6 +17541,181 @@ impl<'a> VM<'a> {
         }
     }
 
+    fn expect_machine_float_format(
+        &self,
+        frame: &Frame,
+        value: usize,
+        format: MachineFloatFormat,
+        op_name: &str,
+    ) -> Result<f64, RuntimeError> {
+        let value = self.expect_machine_float(frame, value, op_name)?;
+        Ok(canonical_machine_float(value, format))
+    }
+
+    fn execute_machine_float_binary(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        left: usize,
+        right: usize,
+        format: MachineFloatFormat,
+        op_name: &str,
+        operation: MachineFloatBinaryKind,
+    ) -> Result<(), RuntimeError> {
+        let left = self.expect_machine_float_format(frame, left, format, op_name)?;
+        let right = self.expect_machine_float_format(frame, right, format, op_name)?;
+        let result = match format {
+            MachineFloatFormat::F32 => {
+                let left = left as f32;
+                let right = right as f32;
+                let result = match operation {
+                    MachineFloatBinaryKind::Add => left + right,
+                    MachineFloatBinaryKind::Subtract => left - right,
+                    MachineFloatBinaryKind::Multiply => left * right,
+                    MachineFloatBinaryKind::Divide => left / right,
+                };
+                canonical_machine_float(result as f64, format)
+            }
+            MachineFloatFormat::F64 => {
+                let result = match operation {
+                    MachineFloatBinaryKind::Add => left + right,
+                    MachineFloatBinaryKind::Subtract => left - right,
+                    MachineFloatBinaryKind::Multiply => left * right,
+                    MachineFloatBinaryKind::Divide => left / right,
+                };
+                canonical_machine_float(result, format)
+            }
+        };
+        self.write_register(frame, dest, Value::machine_float(result))
+    }
+
+    fn execute_machine_float_compare(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        left: usize,
+        right: usize,
+        format: MachineFloatFormat,
+        predicate: MachineFloatPredicate,
+    ) -> Result<(), RuntimeError> {
+        let left = self.expect_machine_float_format(frame, left, format, "fcmp")?;
+        let right = self.expect_machine_float_format(frame, right, format, "fcmp")?;
+        self.write_register(
+            frame,
+            dest,
+            Value::boolean(apply_machine_float_predicate(left, right, predicate)),
+        )
+    }
+
+    fn execute_machine_int_to_float(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        value: usize,
+        int_width: MachineIntWidth,
+        float_format: MachineFloatFormat,
+        signed: bool,
+    ) -> Result<(), RuntimeError> {
+        let value =
+            self.expect_machine_int(frame, value, if signed { "sitofp" } else { "uitofp" })?;
+        let value = if signed {
+            signed_machine_int(value, int_width) as f64
+        } else {
+            (value & int_width.mask()) as f64
+        };
+        self.write_register(
+            frame,
+            dest,
+            Value::machine_float(canonical_machine_float(value, float_format)),
+        )
+    }
+
+    fn execute_machine_float_to_int(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        value: usize,
+        float_format: MachineFloatFormat,
+        int_width: MachineIntWidth,
+        signed: bool,
+    ) -> Result<(), RuntimeError> {
+        let value = self.expect_machine_float_format(
+            frame,
+            value,
+            float_format,
+            if signed { "fptosi" } else { "fptoui" },
+        )?;
+        let truncated = value.trunc();
+        if !truncated.is_finite() {
+            return Err(RuntimeError::invalid_conversion(format!(
+                "{} cannot convert non-finite machine_float",
+                if signed { "fptosi" } else { "fptoui" }
+            )));
+        }
+        let bits = int_width.bits();
+        let valid = if signed {
+            let minimum = -((1u128 << (bits - 1)) as f64);
+            let maximum_exclusive = (1u128 << (bits - 1)) as f64;
+            truncated >= minimum && truncated < maximum_exclusive
+        } else {
+            let maximum_exclusive = if bits == 64 {
+                18446744073709551616.0
+            } else {
+                (1u128 << bits) as f64
+            };
+            truncated >= 0.0 && truncated < maximum_exclusive
+        };
+        if !valid {
+            return Err(RuntimeError::invalid_conversion(format!(
+                "{} machine_float is outside the {}-bit integer range",
+                if signed { "fptosi" } else { "fptoui" },
+                bits
+            )));
+        }
+        let raw = if signed {
+            (truncated as i128 as u128 as u64) & int_width.mask()
+        } else {
+            (truncated as u128 as u64) & int_width.mask()
+        };
+        self.write_register(frame, dest, Value::machine_int(raw))
+    }
+
+    fn execute_machine_float_width_conversion(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        value: usize,
+        from_format: MachineFloatFormat,
+        to_format: MachineFloatFormat,
+        op_name: &str,
+    ) -> Result<(), RuntimeError> {
+        let valid = match op_name {
+            "fpext" => {
+                from_format == MachineFloatFormat::F32 && to_format == MachineFloatFormat::F64
+            }
+            "fptrunc" => {
+                from_format == MachineFloatFormat::F64 && to_format == MachineFloatFormat::F32
+            }
+            _ => true,
+        };
+        if !valid {
+            return Err(RuntimeError::invalid_conversion(format!(
+                "{} requires {} -> {}, found {} -> {}",
+                op_name,
+                if op_name == "fpext" { "f32" } else { "f64" },
+                if op_name == "fpext" { "f64" } else { "f32" },
+                from_format.as_str(),
+                to_format.as_str()
+            )));
+        }
+        let value = self.expect_machine_float_format(frame, value, from_format, op_name)?;
+        self.write_register(
+            frame,
+            dest,
+            Value::machine_float(canonical_machine_float(value, to_format)),
+        )
+    }
+
     fn expect_address(
         &self,
         frame: &Frame,
@@ -16370,11 +17771,18 @@ impl<'a> VM<'a> {
             | MachineMemoryType::I32
             | MachineMemoryType::I64 => Value::machine_int(raw),
             MachineMemoryType::F32 => {
-                let bits = u32::try_from(raw)
-                    .map_err(|_| RuntimeError::invalid_instruction("load f32 bits exceed 32 bits"))?;
-                Value::machine_float(f32::from_bits(bits) as f64)
+                let bits = u32::try_from(raw).map_err(|_| {
+                    RuntimeError::invalid_instruction("load f32 bits exceed 32 bits")
+                })?;
+                Value::machine_float(canonical_machine_float(
+                    f32::from_bits(bits) as f64,
+                    MachineFloatFormat::F32,
+                ))
             }
-            MachineMemoryType::F64 => Value::machine_float(f64::from_bits(raw)),
+            MachineMemoryType::F64 => Value::machine_float(canonical_machine_float(
+                f64::from_bits(raw),
+                MachineFloatFormat::F64,
+            )),
             MachineMemoryType::Addr => Value::address(raw),
         };
         self.write_register(frame, dest, value)
@@ -16407,11 +17815,17 @@ impl<'a> VM<'a> {
                 encode_machine_memory_bits(value, memory_type.size())
             }
             MachineMemoryType::F32 => {
-                let value = self.expect_machine_float(frame, source, "store f32")?;
+                let value = canonical_machine_float(
+                    self.expect_machine_float(frame, source, "store f32")?,
+                    MachineFloatFormat::F32,
+                );
                 (value as f32).to_bits().to_le_bytes().to_vec()
             }
             MachineMemoryType::F64 => {
-                let value = self.expect_machine_float(frame, source, "store f64")?;
+                let value = canonical_machine_float(
+                    self.expect_machine_float(frame, source, "store f64")?,
+                    MachineFloatFormat::F64,
+                );
                 value.to_bits().to_le_bytes().to_vec()
             }
             MachineMemoryType::Addr => {
@@ -16529,7 +17943,11 @@ impl<'a> VM<'a> {
             left,
             right,
             if signed {
-                if remainder { "srem" } else { "sdiv" }
+                if remainder {
+                    "srem"
+                } else {
+                    "sdiv"
+                }
             } else if remainder {
                 "urem"
             } else {
@@ -16552,10 +17970,18 @@ impl<'a> VM<'a> {
                     "integer division overflow",
                 ));
             }
-            if remainder { left % right } else { left / right }
+            if remainder {
+                left % right
+            } else {
+                left / right
+            }
         } else {
             let left = left & width.mask();
-            (if remainder { left % right } else { left / right }) as i128
+            (if remainder {
+                left % right
+            } else {
+                left / right
+            }) as i128
         };
         self.write_register(
             frame,
@@ -16604,10 +18030,18 @@ impl<'a> VM<'a> {
         let result = match predicate {
             MachineIntPredicate::Eq => left == right,
             MachineIntPredicate::Ne => left != right,
-            MachineIntPredicate::Slt => signed_machine_int(left, width) < signed_machine_int(right, width),
-            MachineIntPredicate::Sle => signed_machine_int(left, width) <= signed_machine_int(right, width),
-            MachineIntPredicate::Sgt => signed_machine_int(left, width) > signed_machine_int(right, width),
-            MachineIntPredicate::Sge => signed_machine_int(left, width) >= signed_machine_int(right, width),
+            MachineIntPredicate::Slt => {
+                signed_machine_int(left, width) < signed_machine_int(right, width)
+            }
+            MachineIntPredicate::Sle => {
+                signed_machine_int(left, width) <= signed_machine_int(right, width)
+            }
+            MachineIntPredicate::Sgt => {
+                signed_machine_int(left, width) > signed_machine_int(right, width)
+            }
+            MachineIntPredicate::Sge => {
+                signed_machine_int(left, width) >= signed_machine_int(right, width)
+            }
             MachineIntPredicate::Ult => left < right,
             MachineIntPredicate::Ule => left <= right,
             MachineIntPredicate::Ugt => left > right,
@@ -16677,7 +18111,12 @@ impl<'a> VM<'a> {
             (Value::String(left), Value::String(right)) => {
                 predicate(left.chars().cmp(right.chars()))
             }
-            _ => return Err(RuntimeError::new(format!("{} expects two strings", op_name))),
+            _ => {
+                return Err(RuntimeError::new(format!(
+                    "{} expects two strings",
+                    op_name
+                )))
+            }
         };
         self.write_register(frame, dest, Value::boolean(result))
     }
@@ -16693,13 +18132,8 @@ impl<'a> VM<'a> {
     ) -> Result<(), RuntimeError> {
         let left_value = self.read_register(frame, left)?;
         let right_value = self.read_register(frame, right)?;
-        let result = self.compare_values(
-            frame,
-            &left_value,
-            &right_value,
-            comparison,
-            call_site,
-        )?;
+        let result =
+            self.compare_values(frame, &left_value, &right_value, comparison, call_site)?;
         self.write_register(frame, dest, Value::boolean(result))
     }
 
