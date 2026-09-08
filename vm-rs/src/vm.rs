@@ -13987,6 +13987,178 @@ impl<'a> VM<'a> {
         }
     }
 
+    fn execute_machine_float_instruction(
+        &mut self,
+        frame: &mut Frame,
+        instruction: &Instruction,
+    ) -> Result<(), RuntimeError> {
+        match instruction {
+            Instruction::FConst { dest, format, bits } => {
+                let value = machine_float_from_bits(*format, *bits)
+                    .map_err(RuntimeError::invalid_instruction)?;
+                self.write_register(frame, *dest, Value::machine_float(value))
+            }
+            Instruction::FAdd {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fadd",
+                MachineFloatBinaryKind::Add,
+            ),
+            Instruction::FSub {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fsub",
+                MachineFloatBinaryKind::Subtract,
+            ),
+            Instruction::FMul {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fmul",
+                MachineFloatBinaryKind::Multiply,
+            ),
+            Instruction::FDiv {
+                dest,
+                left,
+                right,
+                format,
+            } => self.execute_machine_float_binary(
+                frame,
+                *dest,
+                *left,
+                *right,
+                *format,
+                "fdiv",
+                MachineFloatBinaryKind::Divide,
+            ),
+            Instruction::FNeg {
+                dest,
+                value,
+                format,
+            } => {
+                let value = self.expect_machine_float_format(frame, *value, *format, "fneg")?;
+                self.write_register(
+                    frame,
+                    *dest,
+                    Value::machine_float(canonical_machine_float(-value, *format)),
+                )
+            }
+            Instruction::FCmp {
+                dest,
+                left,
+                right,
+                format,
+                predicate,
+            } => {
+                self.execute_machine_float_compare(frame, *dest, *left, *right, *format, *predicate)
+            }
+            Instruction::SIToFp {
+                dest,
+                value,
+                int_width,
+                float_format,
+            } => self.execute_machine_int_to_float(
+                frame,
+                *dest,
+                *value,
+                *int_width,
+                *float_format,
+                true,
+            ),
+            Instruction::UIToFp {
+                dest,
+                value,
+                int_width,
+                float_format,
+            } => self.execute_machine_int_to_float(
+                frame,
+                *dest,
+                *value,
+                *int_width,
+                *float_format,
+                false,
+            ),
+            Instruction::FPToSI {
+                dest,
+                value,
+                float_format,
+                int_width,
+            } => self.execute_machine_float_to_int(
+                frame,
+                *dest,
+                *value,
+                *float_format,
+                *int_width,
+                true,
+            ),
+            Instruction::FPToUI {
+                dest,
+                value,
+                float_format,
+                int_width,
+            } => self.execute_machine_float_to_int(
+                frame,
+                *dest,
+                *value,
+                *float_format,
+                *int_width,
+                false,
+            ),
+            Instruction::FPExt {
+                dest,
+                value,
+                from_format,
+                to_format,
+            } => self.execute_machine_float_width_conversion(
+                frame,
+                *dest,
+                *value,
+                *from_format,
+                *to_format,
+                "fpext",
+            ),
+            Instruction::FPTrunc {
+                dest,
+                value,
+                from_format,
+                to_format,
+            } => self.execute_machine_float_width_conversion(
+                frame,
+                *dest,
+                *value,
+                *from_format,
+                *to_format,
+                "fptrunc",
+            ),
+            _ => Err(RuntimeError::invalid_instruction(
+                "instruction is not a machine float operation",
+            )),
+        }
+    }
+
     /// Shared instruction semantics for both the ordinary and cooperative
     /// dispatch paths. Output, calls, returns, and jump control flow stay in
     /// the callers because the two paths attribute those observably.
@@ -14308,166 +14480,21 @@ impl<'a> VM<'a> {
                 true,
                 true,
             ),
-            Instruction::FConst { dest, format, bits } => {
-                let value = machine_float_from_bits(*format, *bits)
-                    .map_err(RuntimeError::invalid_instruction)?;
-                self.write_register(frame, *dest, Value::machine_float(value))
+            Instruction::FConst { .. }
+            | Instruction::FAdd { .. }
+            | Instruction::FSub { .. }
+            | Instruction::FMul { .. }
+            | Instruction::FDiv { .. }
+            | Instruction::FNeg { .. }
+            | Instruction::FCmp { .. }
+            | Instruction::SIToFp { .. }
+            | Instruction::UIToFp { .. }
+            | Instruction::FPToSI { .. }
+            | Instruction::FPToUI { .. }
+            | Instruction::FPExt { .. }
+            | Instruction::FPTrunc { .. } => {
+                self.execute_machine_float_instruction(frame, instruction)
             }
-            Instruction::FAdd {
-                dest,
-                left,
-                right,
-                format,
-            } => self.execute_machine_float_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *format,
-                "fadd",
-                MachineFloatBinaryKind::Add,
-            ),
-            Instruction::FSub {
-                dest,
-                left,
-                right,
-                format,
-            } => self.execute_machine_float_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *format,
-                "fsub",
-                MachineFloatBinaryKind::Subtract,
-            ),
-            Instruction::FMul {
-                dest,
-                left,
-                right,
-                format,
-            } => self.execute_machine_float_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *format,
-                "fmul",
-                MachineFloatBinaryKind::Multiply,
-            ),
-            Instruction::FDiv {
-                dest,
-                left,
-                right,
-                format,
-            } => self.execute_machine_float_binary(
-                frame,
-                *dest,
-                *left,
-                *right,
-                *format,
-                "fdiv",
-                MachineFloatBinaryKind::Divide,
-            ),
-            Instruction::FNeg {
-                dest,
-                value,
-                format,
-            } => {
-                let value = self.expect_machine_float_format(frame, *value, *format, "fneg")?;
-                self.write_register(
-                    frame,
-                    *dest,
-                    Value::machine_float(canonical_machine_float(-value, *format)),
-                )
-            }
-            Instruction::FCmp {
-                dest,
-                left,
-                right,
-                format,
-                predicate,
-            } => {
-                self.execute_machine_float_compare(frame, *dest, *left, *right, *format, *predicate)
-            }
-            Instruction::SIToFp {
-                dest,
-                value,
-                int_width,
-                float_format,
-            } => self.execute_machine_int_to_float(
-                frame,
-                *dest,
-                *value,
-                *int_width,
-                *float_format,
-                true,
-            ),
-            Instruction::UIToFp {
-                dest,
-                value,
-                int_width,
-                float_format,
-            } => self.execute_machine_int_to_float(
-                frame,
-                *dest,
-                *value,
-                *int_width,
-                *float_format,
-                false,
-            ),
-            Instruction::FPToSI {
-                dest,
-                value,
-                float_format,
-                int_width,
-            } => self.execute_machine_float_to_int(
-                frame,
-                *dest,
-                *value,
-                *float_format,
-                *int_width,
-                true,
-            ),
-            Instruction::FPToUI {
-                dest,
-                value,
-                float_format,
-                int_width,
-            } => self.execute_machine_float_to_int(
-                frame,
-                *dest,
-                *value,
-                *float_format,
-                *int_width,
-                false,
-            ),
-            Instruction::FPExt {
-                dest,
-                value,
-                from_format,
-                to_format,
-            } => self.execute_machine_float_width_conversion(
-                frame,
-                *dest,
-                *value,
-                *from_format,
-                *to_format,
-                "fpext",
-            ),
-            Instruction::FPTrunc {
-                dest,
-                value,
-                from_format,
-                to_format,
-            } => self.execute_machine_float_width_conversion(
-                frame,
-                *dest,
-                *value,
-                *from_format,
-                *to_format,
-                "fptrunc",
-            ),
             Instruction::IAdd { .. }
             | Instruction::ISub { .. }
             | Instruction::IMul { .. }
