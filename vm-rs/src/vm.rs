@@ -16567,23 +16567,38 @@ impl<'a> VM<'a> {
         }
     }
 
+    fn array_unary_callback<'args>(
+        arguments: &'args NativeArguments,
+        name: &str,
+    ) -> Result<(Vec<Value>, &'args FunctionValue), RuntimeError> {
+        let Value::Array(array) = &arguments[0] else {
+            return Err(RuntimeError::new(format!(
+                "{} expects array as first argument",
+                name
+            )));
+        };
+        let Value::Function(callback) = &arguments[1] else {
+            return Err(RuntimeError::new(format!(
+                "{} expects function as second argument",
+                name
+            )));
+        };
+        if callback.arity != 1 {
+            return Err(RuntimeError::new(format!(
+                "{} expects callback with 1 argument",
+                name
+            )));
+        }
+        Ok((array.elements.borrow().clone(), callback))
+    }
+
     fn execute_native_map(
         &mut self,
         arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new("map expects array as first argument"));
-        };
-        let Value::Function(callback) = &arguments[1] else {
-            return Err(RuntimeError::new("map expects function as second argument"));
-        };
-        if callback.arity != 1 {
-            return Err(RuntimeError::new("map expects callback with 1 argument"));
-        }
-
-        let elements = array.elements.borrow().clone();
+        let (elements, callback) = Self::array_unary_callback(&arguments, "map")?;
         let mut mapped = Vec::with_capacity(elements.len());
         for element in elements {
             self.checkpoint_native()?;
@@ -16604,19 +16619,7 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new("filter expects array as first argument"));
-        };
-        let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new(
-                "filter expects function as second argument",
-            ));
-        };
-        if predicate.arity != 1 {
-            return Err(RuntimeError::new("filter expects callback with 1 argument"));
-        }
-
-        let elements = array.elements.borrow().clone();
+        let (elements, predicate) = Self::array_unary_callback(&arguments, "filter")?;
         let mut filtered = Vec::with_capacity(elements.len());
         for element in elements {
             self.checkpoint_native()?;
@@ -16642,21 +16645,7 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new("flatMap expects array as first argument"));
-        };
-        let Value::Function(callback) = &arguments[1] else {
-            return Err(RuntimeError::new(
-                "flatMap expects function as second argument",
-            ));
-        };
-        if callback.arity != 1 {
-            return Err(RuntimeError::new(
-                "flatMap expects callback with 1 argument",
-            ));
-        }
-
-        let elements = array.elements.borrow().clone();
+        let (elements, callback) = Self::array_unary_callback(&arguments, "flatMap")?;
         let mut flattened = Vec::new();
         for element in elements {
             self.checkpoint_native()?;
@@ -16688,26 +16677,7 @@ impl<'a> VM<'a> {
         any: bool,
     ) -> Result<Value, RuntimeError> {
         let name = if any { "any" } else { "all" };
-        let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new(format!(
-                "{} expects array as first argument",
-                name
-            )));
-        };
-        let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new(format!(
-                "{} expects function as second argument",
-                name
-            )));
-        };
-        if predicate.arity != 1 {
-            return Err(RuntimeError::new(format!(
-                "{} expects callback with 1 argument",
-                name
-            )));
-        }
-
-        let elements = array.elements.borrow().clone();
+        let (elements, predicate) = Self::array_unary_callback(&arguments, name)?;
         for element in elements {
             self.checkpoint_native()?;
             let result = self.call_function(
@@ -16736,19 +16706,7 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new("count expects array as first argument"));
-        };
-        let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new(
-                "count expects function as second argument",
-            ));
-        };
-        if predicate.arity != 1 {
-            return Err(RuntimeError::new("count expects callback with 1 argument"));
-        }
-
-        let elements = array.elements.borrow().clone();
+        let (elements, predicate) = Self::array_unary_callback(&arguments, "count")?;
         let mut count = 0usize;
         for element in elements {
             self.checkpoint_native()?;
@@ -16774,19 +16732,7 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new("find expects array as first argument"));
-        };
-        let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new(
-                "find expects function as second argument",
-            ));
-        };
-        if predicate.arity != 1 {
-            return Err(RuntimeError::new("find expects callback with 1 argument"));
-        }
-
-        let elements = array.elements.borrow().clone();
+        let (elements, predicate) = Self::array_unary_callback(&arguments, "find")?;
         for element in elements {
             self.checkpoint_native()?;
             let result = self.call_function(
@@ -16811,23 +16757,7 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Value::Array(array) = &arguments[0] else {
-            return Err(RuntimeError::new(
-                "findIndex expects array as first argument",
-            ));
-        };
-        let Value::Function(predicate) = &arguments[1] else {
-            return Err(RuntimeError::new(
-                "findIndex expects function as second argument",
-            ));
-        };
-        if predicate.arity != 1 {
-            return Err(RuntimeError::new(
-                "findIndex expects callback with 1 argument",
-            ));
-        }
-
-        let elements = array.elements.borrow().clone();
+        let (elements, predicate) = Self::array_unary_callback(&arguments, "findIndex")?;
         for (index, element) in elements.into_iter().enumerate() {
             self.checkpoint_native()?;
             let result = self.call_function(
