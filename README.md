@@ -98,6 +98,8 @@ additional directories.
 - [Compiler developer guide (中文)](docs/compiler-developer-guide-zh.md):
   end-to-end compiler pipeline, module loading, type checking, IR, bytecode,
   diagnostics, and verification workflow for contributors.
+- [0.2 到 0.3 升级指南（中文）](docs/cdbc-0.2-to-0.3-upgrade-zh.md)：版本边界、
+  machine foundation 新能力、兼容性和迁移路径。
 
 ## Tools
 
