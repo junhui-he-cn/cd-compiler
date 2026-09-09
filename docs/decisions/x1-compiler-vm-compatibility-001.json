@@ -9,7 +9,7 @@
   "decision": "Adopt cdbc 0.2 as the emitted artifact contract with numeric local/upvalue/global slots and a serialized native import table while keeping strict cdbc-cache 0.2 schema 4, the fixed registered native-name set, and optional debug metadata. The reader accepts only cdbc 0.2; the former cdbc 0.1 name-based read path was removed on 2026-08-15.",
   "version_contract": {
     "compiler": {
-      "version": "0.2.0",
+      "version": "0.3.0",
       "source": "VERSION"
     },
     "artifact": {
@@ -26,7 +26,7 @@
     },
     "vm_library": {
       "package": "compiler-design-vm",
-      "crate_version": "0.2.0",
+      "crate_version": "0.3.0",
       "api_version": "0.2",
       "cargo": "vm-rs/Cargo.toml",
       "source": "vm-rs/src/lib.rs"
