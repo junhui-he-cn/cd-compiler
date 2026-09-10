@@ -1,8 +1,8 @@
 import "../../data_structures.cd" as ds;
 
 fun renderMap(entries: [ds.HashMapEntry<string, number>]): string {
-  let result = "";
-  let index = 0;
+  let mut result = "";
+  let mut index = 0;
   while (index < entries.len()) {
     if (index > 0) {
       result = result + ",";
@@ -25,7 +25,7 @@ print(set.discard("alpha"));
 print(set.snapshot());
 
 let growing = ds.newHashSet::<number>();
-let number = 0;
+let mut number = 0;
 while (number < 12) {
   growing.add(number);
   number += 1;
@@ -47,7 +47,7 @@ print(mapping.discard("beta"));
 print(mapping.discard("beta"));
 print(renderMap(mapping.snapshot()));
 
-let mapIndex = 0;
+let mut mapIndex = 0;
 while (mapIndex < 12) {
   mapping.put("key" + str(mapIndex), mapIndex);
   mapIndex += 1;

@@ -1,11 +1,11 @@
 import "../../data_structures.cd" as ds;
 
 fun totalWeight(graph: ds.WeightedGraph): number {
-  let total = 0;
-  let from = 0;
+  let mut total = 0;
+  let mut from = 0;
   while (from < graph.vertexCount()) {
     let neighbors = graph.neighbors(from);
-    let index = 0;
+    let mut index = 0;
     while (index < neighbors.len()) {
       let edge = neighbors[index];
       if (from < edge.to) {

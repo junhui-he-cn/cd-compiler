@@ -1,9 +1,9 @@
 import "../../data_structures.cd" as ds;
 
 let cache = ds.newLfuCache::<string, number>(64);
-let keyIndex = 0;
-let iteration = 0;
-let checksum = 0;
+let mut keyIndex = 0;
+let mut iteration = 0;
+let mut checksum = 0;
 
 while (iteration < 1000) {
   let key = "key" + str(keyIndex);

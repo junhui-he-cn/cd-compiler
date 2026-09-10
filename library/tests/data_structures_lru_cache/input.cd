@@ -1,8 +1,8 @@
 import "../../data_structures.cd" as ds;
 
 fun render(entries: [ds.LruCacheEntry<string, number>]): string {
-  let result = "";
-  let index = 0;
+  let mut result = "";
+  let mut index = 0;
   while (index < entries.len()) {
     if (index > 0) {
       result = result + ",";

@@ -459,10 +459,11 @@ impl MultiSet<T: Eq> {
   }
 
   fun removeAt(index: number) {
-    while (index + 1 < this.values.len()) {
-      this.values[index] = this.values[index + 1];
-      this.counts[index] = this.counts[index + 1];
-      index += 1;
+    let mut cursor = index;
+    while (cursor + 1 < this.values.len()) {
+      this.values[cursor] = this.values[cursor + 1];
+      this.counts[cursor] = this.counts[cursor + 1];
+      cursor += 1;
     }
     this.values.pop();
     this.counts.pop();
@@ -545,10 +546,11 @@ impl MultiMap<K: Eq, V: Eq> {
   }
 
   fun removeKeyAt(index: number) {
-    while (index + 1 < this.keys.len()) {
-      this.keys[index] = this.keys[index + 1];
-      this.values[index] = this.values[index + 1];
-      index += 1;
+    let mut cursor = index;
+    while (cursor + 1 < this.keys.len()) {
+      this.keys[cursor] = this.keys[cursor + 1];
+      this.values[cursor] = this.values[cursor + 1];
+      cursor += 1;
     }
     this.keys.pop();
     this.values.pop();

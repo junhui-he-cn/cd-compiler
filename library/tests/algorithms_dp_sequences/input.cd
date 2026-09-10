@@ -14,7 +14,7 @@ print(ds.longestIncreasingSubsequence(lisInput));
 print(lisInput);
 
 let stressInput: [number] = [];
-let stressIndex = 0;
+let mut stressIndex = 0;
 while (stressIndex < 2048) {
   stressInput.push(2048 - stressIndex);
   stressIndex += 1;

@@ -36,31 +36,31 @@ import "./library/data_structures.cd" as ds;
 let stack = ds.newStack::<number>();
 stack.push(10);
 stack.push(20);
-print stack.top();
-print stack.pop();
-print stack.snapshot();
+print(stack.top());
+print(stack.pop());
+print(stack.snapshot());
 
 let queue = ds.newQueue::<string>();
 queue.enqueue("first");
 queue.enqueue("second");
-print queue.front();
-print queue.dequeue();
-print queue.snapshot();
+print(queue.front());
+print(queue.dequeue());
+print(queue.snapshot());
 
 let deque = ds.newDeque::<number>();
 deque.addFront(2);
 deque.addFront(1);
 deque.addBack(3);
-print deque.peekFront();
-print deque.peekBack();
-print deque.snapshot();
+print(deque.peekFront());
+print(deque.peekBack());
+print(deque.snapshot());
 
 let ring = ds.newRingBuffer::<number>(2);
-print ring.offer(10);
-print ring.offer(20);
-print ring.offer(30);
-print ring.snapshot();
-print ring.read();
+print(ring.offer(10));
+print(ring.offer(20));
+print(ring.offer(30));
+print(ring.snapshot());
+print(ring.read());
 
 fun ascending(left: number, right: number): bool {
   return left < right;
@@ -70,206 +70,206 @@ let heap = ds.newBinaryHeap::<number>(ascending);
 heap.add(5);
 heap.add(1);
 heap.add(3);
-print heap.peek();
-print heap.take();
+print(heap.peek());
+print(heap.take());
 
 let maybe = ds.some::<number>(42);
-print match maybe {
-  ds.Option.Some(value) => value,
-  ds.Option.None => 0,
-};
+match maybe {
+  ds.Option.Some(value) => { print(value); }
+  ds.Option.None => { print(0); }
+}
 
 let result: ds.Result<number, string> = ds.ok::<number, string>(42);
-print match result {
-  ds.Result.Ok(value) => value,
-  ds.Result.Err(error) => 0,
-};
+match result {
+  ds.Result.Ok(value) => { print(value); }
+  ds.Result.Err(error) => { print(0); }
+}
 
 let list = ds.prepend(2, ds.prepend(1, ds.emptyList::<number>()));
-print ds.toArray(ds.reverse(list));
+print(ds.toArray(ds.reverse(list)));
 
 let seen = ds.newSet::<number>();
 seen.add(2);
 seen.add(2);
 seen.add(1);
-print seen.snapshot();
+print(seen.snapshot());
 
 let bag = ds.newMultiSet::<string>();
 bag.add("tag");
 bag.add("tag");
-print bag.countOf("tag");
+print(bag.countOf("tag"));
 
 let index = ds.newMultiMap::<string, number>();
 index.add("even", 2);
 index.add("even", 4);
-print index.getAll("even");
+print(index.getAll("even"));
 
 let components = ds.newDisjointSet(4);
 components.union(0, 1);
 components.union(2, 3);
-print components.connected(0, 3);
-print components.componentCount();
+print(components.connected(0, 3));
+print(components.componentCount());
 
 let graph = ds.newGraph(3, false);
 graph.addEdge(0, 1);
 graph.addEdge(1, 2);
-print graph.neighbors(1);
-print graph.removeEdge(0, 1);
-print graph.edgeCount();
-print ds.breadthFirstOrder(graph, 0);
-print ds.depthFirstOrder(graph, 0);
-print ds.connectedComponents(graph);
-print ds.isBipartite(graph);
-print ds.articulationPoints(graph);
-print ds.bridges(graph);
-print ds.eulerTrail(graph, 0);
-print ds.shortestPath(graph, 0, 2);
+print(graph.neighbors(1));
+print(graph.removeEdge(0, 1));
+print(graph.edgeCount());
+print(ds.breadthFirstOrder(graph, 0));
+print(ds.depthFirstOrder(graph, 0));
+print(ds.connectedComponents(graph));
+print(ds.isBipartite(graph));
+print(ds.articulationPoints(graph));
+print(ds.bridges(graph));
+print(ds.eulerTrail(graph, 0));
+print(ds.shortestPath(graph, 0, 2));
 
 let dag = ds.newGraph(3, true);
 dag.addEdge(0, 1);
 dag.addEdge(1, 2);
-print ds.inDegrees(dag);
-print ds.topologicalOrder(dag);
+print(ds.inDegrees(dag));
+print(ds.topologicalOrder(dag));
 
 let schedule = ds.newWeightedGraph(3, true);
 schedule.addEdge(0, 1, 3);
 schedule.addEdge(1, 2, 4);
-print ds.criticalPath(schedule, 0);
-print ds.hasCycle(dag);
+print(ds.criticalPath(schedule, 0));
+print(ds.hasCycle(dag));
 
 let weighted = ds.newWeightedGraph(3, false);
 weighted.addEdge(0, 1, 2);
 weighted.addEdge(1, 2, 3);
-print ds.shortestWeightedPath(weighted, 0, 2);
-print ds.allPairsWeightedDistances(weighted);
-print ds.maxFlow(weighted, 0, 2);
-print ds.minCut(weighted, 0, 2);
+print(ds.shortestWeightedPath(weighted, 0, 2));
+print(ds.allPairsWeightedDistances(weighted));
+print(ds.maxFlow(weighted, 0, 2));
+print(ds.minCut(weighted, 0, 2));
 
 let forest = ds.minimumSpanningForest(weighted);
-print forest.edgeCount();
+print(forest.edgeCount());
 
 let sums = ds.newFenwickTree([1, 2, 3, 4, 5]);
-print sums.prefixSum(3);
-print sums.rangeSum(1, 4);
+print(sums.prefixSum(3));
+print(sums.rangeSum(1, 4));
 sums.add(2, 7);
-print sums.snapshot();
+print(sums.snapshot());
 
 let aggregates = ds.newSegmentTree([5, 1, 4, 2, 8]);
-print aggregates.rangeSum(1, 4);
-print aggregates.rangeMinimum(0, 5);
+print(aggregates.rangeSum(1, 4));
+print(aggregates.rangeMinimum(0, 5));
 aggregates.add(1, 5);
-print aggregates.snapshot();
+print(aggregates.snapshot());
 
 let tree = ds.treeNode(2, ds.treeLeaf(1), ds.treeLeaf(3));
-print ds.treeInorder(tree);
+print(ds.treeInorder(tree));
 
 let values = [3, 1, 3, 2];
-print ds.reverseArray(values);
-print ds.rotateArray(values, 1);
-print ds.linearSearch(values, 2);
-print ds.countValue(values, 3);
-print ds.mostFrequent([3, 1, 3, 2, 3]);
+print(ds.reverseArray(values));
+print(ds.rotateArray(values, 1));
+print(ds.linearSearch(values, 2));
+print(ds.countValue(values, 3));
+print(ds.mostFrequent([3, 1, 3, 2, 3]));
 
-fun ascending(left: number, right: number): bool {
+fun ascendingValues(left: number, right: number): bool {
   return left < right;
 }
 
-let ordered = ds.bstInsert(ds.bstInsert(ds.emptyTree::<number>(), 2, ascending), 1, ascending);
-print ds.treeInorder(ordered);
-print ds.sortArray(values, ascending);
-print ds.shellSort(values, ascending);
-print ds.mergeSort(values, ascending);
-print ds.countingSort(values);
-print ds.topKSmallest(values, 2, ascending);
-print ds.topKLargest(values, 2, ascending);
-print ds.kthSmallest(values, 1, ascending);
-print ds.kthLargest(values, 1, ascending);
-print ds.countInversions(values);
+let ordered = ds.bstInsert(ds.bstInsert(ds.emptyTree::<number>(), 2, ascendingValues), 1, ascendingValues);
+print(ds.treeInorder(ordered));
+print(ds.sortArray(values, ascendingValues));
+print(ds.shellSort(values, ascendingValues));
+print(ds.mergeSort(values, ascendingValues));
+print(ds.countingSort(values));
+print(ds.topKSmallest(values, 2, ascendingValues));
+print(ds.topKLargest(values, 2, ascendingValues));
+print(ds.kthSmallest(values, 1, ascendingValues));
+print(ds.kthLargest(values, 1, ascendingValues));
+print(ds.countInversions(values));
 fun atMostThree(value: number): bool {
   return value <= 3;
 }
-print ds.stablePartition(values, atMostThree);
-print ds.quickSort(values, ascending);
-print ds.heapSort(values, ascending);
-print ds.chunkArray(values, 2);
-print ds.slidingWindows(values, 2);
-print ds.prefixSums(values);
+print(ds.stablePartition(values, atMostThree));
+print(ds.quickSort(values, ascendingValues));
+print(ds.heapSort(values, ascendingValues));
+print(ds.chunkArray(values, 2));
+print(ds.slidingWindows(values, 2));
+print(ds.prefixSums(values));
 
 let ranges: [ds.Interval] = [
   ds.Interval { start: 1, end: 3 },
   ds.Interval { start: 2, end: 5 }
 ];
-print ds.mergeIntervals(ranges);
-print ds.intersectIntervals(ranges, [
+print(ds.mergeIntervals(ranges));
+print(ds.intersectIntervals(ranges, [
   ds.Interval { start: 2, end: 4 },
   ds.Interval { start: 7, end: 9 }
-]);
-print ds.selectNonOverlappingIntervals(ranges);
-print ds.minimumIntervalRooms(ranges);
-print ds.canReachEnd([2, 3, 1, 1, 4]);
-print ds.minimumJumps([2, 3, 1, 1, 4]);
-print ds.huffmanMergeCost([5, 9, 12, 13, 16, 45]);
+]));
+print(ds.selectNonOverlappingIntervals(ranges));
+print(ds.minimumIntervalRooms(ranges));
+print(ds.canReachEnd([2, 3, 1, 1, 4]));
+print(ds.minimumJumps([2, 3, 1, 1, 4]));
+print(ds.huffmanMergeCost([5, 9, 12, 13, 16, 45]));
 
-print ds.mergeSortedNumbers([1, 3], [2, 4]);
-print ds.mergeSortedArrays([[1, 3], [2, 4]], ascending);
-print ds.twoSumSorted([1, 2, 4, 7], 6);
-print ds.threeSumZero([-1, 0, 1, 2, -1, -4]);
-print ds.threeSumClosest([-1, 2, 1, -4], 1);
+print(ds.mergeSortedNumbers([1, 3], [2, 4]));
+print(ds.mergeSortedArrays([[1, 3], [2, 4]], ascendingValues));
+print(ds.twoSumSorted([1, 2, 4, 7], 6));
+print(ds.threeSumZero([-1, 0, 1, 2, -1, -4]));
+print(ds.threeSumClosest([-1, 2, 1, -4], 1));
 
-print ds.uniqueValues([3, 1, 3, 2]);
-print ds.unionValues([1, 2], [2, 3]);
-print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
-print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
-print ds.maxWindowValues([2, -1, 3, 4, -2, 1], 3);
-print ds.minWindowValues([2, -1, 3, 4, -2, 1], 3);
-print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
+print(ds.uniqueValues([3, 1, 3, 2]));
+print(ds.unionValues([1, 2], [2, 3]));
+print(ds.windowSums([2, -1, 3, 4, -2, 1], 3));
+print(ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3));
+print(ds.maxWindowValues([2, -1, 3, 4, -2, 1], 3));
+print(ds.minWindowValues([2, -1, 3, 4, -2, 1], 3));
+print(ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]));
 
 fun ascendingNumber(left: number, right: number): bool {
   return left < right;
 }
 
-print ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber);
-print ds.upperBound([1, 2, 2, 4], 2, ascendingNumber);
-print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
-print ds.rotatedBinarySearch([4, 5, 6, 7, 0, 1, 2], 0, ascendingNumber);
-print ds.peakIndex([1, 3, 5, 4, 2]);
-print ds.mountainPeakIndex([1, 3, 5, 4, 2]);
-print ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2);
-print ds.compareStrings("ant", "apple");
-print ds.longestUniqueSubstringLength("abcabcbb");
-print ds.longestPalindromicSubstring("babad");
-print ds.longestCommonSubstringLength("ababc", "babca");
-print ds.longestCommonSubsequence("abcde", "ace");
+print(ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber));
+print(ds.upperBound([1, 2, 2, 4], 2, ascendingNumber));
+print(ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber));
+print(ds.rotatedBinarySearch([4, 5, 6, 7, 0, 1, 2], 0, ascendingNumber));
+print(ds.peakIndex([1, 3, 5, 4, 2]));
+print(ds.mountainPeakIndex([1, 3, 5, 4, 2]));
+print(ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2));
+print(ds.compareStrings("ant", "apple"));
+print(ds.longestUniqueSubstringLength("abcabcbb"));
+print(ds.longestPalindromicSubstring("babad"));
+print(ds.longestCommonSubstringLength("ababc", "babca"));
+print(ds.longestCommonSubsequence("abcde", "ace"));
 
-print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
-print ds.completeKnapsack([2, 3], [3, 4], 7);
-print ds.boundedKnapsack([2, 3], [3, 4], [2, 1], 7);
-print ds.subsets([1, 2]);
-print ds.combinations([1, 2, 3], 2);
-print ds.permutations([1, 2, 3]);
-print ds.generateParentheses(3);
-print ds.isBalancedBrackets("([{}])");
-print ds.largestHistogramArea([2, 1, 5, 6, 2, 3]);
-print ds.nQueens(4);
-print ds.mazePaths([
+print(ds.knapsack01([2, 3, 4], [3, 4, 5], 5));
+print(ds.completeKnapsack([2, 3], [3, 4], 7));
+print(ds.boundedKnapsack([2, 3], [3, 4], [2, 1], 7));
+print(ds.subsets([1, 2]));
+print(ds.combinations([1, 2, 3], 2));
+print(ds.permutations([1, 2, 3]));
+print(ds.generateParentheses(3));
+print(ds.isBalancedBrackets("([{}])"));
+print(ds.largestHistogramArea([2, 1, 5, 6, 2, 3]));
+print(ds.nQueens(4));
+print(ds.mazePaths([
   [true, true],
   [true, true]
-]);
-print ds.uniqueGridPathsWithObstacles([
+]));
+print(ds.uniqueGridPathsWithObstacles([
   [false, false, false],
   [false, true, false],
   [false, false, false]
-]);
-print ds.matrixChainCost([10, 30, 5, 60]);
-print ds.matrixPower2x2([[1, 1], [1, 0]], 5);
-print ds.mergeStonesCost([4, 1, 1, 4]);
-print ds.primeFactors(12);
-print ds.divisors(12);
-print ds.binomialCoefficient(5, 2);
-print ds.permutationCount(5, 2);
-print ds.pascalTriangle(5);
-print ds.gcdArray([12, 18, 24]);
-print ds.prefixProducts([2, 3, 4]);
+]));
+print(ds.matrixChainCost([10, 30, 5, 60]));
+print(ds.matrixPower2x2([[1, 1], [1, 0]], 5));
+print(ds.mergeStonesCost([4, 1, 1, 4]));
+print(ds.primeFactors(12));
+print(ds.divisors(12));
+print(ds.binomialCoefficient(5, 2));
+print(ds.permutationCount(5, 2));
+print(ds.pascalTriangle(5));
+print(ds.gcdArray([12, 18, 24]));
+print(ds.prefixProducts([2, 3, 4]));
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -1425,6 +1425,9 @@ execute the Rust VM, but does not compare AST or bytecode text:
 ```sh
 python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 ```
+
+CI runs the same command as a separate step, so fixture or library drift
+fails the build even though the root test suites do not discover these cases.
 
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,

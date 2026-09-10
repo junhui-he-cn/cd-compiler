@@ -45,6 +45,9 @@ jobs:
       - name: Run Rust VM golden parity tests
         run: python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
 
+      - name: Run library fixture tests
+        run: python3 library/tests/run_tests.py ./build/compiler_design vm-rs
+
       - name: Run Rust unit tests
         run: cargo test --manifest-path vm-rs/Cargo.toml
 

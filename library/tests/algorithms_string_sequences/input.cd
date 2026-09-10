@@ -14,8 +14,8 @@ print(ds.longestPalindromicSubstring("forgeeksskeegfor"));
 print(ds.longestPalindromicSubstring("你我你"));
 print(ds.longestPalindromicSubstring("") == "");
 
-let palindromeStress = "";
-let palindromeIndex = 0;
+let mut palindromeStress = "";
+let mut palindromeIndex = 0;
 while (palindromeIndex < 4096) {
   palindromeStress = palindromeStress + "a";
   palindromeIndex += 1;

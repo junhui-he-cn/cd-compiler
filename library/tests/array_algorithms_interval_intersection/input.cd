@@ -4,8 +4,8 @@ fun renderIntervals(values: [ds.Interval]): string {
   if (values.len() == 0) {
     return "empty";
   }
-  let result = "";
-  let index = 0;
+  let mut result = "";
+  let mut index = 0;
   while (index < values.len()) {
     if (index > 0) {
       result = result + ",";

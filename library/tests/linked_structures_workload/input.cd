@@ -1,13 +1,13 @@
 import "../../data_structures.cd" as ds;
 
 let list = ds.newLinkedList::<number>();
-let value = 0;
+let mut value = 0;
 while (value < 1000) {
   list.pushBack(value);
   value += 1;
 }
 
-let removed = 0;
+let mut removed = 0;
 while (removed < 500) {
   list.popFront();
   removed += 1;

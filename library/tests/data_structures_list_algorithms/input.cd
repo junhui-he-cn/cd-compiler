@@ -16,8 +16,8 @@ print(ds.listIsPalindrome(empty));
 print(ds.toArray(ds.listRemoveFromEnd(values, 0)));
 print(ds.toArray(ds.listRemoveFromEnd(values, 9)));
 
-let longList = ds.emptyList::<number>();
-let listIndex = 0;
+let mut longList = ds.emptyList::<number>();
+let mut listIndex = 0;
 while (listIndex < 4096) {
   longList = ds.prepend(listIndex, longList);
   listIndex += 1;

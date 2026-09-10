@@ -13,8 +13,8 @@ fun byTens(left: number, right: number): bool {
 }
 
 fun renderStrings(entries: [ds.OrderedMapEntry<string, number>]): string {
-  let result = "";
-  let index = 0;
+  let mut result = "";
+  let mut index = 0;
   while (index < entries.len()) {
     if (index > 0) {
       result = result + ",";
@@ -26,8 +26,8 @@ fun renderStrings(entries: [ds.OrderedMapEntry<string, number>]): string {
 }
 
 fun renderNumbers(entries: [ds.OrderedMapEntry<number, string>]): string {
-  let result = "";
-  let index = 0;
+  let mut result = "";
+  let mut index = 0;
   while (index < entries.len()) {
     if (index > 0) {
       result = result + ",";

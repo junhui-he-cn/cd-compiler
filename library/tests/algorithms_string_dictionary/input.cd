@@ -10,14 +10,14 @@ print(ds.canSegmentString("你好吗", ["你好", "吗"]));
 print(ds.canSegmentString("aaaaab", ["a", "aa", "aaa"]));
 
 let dictionaryStress: [string] = [];
-let dictionaryIndex = 0;
+let mut dictionaryIndex = 0;
 while (dictionaryIndex < 1024) {
   dictionaryStress.push("word" + str(dictionaryIndex));
   dictionaryIndex += 1;
 }
 dictionaryStress.push("a");
-let repeatedText = "";
-let repeatedIndex = 0;
+let mut repeatedText = "";
+let mut repeatedIndex = 0;
 while (repeatedIndex < 1024) {
   repeatedText = repeatedText + "a";
   repeatedIndex += 1;
